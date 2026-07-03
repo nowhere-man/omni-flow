@@ -1,0 +1,62 @@
+name: "Release"
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish-tauri:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest' # 用于编译 macOS x86_64 版本
+            args: '--target x86_64-apple-darwin'
+          - platform: 'macos-latest' # 用于编译 macOS ARM64 (M1/M2/M3) 版本
+            args: '--target aarch64-apple-darwin'
+          - platform: 'ubuntu-22.04' # 用于编译 Linux AppImage 和 deb
+            args: ''
+          - platform: 'windows-latest' # 用于编译 Windows exe 和 msi
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: install frontend dependencies
+        run: pnpm install
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: app-v__VERSION__ # Tauri 官方 Action 会自动替换 __VERSION__
+          releaseName: 'OmniFlow v__VERSION__'
+          releaseBody: 'OmniFlow 全新版本发布！请在下方 Assets 中下载对应你操作系统的安装包。'
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
