@@ -1,3 +1,4 @@
+#![allow(clippy::new_without_default)]
 pub mod core;
 pub mod error;
 pub mod models;

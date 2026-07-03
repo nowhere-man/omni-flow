@@ -50,10 +50,10 @@ impl RuleEngine {
         for cond in conditions {
             let matches = match cond.match_type.as_str() {
                 "merchant_keyword" => {
-                    tx.merchant.as_ref().map_or(false, |m| m.contains(&cond.value))
+                    tx.merchant.as_ref().is_some_and(|m| m.contains(&cond.value))
                 }
                 "notes_keyword" => {
-                    tx.notes.as_ref().map_or(false, |n| n.contains(&cond.value))
+                    tx.notes.as_ref().is_some_and(|n| n.contains(&cond.value))
                 }
                 "regex" => {
                     let target = format!("{} {}", tx.merchant.as_deref().unwrap_or(""), tx.notes.as_deref().unwrap_or(""));

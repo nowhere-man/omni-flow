@@ -83,7 +83,7 @@ impl BillParser for CcbParser {
             if let Some(n) = note { final_note.push_str(&n); }
             if let Some(e) = extended_note { 
                 if !e.is_empty() && e != "***" {
-                    final_note.push_str(" "); 
+                    final_note.push(' ');
                     final_note.push_str(&e); 
                 }
             }
