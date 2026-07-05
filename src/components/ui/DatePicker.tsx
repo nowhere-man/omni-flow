@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useLayoutEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, startOfWeek, endOfWeek } from "date-fns";
@@ -9,9 +9,10 @@ export interface DatePickerProps {
   onChange: (value: number | null) => void;
   placeholder?: string;
   className?: string;
+  showTime?: boolean;
 }
 
-export function DatePicker({ value, onChange, placeholder = "选择日期", className = "" }: DatePickerProps) {
+export function DatePicker({ value, onChange, placeholder = "选择日期", className = "", showTime = false }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(value ? new Date(value * 1000) : new Date());
   const containerRef = useRef<HTMLDivElement>(null);
@@ -27,8 +28,15 @@ export function DatePicker({ value, onChange, placeholder = "选择日期", clas
   }, []);
 
   const handleDateSelect = (date: Date) => {
-    onChange(Math.floor(date.getTime() / 1000));
-    setIsOpen(false);
+    if (showTime) {
+      const referenceDate = value ? new Date(value * 1000) : new Date();
+      date.setHours(referenceDate.getHours(), referenceDate.getMinutes(), 0, 0);
+      onChange(Math.floor(date.getTime() / 1000));
+    } else {
+      date.setHours(0, 0, 0, 0);
+      onChange(Math.floor(date.getTime() / 1000));
+      setIsOpen(false);
+    }
   };
 
   const monthStart = startOfMonth(currentMonth);
@@ -47,7 +55,7 @@ export function DatePicker({ value, onChange, placeholder = "选择日期", clas
         onClick={() => setIsOpen(!isOpen)}
       >
         <span className={`select-value ${!value ? "text-muted" : ""}`}>
-          {value ? format(new Date(value * 1000), "yyyy-MM-dd") : placeholder}
+          {value ? format(new Date(value * 1000), showTime ? "yyyy-MM-dd HH:mm" : "yyyy-MM-dd") : placeholder}
         </span>
         <CalendarIcon size={15} className="select-chevron" />
       </button>
@@ -98,6 +106,33 @@ export function DatePicker({ value, onChange, placeholder = "选择日期", clas
               })}
             </div>
             
+            {showTime && value && (
+              <div className="datepicker-time" style={{ padding: "8px 12px", borderTop: "1px dashed color-mix(in srgb, var(--border) 60%, transparent)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "13px", color: "var(--muted)", fontWeight: 500 }}>具体时间</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+                  <TimeDropdown 
+                    options={Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0"))} 
+                    value={format(new Date(value * 1000), "HH")} 
+                    onChange={(h) => {
+                       const date = new Date(value * 1000);
+                       date.setHours(parseInt(h, 10));
+                       onChange(Math.floor(date.getTime() / 1000));
+                    }} 
+                  />
+                  <span style={{ fontWeight: 600, color: "var(--muted)", paddingBottom: "2px" }}>:</span>
+                  <TimeDropdown 
+                    options={Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, "0"))} 
+                    value={format(new Date(value * 1000), "mm")} 
+                    onChange={(m) => {
+                       const date = new Date(value * 1000);
+                       date.setMinutes(parseInt(m, 10));
+                       onChange(Math.floor(date.getTime() / 1000));
+                    }} 
+                  />
+                </div>
+              </div>
+            )}
+            
             {value && (
               <div className="datepicker-footer">
                 <button type="button" className="ghost-button text-sm w-full text-center" onClick={() => { onChange(null); setIsOpen(false); }}>
@@ -108,6 +143,96 @@ export function DatePicker({ value, onChange, placeholder = "选择日期", clas
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function TimeDropdown({ options, value, onChange }: { options: string[], value: string, onChange: (val: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  return (
+    <div ref={containerRef} style={{ position: "relative" }}>
+      <button 
+        type="button" 
+        onClick={() => setOpen(!open)}
+        style={{ padding: "4px 6px", background: open ? "color-mix(in srgb, var(--surface) 80%, transparent)" : "transparent", borderRadius: "6px", fontSize: "15px", fontWeight: 600, color: "var(--foreground)", cursor: "pointer", border: "none", fontFamily: "monospace" }}
+      >
+        {value}
+      </button>
+      <AnimatePresence>
+        {open && (
+           <motion.div 
+             initial={{ opacity: 0, y: 4, scale: 0.95 }}
+             animate={{ opacity: 1, y: 0, scale: 1 }}
+             exit={{ opacity: 0, y: 4, scale: 0.95 }}
+             transition={{ duration: 0.15 }}
+             style={{ position: "absolute", bottom: "calc(100% + 4px)", left: "50%", transform: "translateX(-50%)", background: "var(--background)", border: "1px solid var(--border)", borderRadius: "8px", boxShadow: "0 10px 25px rgba(0,0,0,0.2)", zIndex: 1000, height: "180px", width: "56px", overflow: "hidden" }}
+           >
+              <ScrollColumn options={options} value={value} onChange={(v) => { onChange(v); }} />
+           </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+export function ScrollColumn({ options, value, onChange }: { options: string[], value: string, onChange: (val: string) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const isScrollingRef = useRef(false);
+
+  useLayoutEffect(() => {
+    if (ref.current) {
+      const idx = options.indexOf(value);
+      if (idx !== -1) {
+        ref.current.scrollTop = idx * 36;
+      }
+    }
+  }, [options]);
+
+  const handleScroll = () => {
+    if (isScrollingRef.current || !ref.current) return;
+    const idx = Math.round(ref.current.scrollTop / 36);
+    const safeIdx = Math.max(0, Math.min(options.length - 1, idx));
+    const newValue = options[safeIdx];
+    if (newValue !== value) {
+       onChange(newValue);
+    }
+  };
+
+  return (
+    <div 
+      ref={ref}
+      onScroll={handleScroll}
+      style={{ flex: 1, height: "100%", overflowY: "auto", scrollSnapType: "y mandatory", padding: "72px 0", scrollbarWidth: "none", msOverflowStyle: "none" }} 
+      className="hide-scrollbar"
+    >
+      {options.map((opt) => (
+        <div
+          key={opt}
+          onClick={() => { 
+            isScrollingRef.current = true;
+            onChange(opt); 
+            if (ref.current) ref.current.scrollTo({ top: options.indexOf(opt) * 36, behavior: "smooth" }); 
+            setTimeout(() => isScrollingRef.current = false, 300);
+          }}
+          style={{ height: "36px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", scrollSnapAlign: "center", color: opt === value ? "var(--foreground)" : "var(--muted)", fontWeight: opt === value ? 600 : 400, background: opt === value ? "color-mix(in srgb, var(--foreground) 10%, transparent)" : "transparent", borderRadius: "8px", margin: "0 6px", transition: "all 0.15s ease" }}
+        >
+          {opt}
+        </div>
+      ))}
     </div>
   );
 }

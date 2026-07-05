@@ -25,30 +25,32 @@
     --motion-fast: 140ms;
     --motion-mid: 220ms;
     --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --panel-shadow: 0 8px 26px rgba(17, 24, 39, 0.032), inset 0 1px 0 rgba(255, 255, 255, 0.54);
   }
 
   .dark {
-    --background: #111418;
+    --background: #0d0f12;
     --foreground: #f3f6fb;
     --primary: #60a7ec;
     --primary-foreground: #07111d;
     --surface: #1a1f26;
     --surface-foreground: #ecf1f7;
-    --border: #303844;
-    --muted: #a6afbd;
-    --danger: #ff99a1;
-    --success: #7bd88f;
-    --income: #7bd88f;
-    --expense: #ff99a1;
+    --border: rgba(255, 255, 255, 0.08);
+    --muted: #8b96a8;
+    --danger: #ff8e98;
+    --success: #67cf7f;
+    --income: #67cf7f;
+    --expense: #ff8e98;
     --asset: #8fc8ff;
     --risk: #f4bf5f;
     --ink: #f3f6fb;
-    --mica: #111418;
-    --acrylic: rgba(26, 31, 38, 0.74);
-    --acrylic-strong: rgba(26, 31, 38, 0.9);
-    --subtle: rgba(255, 255, 255, 0.06);
-    --hover: rgba(96, 167, 236, 0.13);
+    --mica: #0d0f12;
+    --acrylic: rgba(26, 31, 38, 0.65);
+    --acrylic-strong: rgba(26, 31, 38, 0.85);
+    --subtle: rgba(255, 255, 255, 0.05);
+    --hover: rgba(255, 255, 255, 0.08);
     --focus: rgba(96, 167, 236, 0.28);
+    --panel-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 
   * {
@@ -307,7 +309,7 @@
     border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
     border-radius: var(--radius);
     background: var(--acrylic);
-    box-shadow: 0 8px 26px rgba(17, 24, 39, 0.032), inset 0 1px 0 rgba(255, 255, 255, 0.54);
+    box-shadow: var(--panel-shadow);
     backdrop-filter: blur(22px) saturate(1.12);
   }
 
@@ -1775,4 +1777,22 @@
       flex-direction: column;
     }
   }
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Hide spin buttons for number inputs */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield; /* Firefox */
 }

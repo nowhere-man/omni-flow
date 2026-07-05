@@ -5,6 +5,7 @@ import { Activity, BarChart3, CalendarRange, Tags } from "lucide-react";
 import { useAppStore } from "../../stores/appStore";
 import { CategoryBreakdown, ComparisonData, RankedTransaction, StatsAPI, TagStat, TrendDataPoint } from "../../tauri-adapter/stats";
 import { yuan } from "../../lib/format";
+import { DatePicker } from "../../components/ui/DatePicker";
 
 type Granularity = "day" | "week" | "month" | "year";
 type PeriodMode = "week" | "month" | "year" | "range";
@@ -98,8 +99,24 @@ export default function ChartsView() {
 
       {periodMode === "range" && (
         <section className="panel panel-pad range-picker">
-          <label><CalendarRange size={16} />开始 <input className="field" type="date" value={rangeStart} onChange={(event) => setRangeStart(event.target.value)} /></label>
-          <label><CalendarRange size={16} />结束 <input className="field" type="date" value={rangeEnd} onChange={(event) => setRangeEnd(event.target.value)} /></label>
+          <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <CalendarRange size={16} />开始 
+            <div style={{ width: "160px" }}>
+              <DatePicker 
+                value={new Date(`${rangeStart}T00:00:00`).getTime() / 1000} 
+                onChange={(val) => setRangeStart(val ? format(new Date(val * 1000), "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"))} 
+              />
+            </div>
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <CalendarRange size={16} />结束 
+            <div style={{ width: "160px" }}>
+              <DatePicker 
+                value={new Date(`${rangeEnd}T00:00:00`).getTime() / 1000} 
+                onChange={(val) => setRangeEnd(val ? format(new Date(val * 1000), "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"))} 
+              />
+            </div>
+          </label>
         </section>
       )}
 

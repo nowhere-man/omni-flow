@@ -59,15 +59,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  fetchTransactionsPage: async (offset = 0, limit = 80) => {
-    const { currentLedgerId, transactions } = get();
+  fetchTransactionsPage: async (offset = 0, limit = 20) => {
+    const { currentLedgerId } = get();
     if (!currentLedgerId) return;
 
     set({ isLoading: true, error: null });
     try {
       const page = await TransactionAPI.listTransactionsPage(currentLedgerId, offset, limit);
       set({
-        transactions: offset === 0 ? page.transactions : [...transactions, ...page.transactions],
+        transactions: page.transactions,
         transactionTotal: page.total,
         isLoading: false,
       });
