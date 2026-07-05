@@ -84,6 +84,11 @@ export interface SearchResult {
   total_expense: number;
 }
 
+export interface TransactionPage {
+  transactions: Transaction[];
+  total: number;
+}
+
 export type DuplicateStatus = "new" | "fuzzy" | "absolute";
 
 export interface ImportPreviewItem {
@@ -140,6 +145,10 @@ export const TransactionAPI = {
   
   listTransactions: async (ledgerId: string): Promise<Transaction[]> => {
     return invoke("list_transactions", { ledgerId });
+  },
+
+  listTransactionsPage: async (ledgerId: string, offset: number, limit: number): Promise<TransactionPage> => {
+    return invoke("list_transactions_page", { ledgerId, offset, limit });
   },
   
   createTransaction: async (transaction: Transaction): Promise<void> => {

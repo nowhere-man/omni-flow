@@ -52,49 +52,47 @@ export default function DataSettings() {
   };
 
   return (
-    <div className="space-y-8 max-w-2xl">
-      {/* 导出数据 */}
-      <div>
-        <h2 className="text-lg font-medium text-foreground mb-4 flex items-center gap-2">
-          <Database size={20} className="text-primary" />
+    <div className="settings-stack">
+      <section className="settings-section">
+        <h2 className="section-title-row">
+          <Database size={20} />
           数据备份
         </h2>
-        <p className="text-sm text-surface-foreground/80 mb-4">
+        <p className="muted-note">
           OmniFlow 是一个本地优先的应用程序，所有的财务数据都存储在你设备本地的 SQLite 数据库中。你可以随时将其导出备份。
         </p>
         <button
           onClick={handleExport}
           disabled={isExporting || isClearing}
-          className="flex items-center gap-2 bg-surface border border-border text-foreground px-4 py-2 rounded-lg hover:bg-background transition-colors disabled:opacity-50"
+          className="ghost-button"
         >
-          {isExporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+          {isExporting ? <Loader2 size={18} className="spin" /> : <Download size={18} />}
           导出数据库 (.db)
         </button>
-      </div>
+      </section>
 
-      <div className="h-px bg-border w-full"></div>
+      <div className="settings-divider"></div>
 
-      {/* 危险操作区 */}
-      <div>
-        <h2 className="text-lg font-medium text-red-500 mb-4 flex items-center gap-2">
+      <section className="settings-section">
+        <h2 className="section-title-row danger-title">
           <AlertTriangle size={20} />
           危险区域
         </h2>
-        <p className="text-sm text-surface-foreground/80 mb-4">
+        <p className="muted-note">
           清空数据将删除你所有的账单、分类、账户和账本信息。此操作不可逆！
         </p>
         <button
           onClick={handleClearData}
           disabled={isClearing || isExporting}
-          className="flex items-center gap-2 bg-red-500/10 text-red-600 border border-red-200 dark:border-red-500/30 px-4 py-2 rounded-lg hover:bg-red-500/20 transition-colors disabled:opacity-50"
+          className="danger-button"
         >
-          {isClearing ? <Loader2 size={18} className="animate-spin" /> : <AlertTriangle size={18} />}
+          {isClearing ? <Loader2 size={18} className="spin" /> : <AlertTriangle size={18} />}
           彻底清空本地数据
         </button>
-      </div>
+      </section>
 
       {message && (
-        <div className={`p-4 rounded-lg text-sm font-medium ${message.type === 'success' ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
+        <div className={`message-bar ${message.type}`}>
           {message.text}
         </div>
       )}

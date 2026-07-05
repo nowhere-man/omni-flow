@@ -12,7 +12,7 @@ use crate::core::parsers::{
 };
 use crate::error::AppError;
 use crate::models::{Account, Ledger, PendingConfirmation, PeriodicBill, Rule, Transaction};
-use crate::ports::storage::{LedgerStore, SearchResult, TransactionFilter};
+use crate::ports::storage::{LedgerStore, SearchResult, TransactionFilter, TransactionPage};
 use tauri::State;
 
 fn bill_parsers() -> Vec<Box<dyn BillParser>> {
@@ -72,6 +72,16 @@ pub fn list_transactions(
     ledger_id: String,
 ) -> Result<Vec<Transaction>, AppError> {
     store.list_transactions(&ledger_id)
+}
+
+#[tauri::command]
+pub fn list_transactions_page(
+    store: State<'_, SqliteStore>,
+    ledger_id: String,
+    offset: i64,
+    limit: i64,
+) -> Result<TransactionPage, AppError> {
+    store.list_transactions_page(&ledger_id, offset, limit)
 }
 
 #[tauri::command]
@@ -268,6 +278,7 @@ mod tests {
     #[test]
     fn command_surface_exposes_crud_search_rules_and_periodic_bills() {
         let _ = update_transaction;
+        let _ = list_transactions_page;
         let _ = delete_transaction;
         let _ = create_ledger;
         let _ = update_ledger;

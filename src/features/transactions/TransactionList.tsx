@@ -1,29 +1,53 @@
-import { useEffect, useState } from "react";
-import { Edit2, Plus, Save, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowDown, ArrowUp, Edit2, Plus, Save, Search, Trash2, X } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
 import { useAppStore } from "../../stores/appStore";
 import { Transaction, TransactionAPI } from "../../tauri-adapter/transactions";
 import { shortDate, yuan } from "../../lib/format";
+import { Category } from "../../models";
 
 const now = () => Math.floor(Date.now() / 1000);
 
 export default function TransactionList() {
-  const { transactions, accounts, currentLedgerId, fetchInitialData, fetchTransactions, isLoading } = useAppStore();
+  const { accounts, currentLedgerId, fetchInitialData, fetchTransactionsPage, isLoading, transactions, transactionTotal } = useAppStore();
+  const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<Transaction | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [pageSize] = useState(80);
 
   useEffect(() => {
     fetchInitialData();
+    invoke<Category[]>("list_categories").then(setCategories).catch(() => setCategories([]));
   }, [fetchInitialData]);
 
+  useEffect(() => {
+    if (currentLedgerId) {
+      fetchTransactionsPage(0, pageSize);
+    }
+  }, [currentLedgerId, fetchTransactionsPage, pageSize]);
+
   const defaultAccountId = accounts[0]?.id || "";
+  const visible = useMemo(() => {
+    const key = query.trim();
+    if (!key) return transactions;
+    return transactions.filter((transaction) =>
+      transaction.merchant?.includes(key)
+      || transaction.notes?.includes(key)
+      || transaction.tags.some((tag) => tag.includes(key))
+      || transaction.amount.toString().includes(key)
+    );
+  }, [query, transactions]);
+  const categoryLabelById = useMemo(() => new Map(categoryOptions(categories).map((category) => [category.id, category.label])), [categories]);
 
   function startNew() {
     if (!currentLedgerId || !defaultAccountId) return;
+    const timestamp = now();
     setEditing({
-      id: window.crypto.randomUUID(),
+      id: crypto.randomUUID(),
       ledger_id: currentLedgerId,
       account_id: defaultAccountId,
       category_id: null,
-      transaction_date: now(),
+      transaction_date: timestamp,
       amount: 0,
       transaction_type: "expense",
       merchant: "",
@@ -32,8 +56,8 @@ export default function TransactionList() {
       is_excluded: false,
       external_source: "manual",
       external_id: null,
-      created_at: now(),
-      updated_at: now(),
+      created_at: timestamp,
+      updated_at: timestamp,
       deleted_at: null,
     });
   }
@@ -48,95 +72,138 @@ export default function TransactionList() {
       await TransactionAPI.createTransaction(payload);
     }
     setEditing(null);
-    await fetchTransactions();
+    await fetchTransactionsPage(0, pageSize);
   }
 
   async function remove(id: string) {
     await TransactionAPI.deleteTransaction(id);
-    await fetchTransactions();
+    await fetchTransactionsPage(0, pageSize);
   }
 
   async function toggleExcluded(transaction: Transaction) {
     await TransactionAPI.updateTransaction({ ...transaction, is_excluded: !transaction.is_excluded, updated_at: now() });
-    await fetchTransactions();
+    await fetchTransactionsPage(0, pageSize);
+  }
+
+  async function loadMore() {
+    await fetchTransactionsPage(transactions.length, pageSize);
   }
 
   return (
-    <div className="page-stack">
-      <section className="page-heading">
+    <div className="money-flow-page">
+      <section className="flow-command">
         <div>
-          <div className="eyebrow">transactions</div>
-          <h1 className="page-title">明细要轻，不要像表格后台</h1>
+          <span>钱流</span>
+          <h1>每一笔都能顺手处理</h1>
         </div>
-        <button className="primary-button" onClick={startNew} disabled={!currentLedgerId || !defaultAccountId}><Plus size={17} />新增</button>
+        <div className="flow-command-tools">
+          <label className="search-field">
+            <Search size={17} />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="商户、备注、标签、金额" />
+          </label>
+          <button className="primary-button" onClick={startNew} disabled={!currentLedgerId || !defaultAccountId}><Plus size={17} />新增</button>
+        </div>
       </section>
 
-      {editing && (
-        <section className="panel panel-pad">
-          <div className="toolbar">
-            <select className="select-field" value={editing.transaction_type} onChange={(event) => setEditing({ ...editing, transaction_type: event.target.value as "expense" | "income" })}>
-              <option value="expense">支出</option>
-              <option value="income">收入</option>
-            </select>
-            <input className="field" type="number" min="0" step="0.01" value={editing.amount} onChange={(event) => setEditing({ ...editing, amount: Number(event.target.value) })} />
-            <input className="field" value={editing.merchant || ""} placeholder="商户" onChange={(event) => setEditing({ ...editing, merchant: event.target.value })} />
-            <input className="field" value={editing.notes || ""} placeholder="备注" onChange={(event) => setEditing({ ...editing, notes: event.target.value })} />
-            <select className="select-field" value={editing.account_id} onChange={(event) => setEditing({ ...editing, account_id: event.target.value })}>
-              {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
-            </select>
-            <label className="inline-flex items-center gap-2 text-sm font-semibold">
-              <input type="checkbox" checked={editing.is_excluded} onChange={(event) => setEditing({ ...editing, is_excluded: event.target.checked })} />
-              不计收支
-            </label>
-            <button className="primary-button" onClick={save}><Save size={17} />保存</button>
-            <button className="ghost-button" onClick={() => setEditing(null)}><X size={17} />取消</button>
-          </div>
-        </section>
-      )}
-
-      <section className="panel overflow-x-auto">
-        {isLoading ? (
-          <div className="panel-pad text-center text-[var(--muted)]">正在载入交易...</div>
-        ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>日期</th>
-                <th>商户</th>
-                <th>金额</th>
-                <th>标签</th>
-                <th>来源</th>
-                <th>不计收支</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactions.map((transaction) => (
-                <tr key={transaction.id}>
-                  <td>{shortDate(transaction.transaction_date)}</td>
-                  <td>
-                    <div className="font-semibold">{transaction.merchant || "未命名交易"}</div>
-                    <div className="text-xs text-[var(--muted)]">{transaction.notes || "-"}</div>
-                  </td>
-                  <td className={transaction.transaction_type === "expense" ? "text-[var(--expense)]" : "text-[var(--income)]"}>{yuan(transaction.amount)}</td>
-                  <td>{transaction.tags.length > 0 ? transaction.tags.join(" / ") : "-"}</td>
-                  <td>{transaction.external_source || "manual"}</td>
-                  <td><input type="checkbox" checked={transaction.is_excluded} onChange={() => toggleExcluded(transaction)} /></td>
-                  <td>
-                    <div className="toolbar">
-                      <button className="icon-button" onClick={() => setEditing(transaction)} aria-label="编辑"><Edit2 size={16} /></button>
-                      <button className="icon-button" onClick={() => remove(transaction.id)} aria-label="删除"><Trash2 size={16} /></button>
+      <section className="flow-layout">
+        <div className="timeline-panel">
+          {isLoading ? (
+            <div className="empty-line">正在载入</div>
+          ) : visible.length === 0 ? (
+            <div className="empty-line">没有匹配交易</div>
+          ) : (
+            <>
+              {visible.map((transaction) => (
+                <article key={transaction.id} className="transaction-card" onClick={() => setEditing(transaction)}>
+                  <div className={transaction.transaction_type === "expense" ? "tx-symbol expense" : "tx-symbol income"}>
+                    {transaction.transaction_type === "expense" ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+                  </div>
+                  <div className="tx-body">
+                    <div className="tx-mainline">
+                      <strong>{transaction.merchant || transaction.notes || "未命名交易"}</strong>
+                      <b className={transaction.transaction_type === "expense" ? "amount-expense" : "amount-income"}>
+                        {transaction.transaction_type === "expense" ? "-" : "+"}{yuan(transaction.amount)}
+                      </b>
                     </div>
-                  </td>
-                </tr>
+                    <div className="tx-meta">
+                      <span>{shortDate(transaction.transaction_date)}</span>
+                      {transaction.category_id && <span>{categoryLabelById.get(transaction.category_id) || "未分类"}</span>}
+                      <span>{transaction.external_source || "manual"}</span>
+                      {transaction.is_excluded && <span>不计收支</span>}
+                    </div>
+                    {transaction.tags.length > 0 && <div className="tx-tags">{transaction.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
+                  </div>
+                  <div className="tx-actions" onClick={(event) => event.stopPropagation()}>
+                    <button className="icon-button" onClick={() => setEditing(transaction)} aria-label="详情"><Edit2 size={15} /></button>
+                    <button className="icon-button" onClick={() => toggleExcluded(transaction)} aria-label="不计收支"><X size={15} /></button>
+                    <button className="icon-button" onClick={() => remove(transaction.id)} aria-label="删除"><Trash2 size={15} /></button>
+                  </div>
+                </article>
               ))}
-              {transactions.length === 0 && (
-                <tr><td colSpan={7} className="text-center text-[var(--muted)] py-12">还没有交易，先导入账单或手动新增一笔。</td></tr>
+              {!query.trim() && transactions.length < transactionTotal && (
+                <button className="ghost-button load-more-button" onClick={loadMore} disabled={isLoading}>
+                  已显示 {transactions.length} / {transactionTotal}，加载更多
+                </button>
               )}
-            </tbody>
-          </table>
-        )}
+            </>
+          )}
+        </div>
+
+        <aside className={`edit-drawer ${editing ? "open" : ""}`}>
+          {editing ? (
+            <>
+              <div className="panel-head">
+                <h2>{transactions.some((transaction) => transaction.id === editing.id) ? "编辑交易" : "新增交易"}</h2>
+                <button className="icon-button" onClick={() => setEditing(null)} aria-label="关闭"><X size={15} /></button>
+              </div>
+              <div className="drawer-fields">
+                <div className="segmented">
+                  <button className={editing.transaction_type === "expense" ? "active" : ""} onClick={() => setEditing({ ...editing, transaction_type: "expense" })}>支出</button>
+                  <button className={editing.transaction_type === "income" ? "active" : ""} onClick={() => setEditing({ ...editing, transaction_type: "income" })}>收入</button>
+                </div>
+                <input className="money-input" type="number" min="0" step="0.01" value={editing.amount} onChange={(event) => setEditing({ ...editing, amount: Number(event.target.value) })} />
+                <input className="field" value={editing.merchant || ""} placeholder="商户" onChange={(event) => setEditing({ ...editing, merchant: event.target.value })} />
+                <input className="field" value={editing.notes || ""} placeholder="备注" onChange={(event) => setEditing({ ...editing, notes: event.target.value })} />
+                <input className="field" type="datetime-local" value={toDateTimeInput(editing.transaction_date)} onChange={(event) => setEditing({ ...editing, transaction_date: Math.floor(new Date(event.target.value).getTime() / 1000) })} />
+                <select className="select-field" value={editing.account_id} onChange={(event) => setEditing({ ...editing, account_id: event.target.value })}>
+                  {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+                </select>
+                <select className="select-field" value={editing.category_id || ""} onChange={(event) => setEditing({ ...editing, category_id: event.target.value || null })}>
+                  <option value="">未分类</option>
+                  {categoryOptions(categories).map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}
+                </select>
+                <input className="field" value={editing.tags.join(",")} placeholder="标签，用逗号分隔" onChange={(event) => setEditing({ ...editing, tags: event.target.value.split(",").map((tag) => tag.trim()).filter(Boolean) })} />
+                <label className="check-row">
+                  <input type="checkbox" checked={editing.is_excluded} onChange={(event) => setEditing({ ...editing, is_excluded: event.target.checked })} />
+                  不计入收支
+                </label>
+                <button className="primary-button" onClick={save}><Save size={17} />保存</button>
+              </div>
+            </>
+          ) : (
+            <div className="empty-line">选择一笔交易</div>
+          )}
+        </aside>
       </section>
     </div>
   );
+}
+
+function toDateTimeInput(timestamp: number) {
+  const date = new Date(timestamp * 1000);
+  const pad = (value: number) => value.toString().padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function categoryOptions(categories: Category[]) {
+  const parents = categories.filter((category) => !category.parent_id);
+  const childrenByParent = new Map<string, Category[]>();
+  for (const category of categories) {
+    if (!category.parent_id) continue;
+    childrenByParent.set(category.parent_id, [...(childrenByParent.get(category.parent_id) || []), category]);
+  }
+  return parents.flatMap((parent) => [
+    { id: parent.id, label: parent.name },
+    ...(childrenByParent.get(parent.id) || []).map((child) => ({ id: child.id, label: `${parent.name} / ${child.name}` })),
+  ]);
 }

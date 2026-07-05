@@ -10,6 +10,7 @@ export default function CategorySettings() {
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editType, setEditType] = useState<TransactionType>("expense");
+  const [editParentId, setEditParentId] = useState("");
 
   useEffect(() => {
     loadCategories();
@@ -39,6 +40,7 @@ export default function CategorySettings() {
     setIsEditing(newId);
     setEditName("");
     setEditType("expense");
+    setEditParentId("");
   };
 
   const handleSave = async (id: string) => {
@@ -50,7 +52,7 @@ export default function CategorySettings() {
         id: isNew ? window.crypto.randomUUID() : id,
         name: editName.trim(),
         category_type: editType,
-        parent_id: null,
+        parent_id: editParentId || null,
         created_at: Math.floor(Date.now() / 1000),
         updated_at: Math.floor(Date.now() / 1000),
         deleted_at: null,
@@ -87,35 +89,34 @@ export default function CategorySettings() {
   };
 
   if (loading) {
-    return <div className="flex justify-center p-8"><Loader2 className="animate-spin text-primary" /></div>;
+    return <div className="center-state"><Loader2 className="spin" /></div>;
   }
 
   const expenses = categories.filter(c => c.category_type === 'expense');
   const incomes = categories.filter(c => c.category_type === 'income');
 
   return (
-    <div className="max-w-3xl">
-      <div className="flex justify-between items-center mb-6">
+    <div className="settings-stack wide">
+      <div className="settings-head-row">
         <div>
-          <h2 className="text-lg font-medium text-foreground">分类管理</h2>
-          <p className="text-sm text-surface-foreground/80 mt-1">
+          <h2>分类管理</h2>
+          <p className="muted-note compact">
             自定义账单的收支分类。
           </p>
         </div>
         <button
           onClick={handleAdd}
           disabled={isEditing !== null}
-          className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+          className="primary-button"
         >
           <Plus size={16} /> 新增分类
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* 支出分类 */}
-        <div>
-          <h3 className="text-sm font-semibold text-red-500 mb-3 border-b border-border pb-2">支出分类</h3>
-          <div className="space-y-2">
+      <div className="split-grid">
+        <section className="settings-section">
+          <h3 className="category-heading expense">支出分类</h3>
+          <div className="category-list">
             {expenses.map(cat => (
               <CategoryRow 
                 key={cat.id} 
@@ -125,20 +126,22 @@ export default function CategorySettings() {
                 setEditName={setEditName}
                 editType={editType}
                 setEditType={setEditType}
+                editParentId={editParentId}
+                setEditParentId={setEditParentId}
+                categories={categories}
                 onSave={() => handleSave(cat.id)}
                 onCancel={() => { setIsEditing(null); if(cat.id.startsWith("new-")) loadCategories(); }}
-                onEdit={() => { setIsEditing(cat.id); setEditName(cat.name); setEditType(cat.category_type); }}
+                onEdit={() => { setIsEditing(cat.id); setEditName(cat.name); setEditType(cat.category_type); setEditParentId(cat.parent_id || ""); }}
                 onDelete={() => handleDelete(cat.id)}
               />
             ))}
-            {expenses.length === 0 && <div className="text-sm text-surface-foreground/50 text-center py-4">暂无支出分类</div>}
+            {expenses.length === 0 && <div className="compact-empty">暂无支出分类</div>}
           </div>
-        </div>
+        </section>
 
-        {/* 收入分类 */}
-        <div>
-          <h3 className="text-sm font-semibold text-green-500 mb-3 border-b border-border pb-2">收入分类</h3>
-          <div className="space-y-2">
+        <section className="settings-section">
+          <h3 className="category-heading income">收入分类</h3>
+          <div className="category-list">
             {incomes.map(cat => (
               <CategoryRow 
                 key={cat.id} 
@@ -148,51 +151,63 @@ export default function CategorySettings() {
                 setEditName={setEditName}
                 editType={editType}
                 setEditType={setEditType}
+                editParentId={editParentId}
+                setEditParentId={setEditParentId}
+                categories={categories}
                 onSave={() => handleSave(cat.id)}
                 onCancel={() => { setIsEditing(null); if(cat.id.startsWith("new-")) loadCategories(); }}
-                onEdit={() => { setIsEditing(cat.id); setEditName(cat.name); setEditType(cat.category_type); }}
+                onEdit={() => { setIsEditing(cat.id); setEditName(cat.name); setEditType(cat.category_type); setEditParentId(cat.parent_id || ""); }}
                 onDelete={() => handleDelete(cat.id)}
               />
             ))}
-            {incomes.length === 0 && <div className="text-sm text-surface-foreground/50 text-center py-4">暂无收入分类</div>}
+            {incomes.length === 0 && <div className="compact-empty">暂无收入分类</div>}
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );
 }
 
-function CategoryRow({ category, isEditing, editName, setEditName, editType, setEditType, onSave, onCancel, onEdit, onDelete }: any) {
+function CategoryRow({ category, isEditing, editName, setEditName, editType, setEditType, editParentId, setEditParentId, categories, onSave, onCancel, onEdit, onDelete }: any) {
   if (isEditing) {
+    const parentOptions = categories.filter((item: Category) => item.id !== category.id && item.category_type === editType && !item.parent_id);
     return (
-      <div className="flex items-center gap-2 p-2 bg-surface border border-primary/30 rounded-lg">
+      <div className="category-row editing">
         <input 
           autoFocus
-          className="flex-1 bg-background px-2 py-1.5 text-sm rounded border border-border focus:outline-none focus:border-primary"
+          className="field"
           value={editName}
           onChange={e => setEditName(e.target.value)}
           placeholder="分类名称"
         />
         <select 
-          className="bg-background px-2 py-1.5 text-sm rounded border border-border focus:outline-none"
+          className="select-field field-xs"
           value={editType}
           onChange={e => setEditType(e.target.value as TransactionType)}
         >
           <option value="expense">支出</option>
           <option value="income">收入</option>
         </select>
-        <button onClick={onSave} className="p-1.5 text-green-600 hover:bg-green-50 rounded"><Save size={16} /></button>
-        <button onClick={onCancel} className="p-1.5 text-red-500 hover:bg-red-50 rounded"><X size={16} /></button>
+        <select
+          className="select-field field-sm"
+          value={editParentId}
+          onChange={e => setEditParentId(e.target.value)}
+        >
+          <option value="">一级分类</option>
+          {parentOptions.map((item: Category) => <option key={item.id} value={item.id}>{item.name} 的二级分类</option>)}
+        </select>
+        <button onClick={onSave} className="icon-button success-icon" aria-label="保存"><Save size={16} /></button>
+        <button onClick={onCancel} className="icon-button danger-icon" aria-label="取消"><X size={16} /></button>
       </div>
     );
   }
 
   return (
-    <div className="flex justify-between items-center p-3 bg-surface border border-border rounded-lg group hover:border-primary/30 transition-colors">
-      <span className="text-sm font-medium">{category.name}</span>
-      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button onClick={onEdit} className="p-1.5 text-surface-foreground hover:bg-background rounded text-xs"><Edit2 size={14} /></button>
-        <button onClick={onDelete} className="p-1.5 text-red-500 hover:bg-red-500/10 rounded text-xs"><Trash2 size={14} /></button>
+    <div className="category-row">
+      <span>{category.name}</span>
+      <div className="row-actions">
+        <button onClick={onEdit} className="icon-button" aria-label="编辑"><Edit2 size={14} /></button>
+        <button onClick={onDelete} className="icon-button danger-icon" aria-label="删除"><Trash2 size={14} /></button>
       </div>
     </div>
   );

@@ -54,6 +54,7 @@ pub fn run() {
             commands::update_account,
             commands::delete_account,
             commands::list_transactions,
+            commands::list_transactions_page,
             commands::create_transaction,
             commands::update_transaction,
             commands::delete_transaction,

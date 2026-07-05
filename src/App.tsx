@@ -1,13 +1,14 @@
 import { useEffect } from "react";
+import { FluentProvider, webDarkTheme, webLightTheme } from "@fluentui/react-components";
 import { BrowserRouter as Router, Navigate, NavLink, Route, Routes } from "react-router-dom";
 import {
-  ArrowDownToLine,
-  BarChart3,
-  LayoutDashboard,
-  ReceiptText,
+  AreaChart,
+  Banknote,
+  FileDown,
+  Home,
+  ListTree,
   Search,
   Settings,
-  Sparkles,
 } from "lucide-react";
 import Dashboard from "./features/dashboard/Dashboard";
 import TransactionList from "./features/transactions/TransactionList";
@@ -18,30 +19,31 @@ import SettingsView from "./features/settings/SettingsView";
 import { applyTheme, useSettingsStore } from "./store/useSettingsStore";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "今日", path: "/" },
-  { icon: BarChart3, label: "分析", path: "/charts" },
-  { icon: ArrowDownToLine, label: "导入", path: "/import" },
-  { icon: ReceiptText, label: "明细", path: "/transactions" },
-  { icon: Search, label: "搜索", path: "/search" },
+  { icon: Home, label: "今日", path: "/" },
+  { icon: ListTree, label: "钱流", path: "/transactions" },
+  { icon: FileDown, label: "导入", path: "/import" },
+  { icon: AreaChart, label: "分析", path: "/charts" },
+  { icon: Search, label: "找账", path: "/search" },
   { icon: Settings, label: "设置", path: "/settings" },
 ];
 
-function AppNav() {
+function AppChrome() {
   return (
     <>
-      <header className="app-header">
-        <NavLink to="/" className="brand-mark" aria-label="OmniFlow">
-          <span className="brand-icon"><Sparkles size={18} /></span>
-          <span className="brand-copy">
+      <header className="workspace-topbar">
+        <NavLink to="/" className="brand-lockup" aria-label="OmniFlow">
+          <span className="brand-orb"><Banknote size={18} /></span>
+          <span>
             <strong>OmniFlow</strong>
-            <small>flowing money, clear mind</small>
+            <small>Personal money flow</small>
           </span>
         </NavLink>
-        <nav className="desktop-nav">
+
+        <nav className="task-switcher" aria-label="主导航">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
-              <NavLink key={item.path} to={item.path} className={({ isActive }) => `nav-pill ${isActive ? "active" : ""}`}>
+              <NavLink key={item.path} to={item.path} className={({ isActive }) => `task-tab ${isActive ? "active" : ""}`}>
                 <Icon size={17} />
                 <span>{item.label}</span>
               </NavLink>
@@ -50,11 +52,11 @@ function AppNav() {
         </nav>
       </header>
 
-      <nav className="mobile-nav" aria-label="底部导航">
+      <nav className="mobile-taskbar" aria-label="移动端导航">
         {navItems.slice(0, 5).map((item) => {
           const Icon = item.icon;
           return (
-            <NavLink key={item.path} to={item.path} className={({ isActive }) => `mobile-nav-item ${isActive ? "active" : ""}`}>
+            <NavLink key={item.path} to={item.path} className={({ isActive }) => `mobile-task ${isActive ? "active" : ""}`}>
               <Icon size={20} />
               <span>{item.label}</span>
             </NavLink>
@@ -67,27 +69,33 @@ function AppNav() {
 
 export default function App() {
   const theme = useSettingsStore((state) => state.theme);
+  const fluentTheme = theme === "dark"
+    || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches)
+    ? webDarkTheme
+    : webLightTheme;
 
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
 
   return (
-    <Router>
-      <div className="app-shell">
-        <AppNav />
-        <main className="app-main">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/charts" element={<ChartsView />} />
-            <Route path="/import" element={<ImportView />} />
-            <Route path="/transactions" element={<TransactionList />} />
-            <Route path="/search" element={<SearchView />} />
-            <Route path="/settings/*" element={<SettingsView />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-      </div>
-    </Router>
+    <FluentProvider theme={fluentTheme} className="fluent-root">
+      <Router>
+        <div className="workspace-shell">
+          <AppChrome />
+          <main className="workspace-main">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/transactions" element={<TransactionList />} />
+              <Route path="/import" element={<ImportView />} />
+              <Route path="/charts" element={<ChartsView />} />
+              <Route path="/search" element={<SearchView />} />
+              <Route path="/settings/*" element={<SettingsView />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </main>
+        </div>
+      </Router>
+    </FluentProvider>
   );
 }

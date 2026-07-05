@@ -11,10 +11,10 @@ export default function BasicSettings() {
   ];
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      <div>
-        <h2 className="text-lg font-medium text-foreground mb-4">外观与主题</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div className="settings-stack">
+      <section className="settings-section">
+        <h2>外观与主题</h2>
+        <div className="theme-choice-grid">
           {themeOptions.map((option) => {
             const Icon = option.icon;
             const isActive = theme === option.value;
@@ -22,20 +22,16 @@ export default function BasicSettings() {
               <button
                 key={option.value}
                 onClick={() => setTheme(option.value)}
-                className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${
-                  isActive
-                    ? 'border-primary bg-primary/5 text-primary'
-                    : 'border-border bg-surface text-surface-foreground hover:border-primary/50'
-                }`}
+                className={`theme-choice ${isActive ? 'active' : ''}`}
               >
-                <Icon className="w-8 h-8 mb-2" />
-                <span className="font-medium">{option.label}</span>
+                <Icon size={28} />
+                <span>{option.label}</span>
               </button>
             );
           })}
         </div>
-      </div>
-      <p className="text-sm text-surface-foreground/70">
+      </section>
+      <p className="muted-note">
         主题切换会立即生效，跟随系统模式会根据您操作系统的当前外观自动匹配深浅色。
       </p>
     </div>

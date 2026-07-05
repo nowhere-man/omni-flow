@@ -25,10 +25,9 @@ export default function SettingsView() {
           <h1 className="page-title">把复杂能力收进清楚的地方</h1>
         </div>
       </section>
-      <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-4">
-      {/* Settings Sidebar */}
-      <div className="panel panel-pad">
-        <nav className="flex flex-col gap-1">
+      <div className="settings-layout">
+      <div className="panel panel-pad settings-sidebar">
+        <nav className="settings-nav" aria-label="设置分类">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = location.pathname.includes(tab.id);
@@ -36,11 +35,7 @@ export default function SettingsView() {
               <Link
                 key={tab.id}
                 to={tab.path}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-surface-foreground hover:bg-surface hover:text-foreground'
-                }`}
+                className={`settings-nav-item ${isActive ? 'active' : ''}`}
               >
                 <Icon size={18} />
                 {tab.label}
@@ -50,8 +45,7 @@ export default function SettingsView() {
         </nav>
       </div>
 
-      {/* Settings Content Area */}
-      <div className="panel panel-pad min-h-[520px]">
+      <div className="panel panel-pad settings-content">
         <Routes>
           <Route path="/" element={<Navigate to="basic" replace />} />
           <Route path="basic" element={<BasicSettings />} />

@@ -46,8 +46,8 @@ export default function SearchView() {
             <option value="">全部账户</option>
             {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
           </select>
-          <input className="field w-28" type="number" placeholder="最小金额" onChange={(event) => patch({ min_amount: event.target.value ? Number(event.target.value) : null })} />
-          <input className="field w-28" type="number" placeholder="最大金额" onChange={(event) => patch({ max_amount: event.target.value ? Number(event.target.value) : null })} />
+          <input className="field field-xs" type="number" placeholder="最小金额" onChange={(event) => patch({ min_amount: event.target.value ? Number(event.target.value) : null })} />
+          <input className="field field-xs" type="number" placeholder="最大金额" onChange={(event) => patch({ max_amount: event.target.value ? Number(event.target.value) : null })} />
           <input className="field" placeholder="标签" value={filter.tag || ""} onChange={(event) => patch({ tag: event.target.value || null })} />
         </div>
       </section>
@@ -61,9 +61,9 @@ export default function SearchView() {
         </section>
       )}
 
-      <section className="panel overflow-x-auto">
+      <section className="panel table-scroll">
         {!result ? (
-          <div className="panel-pad text-center text-[var(--muted)]">组合条件后点击搜索，结果和汇总都由后端计算。</div>
+          <div className="panel-pad empty-copy">组合条件后点击搜索，结果和汇总都由后端计算。</div>
         ) : (
           <table className="data-table">
             <thead>
@@ -79,13 +79,13 @@ export default function SearchView() {
               {result.transactions.map((transaction) => (
                 <tr key={transaction.id}>
                   <td>{shortDate(transaction.transaction_date)}</td>
-                  <td><strong>{transaction.merchant || "未命名交易"}</strong><div className="text-xs text-[var(--muted)]">{transaction.notes || "-"}</div></td>
-                  <td className={transaction.transaction_type === "expense" ? "text-[var(--expense)]" : "text-[var(--income)]"}>{yuan(transaction.amount)}</td>
+                  <td><strong>{transaction.merchant || "未命名交易"}</strong><div className="table-note">{transaction.notes || "-"}</div></td>
+                  <td className={transaction.transaction_type === "expense" ? "amount-expense" : "amount-income"}>{yuan(transaction.amount)}</td>
                   <td>{transaction.tags.join(" / ") || "-"}</td>
                   <td>{transaction.is_excluded ? "是" : "否"}</td>
                 </tr>
               ))}
-              {result.transactions.length === 0 && <tr><td colSpan={5} className="text-center py-12 text-[var(--muted)]">没有匹配交易</td></tr>}
+              {result.transactions.length === 0 && <tr><td colSpan={5} className="table-empty">没有匹配交易</td></tr>}
             </tbody>
           </table>
         )}

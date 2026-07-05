@@ -24,6 +24,12 @@ pub struct SearchResult {
     pub total_expense: f64,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TransactionPage {
+    pub transactions: Vec<Transaction>,
+    pub total: i64,
+}
+
 pub trait LedgerStore: Send + Sync {
     // ---- Ledgers ----
     fn create_ledger(&self, ledger: &Ledger) -> Result<(), AppError>;
@@ -48,6 +54,12 @@ pub trait LedgerStore: Send + Sync {
     fn insert_transactions(&self, transactions: &[Transaction]) -> Result<(), AppError>;
     fn get_transaction(&self, id: &str) -> Result<Option<Transaction>, AppError>;
     fn list_transactions(&self, ledger_id: &str) -> Result<Vec<Transaction>, AppError>;
+    fn list_transactions_page(
+        &self,
+        ledger_id: &str,
+        offset: i64,
+        limit: i64,
+    ) -> Result<TransactionPage, AppError>;
     fn search_transactions(
         &self,
         ledger_id: &str,

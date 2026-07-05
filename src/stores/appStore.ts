@@ -6,11 +6,13 @@ interface AppState {
   accounts: Account[];
   currentLedgerId: string | null;
   transactions: Transaction[];
+  transactionTotal: number;
   isLoading: boolean;
   error: string | null;
   
   fetchInitialData: () => Promise<void>;
   fetchTransactions: () => Promise<void>;
+  fetchTransactionsPage: (offset?: number, limit?: number) => Promise<void>;
   setCurrentLedgerId: (id: string) => void;
 }
 
@@ -19,6 +21,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   accounts: [],
   currentLedgerId: null,
   transactions: [],
+  transactionTotal: 0,
   isLoading: false,
   error: null,
 
@@ -38,10 +41,6 @@ export const useAppStore = create<AppState>((set, get) => ({
         currentLedgerId,
         isLoading: false 
       });
-      
-      if (currentLedgerId) {
-        get().fetchTransactions();
-      }
     } catch (err: any) {
       set({ error: err.toString(), isLoading: false });
     }
@@ -59,9 +58,26 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ error: err.toString(), isLoading: false });
     }
   },
+
+  fetchTransactionsPage: async (offset = 0, limit = 80) => {
+    const { currentLedgerId, transactions } = get();
+    if (!currentLedgerId) return;
+
+    set({ isLoading: true, error: null });
+    try {
+      const page = await TransactionAPI.listTransactionsPage(currentLedgerId, offset, limit);
+      set({
+        transactions: offset === 0 ? page.transactions : [...transactions, ...page.transactions],
+        transactionTotal: page.total,
+        isLoading: false,
+      });
+    } catch (err: any) {
+      set({ error: err.toString(), isLoading: false });
+    }
+  },
   
   setCurrentLedgerId: (id: string) => {
-    set({ currentLedgerId: id });
-    get().fetchTransactions();
+    set({ currentLedgerId: id, transactions: [], transactionTotal: 0 });
+    get().fetchTransactionsPage(0);
   }
 }));

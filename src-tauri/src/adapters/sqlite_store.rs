@@ -6,7 +6,7 @@ use crate::models::{
     Account, AccountType, Category, Ledger, PendingConfirmation, PeriodicBill, Rule, Transaction,
     TransactionType,
 };
-use crate::ports::storage::{LedgerStore, SearchResult, TransactionFilter};
+use crate::ports::storage::{LedgerStore, SearchResult, TransactionFilter, TransactionPage};
 use std::str::FromStr;
 
 pub struct SqliteStore {
@@ -384,6 +384,37 @@ impl LedgerStore for SqliteStore {
             .query_map(params![ledger_id], Self::row_to_transaction)?
             .collect::<Result<Vec<_>, _>>()?;
         Ok(transactions)
+    }
+
+    fn list_transactions_page(
+        &self,
+        ledger_id: &str,
+        offset: i64,
+        limit: i64,
+    ) -> Result<TransactionPage, AppError> {
+        let conn = self.conn.lock().unwrap();
+        let total: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM transactions WHERE ledger_id = ?1 AND deleted_at IS NULL",
+            params![ledger_id],
+            |row| row.get(0),
+        )?;
+        let safe_offset = offset.max(0);
+        let safe_limit = limit.clamp(1, 300);
+        let mut stmt = conn.prepare(
+            "SELECT id, ledger_id, account_id, category_id, transaction_date, amount, type, merchant, notes, tags, is_excluded, external_source, external_id, created_at, updated_at, deleted_at
+             FROM transactions
+             WHERE ledger_id = ?1 AND deleted_at IS NULL
+             ORDER BY transaction_date DESC
+             LIMIT ?2 OFFSET ?3",
+        )?;
+        let transactions = stmt
+            .query_map(params![ledger_id, safe_limit, safe_offset], Self::row_to_transaction)?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(TransactionPage {
+            transactions,
+            total,
+        })
     }
 
     fn search_transactions(

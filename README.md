@@ -4,9 +4,9 @@
 
   <p>
     <img src="https://img.shields.io/badge/Tauri-2.0-blue?style=flat-square&logo=tauri" alt="Tauri" />
-    <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react" alt="React" />
+    <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react" alt="React" />
     <img src="https://img.shields.io/badge/Rust-🦀-orange?style=flat-square&logo=rust" alt="Rust" />
-    <img src="https://img.shields.io/badge/TailwindCSS-38B2AC?style=flat-square&logo=tailwind-css" alt="TailwindCSS" />
+    <img src="https://img.shields.io/badge/Fluent_UI-0F6CBD?style=flat-square&logo=microsoft" alt="Fluent UI" />
     <img src="https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite" alt="SQLite" />
   </p>
 </div>
@@ -30,7 +30,7 @@
 - 🔒 **本地优先，隐私极致**：不强制依赖任何云端服务，所有底层数据库 (SQLite) 和数据分析全在本地处理。支持高级 AES-256-GCM 本地加密与自建 WebDAV 加密同步。
 - 📥 **多源账单一键导入**：内置了强大的规则引擎。目前支持直导 **微信支付 (XLSX)**、**支付宝 (CSV)**、**建设银行 (XLS)**、**京东/美团** 等多平台的原生账单。
 - 🧹 **智能去重与自动清洗**：无需担心多次导入重复账单！独创的基于单号的“精准去重”与基于容差的“模糊去重”引擎，让账单干干净净。
-- 🎨 **现代化美学界面**：使用 Tailwind CSS 与 Lucide Icons 精心雕琢的界面，配合 ECharts 提供的高级可视化体验，告别枯燥的数字列表。
+- 🎨 **现代化美学界面**：使用 Fluent UI、原生 CSS 与 Lucide Icons 打造一体化工作台，配合 ECharts 提供高级可视化体验，告别枯燥的数字列表。
 - 🔍 **全能搜索与聚合视图**：毫秒级响应的全局检索，通过金额、商家、备注、标签等多维度，一秒找回曾经的交易记录。
 
 ---

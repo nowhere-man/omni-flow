@@ -1,163 +1,178 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import ReactECharts from "echarts-for-react";
-import { ArrowDownCircle, ArrowUpCircle, Landmark, ReceiptText, Sparkles } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  FileDown,
+  ListTree,
+  Plus,
+  Search,
+  WalletCards,
+} from "lucide-react";
 import { useAppStore } from "../../stores/appStore";
 import { DashboardSummary, RankedTransaction, StatsAPI, TrendDataPoint } from "../../tauri-adapter/stats";
+import { Transaction, TransactionAPI } from "../../tauri-adapter/transactions";
 import { monthRange, shortDate, yuan } from "../../lib/format";
 
+const now = () => Math.floor(Date.now() / 1000);
+
 export default function Dashboard() {
-  const { ledgers, currentLedgerId, fetchInitialData, isLoading } = useAppStore();
+  const { accounts, currentLedgerId, fetchInitialData, fetchTransactionsPage, isLoading, transactions, transactionTotal } = useAppStore();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [trend, setTrend] = useState<TrendDataPoint[]>([]);
   const [topExpenses, setTopExpenses] = useState<RankedTransaction[]>([]);
-  const [loadingStats, setLoadingStats] = useState(false);
+  const [draft, setDraft] = useState({ amount: "", merchant: "", notes: "", type: "expense" as "expense" | "income" });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchInitialData();
   }, [fetchInitialData]);
 
   useEffect(() => {
-    async function load() {
-      if (!currentLedgerId) return;
-      setLoadingStats(true);
-      const { startTs, endTs } = monthRange();
-      try {
-        const [nextSummary, nextTrend, nextTop] = await Promise.all([
-          StatsAPI.getDashboardSummary(currentLedgerId, startTs, endTs),
-          StatsAPI.getTrend(currentLedgerId, startTs, endTs, "day"),
-          StatsAPI.getTopTransactions(currentLedgerId, startTs, endTs, "expense", 5),
-        ]);
-        setSummary(nextSummary);
-        setTrend(nextTrend);
-        setTopExpenses(nextTop);
-      } finally {
-        setLoadingStats(false);
-      }
+    if (currentLedgerId) {
+      fetchTransactionsPage(0, 12);
     }
-    load();
-  }, [currentLedgerId]);
+  }, [currentLedgerId, fetchTransactionsPage]);
 
-  const currentLedger = ledgers.find((ledger) => ledger.id === currentLedgerId);
-  const chartOption = useMemo(() => ({
-    color: ["#62dca3", "#ff8a80"],
-    tooltip: {
-      trigger: "axis",
-      backgroundColor: "rgba(8,12,20,0.95)",
-      borderWidth: 0,
-      textStyle: { color: "#fff" },
-    },
-    grid: { left: 8, right: 8, top: 24, bottom: 8, containLabel: true },
-    xAxis: {
-      type: "category",
-      data: trend.map((item) => item.date.slice(5)),
-      axisLine: { show: false },
-      axisTick: { show: false },
-      axisLabel: { color: "rgba(248,251,255,0.58)" },
-    },
-    yAxis: {
-      type: "value",
-      axisLabel: { color: "rgba(248,251,255,0.58)" },
-      splitLine: { lineStyle: { color: "rgba(255,255,255,0.1)" } },
-    },
+  useEffect(() => {
+    async function loadStats() {
+      if (!currentLedgerId) return;
+      const { startTs, endTs } = monthRange();
+      const [nextSummary, nextTrend, nextTop] = await Promise.all([
+        StatsAPI.getDashboardSummary(currentLedgerId, startTs, endTs),
+        StatsAPI.getTrend(currentLedgerId, startTs, endTs, "day"),
+        StatsAPI.getTopTransactions(currentLedgerId, startTs, endTs, "expense", 4),
+      ]);
+      setSummary(nextSummary);
+      setTrend(nextTrend);
+      setTopExpenses(nextTop);
+    }
+    loadStats();
+  }, [currentLedgerId, transactionTotal]);
+
+  const defaultAccount = accounts.find((account) => account.account_type === "cash") || accounts[0];
+  const recentTransactions = useMemo(() => transactions.slice(0, 7), [transactions]);
+  const netFlow = summary?.net_cash_flow ?? 0;
+
+  const flowOption = useMemo(() => ({
+    color: ["#10b981", "#ef4444"],
+    tooltip: { trigger: "axis", backgroundColor: "rgba(15,23,42,0.94)", borderWidth: 0, textStyle: { color: "#fff" } },
+    grid: { left: 0, right: 0, top: 8, bottom: 0, containLabel: false },
+    xAxis: { type: "category", show: false, data: trend.map((item) => item.date.slice(5)) },
+    yAxis: { type: "value", show: false },
     series: [
-      {
-        name: "收入",
-        type: "line",
-        smooth: true,
-        symbolSize: 6,
-        areaStyle: { opacity: 0.18 },
-        lineStyle: { width: 3 },
-        data: trend.map((item) => item.income),
-      },
-      {
-        name: "支出",
-        type: "line",
-        smooth: true,
-        symbolSize: 6,
-        areaStyle: { opacity: 0.14 },
-        lineStyle: { width: 3 },
-        data: trend.map((item) => item.expense),
-      },
+      { name: "收入", type: "line", smooth: true, showSymbol: false, lineStyle: { width: 3 }, areaStyle: { opacity: 0.16 }, data: trend.map((item) => item.income) },
+      { name: "支出", type: "line", smooth: true, showSymbol: false, lineStyle: { width: 3 }, areaStyle: { opacity: 0.12 }, data: trend.map((item) => item.expense) },
     ],
   }), [trend]);
 
-  if (isLoading || loadingStats) {
-    return <div className="page-stack"><div className="panel panel-pad">正在同步账本状态...</div></div>;
+  async function quickAdd() {
+    if (!currentLedgerId || !defaultAccount || Number(draft.amount) <= 0) return;
+    setSaving(true);
+    const timestamp = now();
+    const transaction: Transaction = {
+      id: crypto.randomUUID(),
+      ledger_id: currentLedgerId,
+      account_id: defaultAccount.id,
+      category_id: null,
+      transaction_date: timestamp,
+      amount: Number(draft.amount),
+      transaction_type: draft.type,
+      merchant: draft.merchant || null,
+      notes: draft.notes || null,
+      tags: [],
+      is_excluded: false,
+      external_source: "manual",
+      external_id: null,
+      created_at: timestamp,
+      updated_at: timestamp,
+      deleted_at: null,
+    };
+    await TransactionAPI.createTransaction(transaction);
+    setDraft({ amount: "", merchant: "", notes: "", type: draft.type });
+    await fetchTransactionsPage(0, 12);
+    setSaving(false);
+  }
+
+  if (isLoading) {
+    return <div className="screen-state">正在载入</div>;
   }
 
   return (
-    <div className="page-stack">
-      <section className="dashboard-hero">
-        <div className="hero-copy">
-          <div>
-            <div className="hero-kicker"><Sparkles size={14} /> {currentLedger?.name || "默认账本"}</div>
-            <h1 className="hero-title">本月钱流，一眼明白</h1>
+    <div className="home-workbench">
+      <section className="today-strip">
+        <div className="balance-stage">
+          <div className="stage-kicker"><WalletCards size={16} /> 今日</div>
+          <div className="balance-row">
+            <div>
+              <span>账户余额</span>
+              <strong>{yuan(summary?.net_assets ?? 0)}</strong>
+            </div>
+            <div className={netFlow >= 0 ? "flow-positive" : "flow-negative"}>
+              <span>本月净流动</span>
+              <strong>{yuan(netFlow)}</strong>
+            </div>
           </div>
-
-          <div className="hero-balance">
-            <span>账户余额概览</span>
-            <strong>{yuan(summary?.net_assets ?? 0)}</strong>
-          </div>
-
-          <div className="hero-stat-grid">
-            <div className="hero-stat">
-              <span>收入</span>
-              <strong>{yuan(summary?.income ?? 0)}</strong>
-            </div>
-            <div className="hero-stat">
-              <span>支出</span>
-              <strong>{yuan(summary?.expense ?? 0)}</strong>
-            </div>
-            <div className="hero-stat">
-              <span>净现金流</span>
-              <strong>{yuan(summary?.net_cash_flow ?? 0)}</strong>
-            </div>
+          <div className="stage-chart">
+            <ReactECharts option={flowOption} style={{ height: 112 }} />
           </div>
         </div>
 
-        <div className="hero-chart">
-          <ReactECharts option={chartOption} style={{ height: "100%", minHeight: 320 }} />
+        <div className="quick-entry-panel">
+          <div className="panel-head">
+            <h2>快速补记</h2>
+            <div className="segmented">
+              <button className={draft.type === "expense" ? "active" : ""} onClick={() => setDraft({ ...draft, type: "expense" })}><ArrowUp size={15} />支出</button>
+              <button className={draft.type === "income" ? "active" : ""} onClick={() => setDraft({ ...draft, type: "income" })}><ArrowDown size={15} />收入</button>
+            </div>
+          </div>
+          <div className="quick-entry-grid">
+            <input className="money-input" inputMode="decimal" placeholder="0.00" value={draft.amount} onChange={(event) => setDraft({ ...draft, amount: event.target.value })} />
+            <input className="field" placeholder="商户" value={draft.merchant} onChange={(event) => setDraft({ ...draft, merchant: event.target.value })} />
+            <input className="field" placeholder="备注" value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} />
+            <button className="primary-button" onClick={quickAdd} disabled={saving || !draft.amount}><Plus size={17} />记一笔</button>
+          </div>
         </div>
       </section>
 
-      <section className="insight-row">
-        <div className="insight-card">
-          <div className="metric-label" style={{ color: "var(--asset)" }}><Landmark size={18} /> 资产口径</div>
-          <p>这里展示账户余额合计，适合快速确认今天的资金状态。</p>
-        </div>
-        <div className="insight-card">
-          <div className="metric-label" style={{ color: "var(--income)" }}><ArrowDownCircle size={18} /> 收入节奏</div>
-          <p>收入曲线和支出曲线分开呈现，月底回看不会被一张默认柱状图糊住。</p>
-        </div>
-        <div className="insight-card">
-          <div className="metric-label" style={{ color: "var(--expense)" }}><ArrowUpCircle size={18} /> 支出提醒</div>
-          <p>本月高额支出会自动浮到下面，方便继续钻到明细。</p>
-        </div>
+      <section className="action-lane">
+        <ActionCard to="/import" icon={<FileDown size={20} />} title="导入账单" value="预览后入账" />
+        <ActionCard to="/transactions" icon={<ListTree size={20} />} title="钱流明细" value={`${transactionTotal} 笔`} />
+        <ActionCard to="/search" icon={<Search size={20} />} title="找一笔账" value="组合筛选" />
       </section>
 
-      <section className="metric-grid">
-        <Metric icon={<Landmark size={18} />} label="净资产" value={yuan(summary?.net_assets ?? 0)} tone="asset" />
-        <Metric icon={<ArrowDownCircle size={18} />} label="本月收入" value={yuan(summary?.income ?? 0)} tone="income" />
-        <Metric icon={<ArrowUpCircle size={18} />} label="本月支出" value={yuan(summary?.expense ?? 0)} tone="expense" />
-        <Metric icon={<ReceiptText size={18} />} label="净现金流" value={yuan(summary?.net_cash_flow ?? 0)} tone={(summary?.net_cash_flow ?? 0) >= 0 ? "income" : "expense"} />
-      </section>
+      <section className="home-grid">
+        <div className="flow-panel">
+          <div className="panel-head">
+            <h2>最近钱流</h2>
+            <Link to="/transactions">全部</Link>
+          </div>
+          <div className="flow-list">
+            {recentTransactions.length === 0 ? (
+              <div className="empty-line">暂无交易</div>
+            ) : recentTransactions.map((transaction) => (
+              <TransactionRow key={transaction.id} transaction={transaction} />
+            ))}
+          </div>
+        </div>
 
-      <section className="grid grid-cols-1">
-        <div className="panel panel-pad">
-          <h2 className="section-title mb-4">值得注意的支出</h2>
-          <div className="spend-list">
+        <div className="insight-panel">
+          <div className="panel-head">
+            <h2>本月重点</h2>
+            <Link to="/charts">分析</Link>
+          </div>
+          <div className="focus-list">
             {topExpenses.length === 0 ? (
-              <div className="text-sm text-[var(--muted)] py-10 text-center">本月还没有可分析的支出</div>
-            ) : topExpenses.map((item) => (
-              <div key={item.id} className="spend-item">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="spend-rank">{topExpenses.indexOf(item) + 1}</span>
-                  <div className="min-w-0">
-                    <div className="font-semibold truncate">{item.merchant || item.notes || "未命名支出"}</div>
-                    <div className="text-xs text-[var(--muted)]">{shortDate(item.transaction_date)} · {item.category_name || "未分类"}</div>
-                  </div>
+              <div className="empty-line">暂无支出排行</div>
+            ) : topExpenses.map((item, index) => (
+              <div className="focus-item" key={item.id}>
+                <span>{index + 1}</span>
+                <div>
+                  <strong>{item.merchant || item.notes || "未命名支出"}</strong>
+                  <small>{shortDate(item.transaction_date)} · {item.category_name || "未分类"}</small>
                 </div>
-                <strong className="text-[var(--expense)]">{yuan(item.amount)}</strong>
+                <b>{yuan(item.amount)}</b>
               </div>
             ))}
           </div>
@@ -167,11 +182,26 @@ export default function Dashboard() {
   );
 }
 
-function Metric({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: string; tone: "income" | "expense" | "asset" }) {
+function ActionCard({ to, icon, title, value }: { to: string; icon: React.ReactNode; title: string; value: string }) {
   return (
-    <div className="metric-tile">
-      <div className="metric-label" style={{ color: `var(--${tone})` }}>{icon}{label}</div>
-      <strong>{value}</strong>
+    <Link to={to} className="action-card">
+      <span>{icon}</span>
+      <strong>{title}</strong>
+      <small>{value}</small>
+    </Link>
+  );
+}
+
+function TransactionRow({ transaction }: { transaction: Transaction }) {
+  const isExpense = transaction.transaction_type === "expense";
+  return (
+    <div className="flow-row">
+      <span className={isExpense ? "flow-dot expense" : "flow-dot income"}>{isExpense ? <ArrowUp size={14} /> : <ArrowDown size={14} />}</span>
+      <div className="flow-main">
+        <strong>{transaction.merchant || transaction.notes || "未命名交易"}</strong>
+        <small>{shortDate(transaction.transaction_date)}{transaction.is_excluded ? " · 不计收支" : ""}</small>
+      </div>
+      <b className={isExpense ? "amount-expense" : "amount-income"}>{isExpense ? "-" : "+"}{yuan(transaction.amount)}</b>
     </div>
   );
 }
