@@ -6,6 +6,9 @@ CREATE TABLE IF NOT EXISTS ledgers (
     id TEXT PRIMARY KEY, -- ULID
     name TEXT NOT NULL,
     budget REAL DEFAULT 0.0,
+    cover TEXT DEFAULT NULL,
+    description TEXT DEFAULT NULL,
+    is_default BOOLEAN DEFAULT 0,
     created_at INTEGER NOT NULL, -- Unix timestamp
     updated_at INTEGER NOT NULL,
     deleted_at INTEGER DEFAULT NULL
@@ -18,6 +21,9 @@ CREATE TABLE IF NOT EXISTS accounts (
     account_type TEXT NOT NULL, -- cash, debit, credit, wallet, other
     balance REAL DEFAULT 0.0,
     credit_limit REAL DEFAULT 0.0,
+    cover TEXT DEFAULT NULL,
+    description TEXT DEFAULT NULL,
+    is_default BOOLEAN DEFAULT 0,
     bill_day INTEGER DEFAULT NULL,
     repay_day INTEGER DEFAULT NULL,
     created_at INTEGER NOT NULL,

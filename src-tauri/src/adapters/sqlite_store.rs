@@ -41,6 +41,9 @@ impl SqliteStore {
             id: Ulid::new().to_string(),
             name: "默认账本".to_string(),
             budget: 0.0,
+            cover: None,
+            description: None,
+            is_default: true,
             created_at: now,
             updated_at: now,
             deleted_at: None,
@@ -52,6 +55,9 @@ impl SqliteStore {
             account_type: AccountType::Cash,
             balance: 0.0,
             credit_limit: 0.0,
+            cover: None,
+            description: None,
+            is_default: true,
             bill_day: None,
             repay_day: None,
             created_at: now,
@@ -138,24 +144,27 @@ impl LedgerStore for SqliteStore {
     fn create_ledger(&self, ledger: &Ledger) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "INSERT INTO ledgers (id, name, budget, created_at, updated_at, deleted_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-            params![ledger.id, ledger.name, ledger.budget, ledger.created_at, ledger.updated_at, ledger.deleted_at],
+            "INSERT INTO ledgers (id, name, budget, cover, description, is_default, created_at, updated_at, deleted_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            params![ledger.id, ledger.name, ledger.budget, ledger.cover, ledger.description, ledger.is_default, ledger.created_at, ledger.updated_at, ledger.deleted_at],
         )?;
         Ok(())
     }
 
     fn list_ledgers(&self) -> Result<Vec<Ledger>, AppError> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT id, name, budget, created_at, updated_at, deleted_at FROM ledgers WHERE deleted_at IS NULL")?;
+        let mut stmt = conn.prepare("SELECT id, name, budget, cover, description, is_default, created_at, updated_at, deleted_at FROM ledgers WHERE deleted_at IS NULL")?;
         let ledgers = stmt
             .query_map([], |row| {
                 Ok(Ledger {
                     id: row.get(0)?,
                     name: row.get(1)?,
                     budget: row.get(2)?,
-                    created_at: row.get(3)?,
-                    updated_at: row.get(4)?,
-                    deleted_at: row.get(5)?,
+                    cover: row.get(3)?,
+                    description: row.get(4)?,
+                    is_default: row.get(5)?,
+                    created_at: row.get(6)?,
+                    updated_at: row.get(7)?,
+                    deleted_at: row.get(8)?,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -165,8 +174,8 @@ impl LedgerStore for SqliteStore {
     fn update_ledger(&self, ledger: &Ledger) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "UPDATE ledgers SET name = ?1, budget = ?2, updated_at = ?3, deleted_at = ?4 WHERE id = ?5",
-            params![ledger.name, ledger.budget, ledger.updated_at, ledger.deleted_at, ledger.id],
+            "UPDATE ledgers SET name = ?1, budget = ?2, cover = ?3, description = ?4, is_default = ?5, updated_at = ?6, deleted_at = ?7 WHERE id = ?8",
+            params![ledger.name, ledger.budget, ledger.cover, ledger.description, ledger.is_default, ledger.updated_at, ledger.deleted_at, ledger.id],
         )?;
         Ok(())
     }
@@ -185,14 +194,17 @@ impl LedgerStore for SqliteStore {
     fn create_account(&self, account: &Account) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "INSERT INTO accounts (id, name, account_type, balance, credit_limit, bill_day, repay_day, created_at, updated_at, deleted_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            "INSERT INTO accounts (id, name, account_type, balance, credit_limit, cover, description, is_default, bill_day, repay_day, created_at, updated_at, deleted_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
             params![
                 account.id,
                 account.name,
                 account.account_type.to_string(),
                 account.balance,
                 account.credit_limit,
+                account.cover,
+                account.description,
+                account.is_default,
                 account.bill_day,
                 account.repay_day,
                 account.created_at,
@@ -205,7 +217,7 @@ impl LedgerStore for SqliteStore {
 
     fn list_accounts(&self) -> Result<Vec<Account>, AppError> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT id, name, account_type, balance, credit_limit, bill_day, repay_day, created_at, updated_at, deleted_at FROM accounts WHERE deleted_at IS NULL")?;
+        let mut stmt = conn.prepare("SELECT id, name, account_type, balance, credit_limit, cover, description, is_default, bill_day, repay_day, created_at, updated_at, deleted_at FROM accounts WHERE deleted_at IS NULL")?;
         let accounts = stmt
             .query_map([], |row| {
                 let type_str: String = row.get(2)?;
@@ -216,11 +228,14 @@ impl LedgerStore for SqliteStore {
                     account_type,
                     balance: row.get(3)?,
                     credit_limit: row.get(4)?,
-                    bill_day: row.get(5)?,
-                    repay_day: row.get(6)?,
-                    created_at: row.get(7)?,
-                    updated_at: row.get(8)?,
-                    deleted_at: row.get(9)?,
+                    cover: row.get(5)?,
+                    description: row.get(6)?,
+                    is_default: row.get(7)?,
+                    bill_day: row.get(8)?,
+                    repay_day: row.get(9)?,
+                    created_at: row.get(10)?,
+                    updated_at: row.get(11)?,
+                    deleted_at: row.get(12)?,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -230,12 +245,15 @@ impl LedgerStore for SqliteStore {
     fn update_account(&self, account: &Account) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "UPDATE accounts SET name = ?1, account_type = ?2, balance = ?3, credit_limit = ?4, bill_day = ?5, repay_day = ?6, updated_at = ?7, deleted_at = ?8 WHERE id = ?9",
+            "UPDATE accounts SET name = ?1, account_type = ?2, balance = ?3, credit_limit = ?4, cover = ?5, description = ?6, is_default = ?7, bill_day = ?8, repay_day = ?9, updated_at = ?10, deleted_at = ?11 WHERE id = ?12",
             params![
                 account.name,
                 account.account_type.to_string(),
                 account.balance,
                 account.credit_limit,
+                account.cover,
+                account.description,
+                account.is_default,
                 account.bill_day,
                 account.repay_day,
                 account.updated_at,
@@ -785,16 +803,22 @@ mod tests {
             id: "ledger".to_string(),
             name: "默认账本".to_string(),
             budget: 0.0,
+            cover: None,
+            description: None,
+            is_default: true,
             created_at: 1,
             updated_at: 1,
             deleted_at: None,
         };
         let account = Account {
             id: "account".to_string(),
-            name: "现金".to_string(),
+            name: "现金账户".to_string(),
             account_type: AccountType::Cash,
             balance: 0.0,
             credit_limit: 0.0,
+            cover: None,
+            description: None,
+            is_default: true,
             bill_day: None,
             repay_day: None,
             created_at: 1,
@@ -883,6 +907,9 @@ mod tests {
             id: "ledger".to_string(),
             name: "默认账本".to_string(),
             budget: 0.0,
+            cover: None,
+            description: None,
+            is_default: true,
             created_at: 1,
             updated_at: 1,
             deleted_at: None,

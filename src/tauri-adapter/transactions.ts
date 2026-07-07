@@ -4,6 +4,9 @@ export interface Ledger {
   id: string;
   name: string;
   budget: number;
+  cover: string | null;
+  description: string | null;
+  is_default: boolean;
   created_at: number;
   updated_at: number;
   deleted_at: number | null;
@@ -15,6 +18,9 @@ export interface Account {
   account_type: "cash" | "debit" | "credit" | "wallet" | "other";
   balance: number;
   credit_limit: number;
+  cover: string | null;
+  description: string | null;
+  is_default: boolean;
   bill_day: number | null;
   repay_day: number | null;
   created_at: number;
