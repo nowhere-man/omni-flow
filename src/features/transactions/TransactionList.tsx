@@ -103,18 +103,18 @@ export default function TransactionList() {
   const netColor = netIncome > 0 ? "var(--success)" : netIncome < 0 ? "var(--danger)" : "inherit";
 
   return (
-    <div className="money-flow-page" style={{ padding: "24px", maxWidth: "1000px", margin: "0 auto" }}>
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px", position: "relative" }}>
+    <div className="money-flow-page">
+      <header className="dashboard-header">
         <div style={{ width: "80px" }}></div>
-        <div style={{ display: "flex", alignItems: "center", gap: "16px", position: "relative" }}>
-          <button className="icon-button" onClick={handlePrevMonth}><ChevronLeft size={24} /></button>
+        <div className="dashboard-month-selector">
+          <button className="icon-button" onClick={handlePrevMonth} aria-label="上个月"><ChevronLeft size={20} /></button>
           <div style={{ position: "relative" }}>
-            <div 
-              style={{ cursor: "pointer", padding: "8px 16px", borderRadius: "8px", background: showMonthPicker ? "var(--surface)" : "color-mix(in srgb, var(--surface) 50%, transparent)", transition: "background 0.2s" }} 
+            <button 
+              className="dashboard-title-trigger"
               onClick={() => setShowMonthPicker(!showMonthPicker)}
             >
-              <h2 style={{ margin: 0, fontSize: "22px", fontWeight: 600 }}>{format(selectedMonth, "yyyy年 MM月")}</h2>
-            </div>
+              <h2>{format(selectedMonth, "yyyy年 MM月")}</h2>
+            </button>
             <AnimatePresence>
               {showMonthPicker && (
                 <YearMonthPicker 
@@ -125,47 +125,47 @@ export default function TransactionList() {
               )}
             </AnimatePresence>
           </div>
-          <button className="icon-button" onClick={handleNextMonth}><ChevronRight size={24} /></button>
+          <button className="icon-button" onClick={handleNextMonth} aria-label="下个月"><ChevronRight size={20} /></button>
         </div>
         
         <div style={{ width: "80px", display: "flex", justifyContent: "flex-end", gap: "4px" }}>
-          <button className={`icon-button ${layoutMode === "card" ? "active" : ""}`} onClick={() => setLayoutMode("card")} style={{ background: layoutMode === "card" ? "var(--surface)" : "transparent" }}><LayoutGrid size={18} /></button>
-          <button className={`icon-button ${layoutMode === "list" ? "active" : ""}`} onClick={() => setLayoutMode("list")} style={{ background: layoutMode === "list" ? "var(--surface)" : "transparent" }}><List size={18} /></button>
+          <button className={`icon-button ${layoutMode === "card" ? "active" : ""}`} onClick={() => setLayoutMode("card")} aria-label="卡片布局"><LayoutGrid size={18} /></button>
+          <button className={`icon-button ${layoutMode === "list" ? "active" : ""}`} onClick={() => setLayoutMode("list")} aria-label="列表布局"><List size={18} /></button>
         </div>
       </header>
 
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", marginBottom: "32px" }}>
-        <div className="panel panel-pad" style={{ textAlign: "center", padding: "24px" }}>
-          <div style={{ color: "var(--muted)", fontSize: "14px", marginBottom: "8px" }}>总收入</div>
-          <div style={{ fontSize: "28px", fontWeight: 700, color: "var(--success)" }}>{yuan(metrics.income)}</div>
+      <section className="transactions-kpis">
+        <div className="kpi-card">
+          <div className="kpi-card-label">总收入</div>
+          <div className="kpi-card-value income">{yuan(metrics.income)}</div>
         </div>
-        <div className="panel panel-pad" style={{ textAlign: "center", padding: "24px" }}>
-          <div style={{ color: "var(--muted)", fontSize: "14px", marginBottom: "8px" }}>总支出</div>
-          <div style={{ fontSize: "28px", fontWeight: 700, color: "var(--danger)" }}>{yuan(metrics.expense)}</div>
+        <div className="kpi-card">
+          <div className="kpi-card-label">总支出</div>
+          <div className="kpi-card-value expense">{yuan(metrics.expense)}</div>
         </div>
-        <div className="panel panel-pad" style={{ textAlign: "center", padding: "24px" }}>
-          <div style={{ color: "var(--muted)", fontSize: "14px", marginBottom: "8px" }}>净收入</div>
-          <div style={{ fontSize: "28px", fontWeight: 700, color: netColor }}>{yuan(netIncome)}</div>
+        <div className="kpi-card">
+          <div className="kpi-card-label">净收入</div>
+          <div className="kpi-card-value" style={{ color: netColor }}>{yuan(netIncome)}</div>
         </div>
       </section>
 
-      <section className="timeline-panel hide-scrollbar" style={{ flex: 1, overflowY: "auto", paddingBottom: "100px", padding: "0 4px" }}>
+      <section className="timeline-panel hide-scrollbar" style={{ flex: 1, overflowY: "auto", paddingBottom: "100px" }}>
         {isLoading ? (
           <div className="empty-line">正在载入数据</div>
         ) : groupedTransactions.length === 0 ? (
           <div className="empty-line">本月无记录</div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          <div className="transaction-groups-wrapper">
             {groupedTransactions.map((group) => (
               <div key={group.dateString}>
-                <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--muted)", marginBottom: "12px", paddingLeft: "4px" }}>
+                <div className="transaction-group-title">
                   {group.label}
                 </div>
                 
                 {layoutMode === "list" ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                     {group.transactions.map((transaction) => (
-                      <article key={transaction.id} className="transaction-card" onClick={() => setEditing(transaction)} style={{ cursor: "pointer", gridTemplateColumns: "auto 1fr" }}>
+                      <article key={transaction.id} className="transaction-card" onClick={() => setEditing(transaction)}>
                         <div className={transaction.transaction_type === "expense" ? "tx-symbol expense" : "tx-symbol income"}>
                           {getTransactionIcon(transaction, categories) ? (
                             <CategoryIcon name={getTransactionIcon(transaction, categories)} size={16} />
@@ -191,13 +191,12 @@ export default function TransactionList() {
                     ))}
                   </div>
                 ) : (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "12px" }}>
+                  <div className="transaction-grid-cards">
                     {group.transactions.map((transaction) => (
                       <div 
                         key={transaction.id} 
                         onClick={() => setEditing(transaction)}
-                        className="panel hover-transform"
-                        style={{ padding: "16px", cursor: "pointer", display: "flex", flexDirection: "column", gap: "12px", transition: "transform 0.15s, box-shadow 0.15s" }}
+                        className="transaction-item-card"
                       >
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -209,19 +208,19 @@ export default function TransactionList() {
                                )}
                              </div>
                              <div>
-                               <div style={{ fontWeight: 600, fontSize: "15px" }}>{transaction.merchant || transaction.notes || "未命名交易"}</div>
+                               <div style={{ fontWeight: 600, fontSize: "14px" }}>{transaction.merchant || transaction.notes || "未命名交易"}</div>
                                <div style={{ fontSize: "12px", color: "var(--muted)", marginTop: "2px" }}>
                                  {transaction.category_id ? categoryLabelById.get(transaction.category_id) : "未分类"}
-                               </div>
+                                </div>
                              </div>
                            </div>
-                           <b style={{ fontSize: "16px", color: transaction.transaction_type === "expense" ? "var(--danger)" : "var(--success)" }}>
+                           <b style={{ fontSize: "15px", color: transaction.transaction_type === "expense" ? "var(--danger)" : "var(--success)" }}>
                              {transaction.transaction_type === "expense" ? "-" : "+"}{yuan(transaction.amount)}
                            </b>
                         </div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", color: "var(--muted)" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", color: "var(--muted)", marginTop: "auto" }}>
                           <span>{format(new Date(transaction.transaction_date * 1000), "HH:mm")}</span>
-                          {transaction.is_excluded && <span style={{ background: "color-mix(in srgb, var(--muted) 20%, transparent)", padding: "2px 6px", borderRadius: "4px" }}>不计收支</span>}
+                          {transaction.is_excluded && <span style={{ background: "var(--subtle)", padding: "2px 8px", borderRadius: "999px" }}>不计收支</span>}
                         </div>
                       </div>
                     ))}

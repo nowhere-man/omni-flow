@@ -1,13 +1,21 @@
-import { useSettingsStore, ThemeMode } from "../../../store/useSettingsStore";
-import { Monitor, Moon, Sun } from "lucide-react";
+import { useSettingsStore, ThemeMode, ThemeColor } from "../../../store/useSettingsStore";
+import { Monitor, Moon, Sun, Check } from "lucide-react";
 
 export default function BasicSettings() {
-  const { theme, setTheme } = useSettingsStore();
+  const { theme, setTheme, themeColor, setThemeColor } = useSettingsStore();
 
   const themeOptions: { value: ThemeMode; label: string; icon: React.ElementType }[] = [
     { value: 'light', label: '浅色模式', icon: Sun },
     { value: 'dark', label: '深色模式', icon: Moon },
     { value: 'system', label: '跟随系统', icon: Monitor },
+  ];
+
+  const colorOptions: { value: ThemeColor; label: string; colorHex: string }[] = [
+    { value: 'mint', label: '薄荷绿', colorHex: '#10b981' },
+    { value: 'blue', label: '科技蓝', colorHex: '#3b82f6' },
+    { value: 'purple', label: '星空紫', colorHex: '#a855f7' },
+    { value: 'orange', label: '活力橙', colorHex: '#f97316' },
+    { value: 'rose', label: '玫瑰红', colorHex: '#f43f5e' },
   ];
 
   return (
@@ -26,6 +34,26 @@ export default function BasicSettings() {
               >
                 <Icon size={28} />
                 <span>{option.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+      <section className="settings-section">
+        <h2>主题色</h2>
+        <div className="color-choice-grid">
+          {colorOptions.map((option) => {
+            const isActive = themeColor === option.value;
+            return (
+              <button
+                key={option.value}
+                onClick={() => setThemeColor(option.value)}
+                className={`color-choice ${isActive ? 'active' : ''}`}
+                style={{ '--choice-bg': option.colorHex } as React.CSSProperties}
+                title={option.label}
+                aria-label={`选择${option.label}`}
+              >
+                <Check size={24} />
               </button>
             );
           })}

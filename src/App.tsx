@@ -66,14 +66,15 @@ function AppChrome() {
 
 export default function App() {
   const theme = useSettingsStore((state) => state.theme);
+  const themeColor = useSettingsStore((state) => state.themeColor);
   const fluentTheme = theme === "dark"
     || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches)
     ? webDarkTheme
     : webLightTheme;
 
   useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
+    applyTheme(theme, themeColor);
+  }, [theme, themeColor]);
 
   return (
     <FluentProvider theme={fluentTheme} className="fluent-root">

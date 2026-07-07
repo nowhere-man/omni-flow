@@ -109,18 +109,20 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="money-flow-page" style={{ padding: "24px", maxWidth: "1000px", margin: "0 auto", height: "calc(100vh - 48px)", display: "flex", flexDirection: "column" }}>
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px", position: "relative" }}>
+    <div className="money-flow-page">
+      <header className="dashboard-header">
         <div style={{ width: "80px" }}></div>
-        <div style={{ display: "flex", alignItems: "center", gap: "16px", position: "relative" }}>
-          <button className="icon-button" onClick={handlePrevMonth}><ChevronLeft size={24} /></button>
+        <div className="dashboard-month-selector">
+          <button className="icon-button" onClick={handlePrevMonth} aria-label="上个月">
+            <ChevronLeft size={20} />
+          </button>
           <div style={{ position: "relative" }}>
-            <div 
-              style={{ cursor: "pointer", padding: "8px 16px", borderRadius: "8px", background: showMonthPicker ? "var(--surface)" : "color-mix(in srgb, var(--surface) 50%, transparent)", transition: "background 0.2s" }} 
+            <button 
+              className="dashboard-title-trigger"
               onClick={() => setShowMonthPicker(!showMonthPicker)}
             >
-              <h2 style={{ margin: 0, fontSize: "22px", fontWeight: 600 }}>{format(selectedMonth, "yyyy年 MM月")}</h2>
-            </div>
+              <h2>{format(selectedMonth, "yyyy年 MM月")}</h2>
+            </button>
             <AnimatePresence>
               {showMonthPicker && (
                 <YearMonthPicker 
@@ -131,43 +133,36 @@ export default function Dashboard() {
               )}
             </AnimatePresence>
           </div>
-          <button className="icon-button" onClick={handleNextMonth}><ChevronRight size={24} /></button>
+          <button className="icon-button" onClick={handleNextMonth} aria-label="下个月">
+            <ChevronRight size={20} />
+          </button>
         </div>
         <div style={{ width: "80px" }}></div>
       </header>
 
-      <div className="panel" style={{ flex: 1, padding: "24px", display: "flex", flexDirection: "column" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", marginBottom: "16px" }}>
+      <div className="calendar-panel">
+        <div className="calendar-weekdays">
           {weekDays.map(d => (
-            <div key={d} style={{ textAlign: "center", fontSize: "14px", fontWeight: 600, color: "var(--muted)" }}>周{d}</div>
+            <div key={d} className="calendar-weekday">周{d}</div>
           ))}
         </div>
         {isLoading ? (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)" }}>正在载入日历...</div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "12px", flex: 1 }}>
+          <div className="calendar-grid">
             {calendarDays.map((item, idx) => (
               <div 
                 key={idx} 
-                style={{ 
-                  background: item.isCurrentMonth ? "color-mix(in srgb, var(--surface) 30%, transparent)" : "transparent",
-                  borderRadius: "12px", 
-                  padding: "12px",
-                  display: "flex", 
-                  flexDirection: "column", 
-                  alignItems: "center",
-                  opacity: item.isCurrentMonth ? 1 : 0.4,
-                  border: item.isToday ? "1.5px solid var(--primary)" : "1.5px solid color-mix(in srgb, var(--border) 40%, transparent)"
-                }}
+                className={`calendar-day-card ${item.isCurrentMonth ? "current-month" : "other-month"} ${item.isToday ? "today" : ""}`}
               >
-                <div style={{ fontSize: "18px", fontWeight: item.isToday ? 700 : 500, color: item.isToday ? "var(--primary)" : "var(--foreground)" }}>
+                <div className="calendar-day-num">
                   {format(item.date, "d")}
                 </div>
-                <div style={{ marginTop: "auto", fontSize: "13px", fontWeight: 600, height: "20px", display: "flex", alignItems: "flex-end" }}>
+                <div className="calendar-day-net-container" style={{ marginTop: "auto" }}>
                   {item.netIncome !== undefined && item.netIncome !== 0 && (
-                    <span style={{ color: item.netIncome > 0 ? "var(--success)" : "var(--danger)" }}>
+                    <div className={`calendar-day-net ${item.netIncome > 0 ? "positive" : "negative"}`}>
                       {item.netIncome > 0 ? "+" : "-"}{yuan(Math.abs(item.netIncome))}
-                    </span>
+                    </div>
                   )}
                 </div>
               </div>
@@ -177,11 +172,11 @@ export default function Dashboard() {
       </div>
 
       <button 
-        className="primary-button hover-transform" 
+        className="quick-add-fab" 
         onClick={openQuickEntry}
-        style={{ position: "fixed", bottom: "40px", right: "40px", width: "64px", height: "64px", borderRadius: "32px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 12px 24px rgba(0,0,0,0.3)", padding: 0 }}
+        aria-label="记一笔"
       >
-        <Plus size={28} />
+        <Plus size={24} />
       </button>
 
       <AnimatePresence>
