@@ -1,0 +1,45 @@
+CREATE TABLE import_session (
+    id TEXT NOT NULL PRIMARY KEY,
+    ledger_id TEXT NOT NULL REFERENCES ledger(id),
+    source TEXT,
+    state TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE import_preview_item (
+    id TEXT NOT NULL PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES import_session(id),
+    payload TEXT NOT NULL,
+    is_skipped INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+insertImportSession:
+INSERT INTO import_session(id, ledger_id, source, state, created_at, updated_at)
+VALUES (:id, :ledger_id, :source, 'PREVIEW', :created_at, :updated_at);
+
+importSession:
+SELECT * FROM import_session WHERE id = :id AND state = 'PREVIEW';
+
+insertImportPreviewItem:
+INSERT INTO import_preview_item(id, session_id, payload, is_skipped, created_at, updated_at)
+VALUES (:id, :session_id, :payload, :is_skipped, :created_at, :updated_at);
+
+previewItemsForSession:
+SELECT * FROM import_preview_item WHERE session_id = :session_id ORDER BY created_at, id;
+
+previewItem:
+SELECT * FROM import_preview_item WHERE id = :id AND session_id = :session_id;
+
+updateImportPreviewItem:
+UPDATE import_preview_item
+SET payload = :payload, is_skipped = :is_skipped, updated_at = :updated_at
+WHERE id = :id AND session_id = :session_id;
+
+deleteImportPreviewItems:
+DELETE FROM import_preview_item WHERE session_id = :session_id;
+
+deleteImportSession:
+DELETE FROM import_session WHERE id = :id;

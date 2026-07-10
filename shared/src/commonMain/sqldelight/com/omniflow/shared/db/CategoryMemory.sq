@@ -1,0 +1,14 @@
+CREATE TABLE category_memory (
+    ledger_id TEXT NOT NULL REFERENCES ledger(id),
+    memory_key TEXT NOT NULL,
+    category_id TEXT NOT NULL REFERENCES category(id),
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (ledger_id, memory_key)
+);
+
+categoryMemory:
+SELECT category_id FROM category_memory WHERE ledger_id = :ledger_id AND memory_key = :memory_key;
+
+upsertCategoryMemory:
+INSERT OR REPLACE INTO category_memory(ledger_id, memory_key, category_id, updated_at)
+VALUES (:ledger_id, :memory_key, :category_id, :updated_at);

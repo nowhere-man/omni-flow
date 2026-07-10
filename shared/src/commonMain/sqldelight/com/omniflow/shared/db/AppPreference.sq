@@ -1,0 +1,14 @@
+CREATE TABLE app_preference (
+    key TEXT NOT NULL PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+preference:
+SELECT value FROM app_preference WHERE key = :key;
+
+upsertPreference:
+INSERT OR REPLACE INTO app_preference(key, value, updated_at) VALUES (:key, :value, :updated_at);
+
+deletePreference:
+DELETE FROM app_preference WHERE key = :key;

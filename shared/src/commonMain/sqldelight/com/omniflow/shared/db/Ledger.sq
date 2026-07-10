@@ -1,0 +1,41 @@
+CREATE TABLE ledger (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    cover_key TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER
+);
+
+activeLedgers:
+SELECT * FROM ledger WHERE deleted_at IS NULL ORDER BY name;
+
+insertLedger:
+INSERT INTO ledger(id, name, cover_key, created_at, updated_at)
+VALUES (:id, :name, :cover_key, :created_at, :updated_at);
+
+updateLedger:
+UPDATE ledger SET name = :name, cover_key = :cover_key, updated_at = :updated_at
+WHERE id = :id AND deleted_at IS NULL;
+
+activeLedgerId:
+SELECT id FROM ledger WHERE id = :id AND deleted_at IS NULL;
+
+archiveLedger:
+UPDATE ledger SET deleted_at = :deleted_at, updated_at = :deleted_at WHERE id = :id;
+
+archiveCategoriesForLedger:
+UPDATE category SET deleted_at = :deleted_at, updated_at = :deleted_at
+WHERE ledger_id = :ledger_id AND deleted_at IS NULL;
+
+archiveTagsForLedger:
+UPDATE tag SET deleted_at = :deleted_at, updated_at = :deleted_at
+WHERE ledger_id = :ledger_id AND deleted_at IS NULL;
+
+archiveRulesForLedger:
+UPDATE rule SET deleted_at = :deleted_at, updated_at = :deleted_at
+WHERE ledger_id = :ledger_id AND deleted_at IS NULL;
+
+archiveTransactionsForLedger:
+UPDATE transaction_record SET deleted_at = :deleted_at, updated_at = :deleted_at
+WHERE ledger_id = :ledger_id AND deleted_at IS NULL;

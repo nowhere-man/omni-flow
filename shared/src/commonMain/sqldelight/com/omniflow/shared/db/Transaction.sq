@@ -1,0 +1,147 @@
+CREATE TABLE transaction_record (
+    id TEXT NOT NULL PRIMARY KEY,
+    ledger_id TEXT NOT NULL REFERENCES ledger(id),
+    account_id TEXT NOT NULL REFERENCES account(id),
+    category_id TEXT NOT NULL REFERENCES category(id),
+    amount_minor INTEGER NOT NULL,
+    type TEXT NOT NULL,
+    occurred_at INTEGER NOT NULL,
+    note TEXT,
+    is_excluded INTEGER NOT NULL DEFAULT 0,
+    external_source TEXT,
+    external_id TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER
+);
+
+CREATE INDEX transaction_record_ledger_occurred_at ON transaction_record(ledger_id, occurred_at);
+CREATE UNIQUE INDEX transaction_record_external_order ON transaction_record(external_source, external_id)
+WHERE external_source IS NOT NULL AND external_id IS NOT NULL;
+
+insertTransaction:
+INSERT INTO transaction_record(
+    id, ledger_id, account_id, category_id, amount_minor, type, occurred_at, note,
+    is_excluded, external_source, external_id, created_at, updated_at
+) VALUES (
+    :id, :ledger_id, :account_id, :category_id, :amount_minor, :type, :occurred_at, :note,
+    :is_excluded, :external_source, :external_id, :created_at, :updated_at
+);
+
+activeTransaction:
+SELECT
+    id, ledger_id, account_id, category_id, amount_minor, type, occurred_at, note,
+    is_excluded, external_source, external_id, deleted_at
+FROM transaction_record
+WHERE id = :id AND deleted_at IS NULL;
+
+updateTransaction:
+UPDATE transaction_record
+SET ledger_id = :ledger_id,
+    account_id = :account_id,
+    category_id = :category_id,
+    amount_minor = :amount_minor,
+    type = :type,
+    occurred_at = :occurred_at,
+    note = :note,
+    is_excluded = :is_excluded,
+    external_source = :external_source,
+    external_id = :external_id,
+    updated_at = :updated_at
+WHERE id = :id AND deleted_at IS NULL;
+
+archiveTransaction:
+UPDATE transaction_record SET deleted_at = :deleted_at, updated_at = :deleted_at
+WHERE id = :id AND deleted_at IS NULL;
+
+activeTransactionByExternalId:
+SELECT id FROM transaction_record
+WHERE external_source = :external_source AND external_id = :external_id AND deleted_at IS NULL
+LIMIT 1;
+
+possibleDuplicates:
+SELECT note FROM transaction_record
+WHERE ledger_id = :ledger_id
+  AND amount_minor = :amount_minor
+  AND occurred_at >= :occurred_at_start
+  AND occurred_at < :occurred_at_end
+  AND deleted_at IS NULL;
+
+transactionsForLedger:
+SELECT * FROM transaction_record
+WHERE ledger_id = :ledger_id AND deleted_at IS NULL
+ORDER BY occurred_at DESC;
+
+transactionsInRange:
+SELECT
+    transaction_record.id,
+    transaction_record.ledger_id,
+    ledger.name AS ledger_name,
+    transaction_record.account_id,
+    account.name AS account_name,
+    transaction_record.category_id,
+    category.name AS category_name,
+    category.icon_key AS category_icon_key,
+    transaction_record.amount_minor,
+    transaction_record.type,
+    transaction_record.occurred_at,
+    transaction_record.note,
+    transaction_record.is_excluded
+FROM transaction_record
+JOIN ledger ON ledger.id = transaction_record.ledger_id
+JOIN account ON account.id = transaction_record.account_id
+JOIN category ON category.id = transaction_record.category_id
+WHERE transaction_record.deleted_at IS NULL
+  AND transaction_record.occurred_at >= :start_inclusive
+  AND transaction_record.occurred_at < :end_exclusive
+  AND (:ledger_filter IS NULL OR transaction_record.ledger_id = :ledger_filter)
+ORDER BY transaction_record.occurred_at DESC;
+
+transactionRowsInRange:
+SELECT
+    transaction_record.id,
+    transaction_record.ledger_id,
+    ledger.name AS ledger_name,
+    transaction_record.account_id,
+    account.name AS account_name,
+    transaction_record.category_id,
+    category.name AS category_name,
+    category.icon_key AS category_icon_key,
+    COALESCE(parent_category.id, category.id) AS primary_category_id,
+    COALESCE(parent_category.name, category.name) AS primary_category_name,
+    COALESCE(parent_category.icon_key, category.icon_key) AS primary_category_icon_key,
+    transaction_record.amount_minor,
+    transaction_record.type,
+    transaction_record.occurred_at,
+    transaction_record.note,
+    transaction_record.is_excluded
+FROM transaction_record
+JOIN ledger ON ledger.id = transaction_record.ledger_id
+JOIN account ON account.id = transaction_record.account_id
+JOIN category ON category.id = transaction_record.category_id
+LEFT JOIN category AS parent_category ON parent_category.id = category.parent_id
+WHERE transaction_record.deleted_at IS NULL
+  AND transaction_record.occurred_at >= :start_inclusive
+  AND transaction_record.occurred_at < :end_exclusive
+  AND (:ledger_filter IS NULL OR transaction_record.ledger_id = :ledger_filter)
+ORDER BY transaction_record.occurred_at DESC;
+
+transactionTagsInRange:
+SELECT transaction_tag.transaction_id, tag.id AS tag_id, tag.name AS tag_name
+FROM transaction_tag
+JOIN transaction_record ON transaction_record.id = transaction_tag.transaction_id
+JOIN tag ON tag.id = transaction_tag.tag_id
+WHERE transaction_record.deleted_at IS NULL
+  AND transaction_record.occurred_at >= :start_inclusive
+  AND transaction_record.occurred_at < :end_exclusive
+  AND (:ledger_filter IS NULL OR transaction_record.ledger_id = :ledger_filter);
+
+summaryInRange:
+SELECT
+    COALESCE(SUM(CASE WHEN type = 'EXPENSE' AND is_excluded = 0 THEN amount_minor ELSE 0 END), 0) AS expense_minor,
+    COALESCE(SUM(CASE WHEN type = 'INCOME' AND is_excluded = 0 THEN amount_minor ELSE 0 END), 0) AS income_minor
+FROM transaction_record
+WHERE deleted_at IS NULL
+  AND occurred_at >= :start_inclusive
+  AND occurred_at < :end_exclusive
+  AND (:ledger_filter IS NULL OR ledger_id = :ledger_filter);

@@ -1,0 +1,44 @@
+CREATE TABLE category (
+    id TEXT NOT NULL PRIMARY KEY,
+    ledger_id TEXT NOT NULL REFERENCES ledger(id),
+    parent_id TEXT REFERENCES category(id),
+    name TEXT NOT NULL,
+    icon_key TEXT,
+    type TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER
+);
+
+activeCategoriesForLedger:
+SELECT * FROM category WHERE ledger_id = :ledger_id AND deleted_at IS NULL ORDER BY parent_id, name;
+
+insertCategory:
+INSERT INTO category(id, ledger_id, parent_id, name, icon_key, type, created_at, updated_at)
+VALUES (:id, :ledger_id, :parent_id, :name, :icon_key, :type, :created_at, :updated_at);
+
+activeCategoryTypeForLedger:
+SELECT type FROM category
+WHERE id = :id AND ledger_id = :ledger_id AND deleted_at IS NULL;
+
+activePrimaryCategoryTypeForLedger:
+SELECT type FROM category
+WHERE id = :id AND ledger_id = :ledger_id AND parent_id IS NULL AND deleted_at IS NULL;
+
+activeCategoryId:
+SELECT id FROM category WHERE id = :id AND deleted_at IS NULL;
+
+activeCategory:
+SELECT * FROM category WHERE id = :id AND deleted_at IS NULL;
+
+activeChildCategoryId:
+SELECT id FROM category WHERE parent_id = :parent_id AND deleted_at IS NULL LIMIT 1;
+
+updateCategory:
+UPDATE category
+SET name = :name, icon_key = :icon_key, updated_at = :updated_at
+WHERE id = :id AND ledger_id = :ledger_id AND type = :type AND deleted_at IS NULL;
+
+archiveCategory:
+UPDATE category SET deleted_at = :deleted_at, updated_at = :deleted_at
+WHERE id = :id AND deleted_at IS NULL;

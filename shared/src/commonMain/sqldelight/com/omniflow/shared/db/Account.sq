@@ -1,0 +1,73 @@
+CREATE TABLE account (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    icon_key TEXT NOT NULL,
+    card_number TEXT,
+    note TEXT,
+    balance_minor INTEGER NOT NULL DEFAULT 0,
+    include_in_total_assets INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER
+);
+
+CREATE TABLE account_balance_record (
+    id TEXT NOT NULL PRIMARY KEY,
+    account_id TEXT NOT NULL REFERENCES account(id),
+    date INTEGER NOT NULL,
+    balance_minor INTEGER NOT NULL,
+    delta_minor INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
+);
+
+activeAccounts:
+SELECT * FROM account WHERE deleted_at IS NULL ORDER BY name;
+
+insertAccount:
+INSERT INTO account(
+    id, name, type, icon_key, card_number, note, balance_minor, include_in_total_assets, created_at, updated_at
+) VALUES (
+    :id, :name, :type, :icon_key, :card_number, :note, :balance_minor, :include_in_total_assets, :created_at, :updated_at
+);
+
+activeAccountId:
+SELECT id FROM account WHERE id = :id AND deleted_at IS NULL;
+
+activeAccountBalance:
+SELECT balance_minor FROM account WHERE id = :id AND deleted_at IS NULL;
+
+accountBalance:
+SELECT balance_minor FROM account WHERE id = :id;
+
+archiveAccount:
+UPDATE account SET deleted_at = :deleted_at, updated_at = :deleted_at WHERE id = :id;
+
+updateBalance:
+UPDATE account SET balance_minor = balance_minor + :delta_minor, updated_at = :updated_at WHERE id = :id;
+
+updateAccount:
+UPDATE account
+SET name = :name,
+    type = :type,
+    icon_key = :icon_key,
+    card_number = :card_number,
+    note = :note,
+    include_in_total_assets = :include_in_total_assets,
+    updated_at = :updated_at
+WHERE id = :id AND deleted_at IS NULL;
+
+setAccountBalance:
+UPDATE account SET balance_minor = :balance_minor, updated_at = :updated_at
+WHERE id = :id AND deleted_at IS NULL;
+
+insertAccountBalanceRecord:
+INSERT INTO account_balance_record(id, account_id, date, balance_minor, delta_minor, created_at)
+VALUES (:id, :account_id, :date, :balance_minor, :delta_minor, :created_at);
+
+accountSummary:
+SELECT
+    COALESCE(SUM(CASE WHEN balance_minor > 0 THEN balance_minor ELSE 0 END), 0) AS assets_minor,
+    COALESCE(SUM(CASE WHEN balance_minor < 0 THEN -balance_minor ELSE 0 END), 0) AS liabilities_minor
+FROM account
+WHERE deleted_at IS NULL AND include_in_total_assets = 1;

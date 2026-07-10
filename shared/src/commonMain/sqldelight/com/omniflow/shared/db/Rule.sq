@@ -1,0 +1,46 @@
+CREATE TABLE rule (
+    id TEXT NOT NULL PRIMARY KEY,
+    ledger_id TEXT NOT NULL REFERENCES ledger(id),
+    name TEXT NOT NULL,
+    condition_type TEXT NOT NULL,
+    condition_value TEXT NOT NULL,
+    action_type TEXT NOT NULL,
+    action_value TEXT NOT NULL,
+    priority INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER
+);
+
+activeRulesForLedger:
+SELECT * FROM rule WHERE ledger_id = :ledger_id AND deleted_at IS NULL ORDER BY priority ASC;
+
+activeRuleIdForLedger:
+SELECT id FROM rule WHERE id = :id AND ledger_id = :ledger_id AND deleted_at IS NULL;
+
+activeRule:
+SELECT * FROM rule WHERE id = :id AND deleted_at IS NULL;
+
+insertRule:
+INSERT INTO rule(
+    id, ledger_id, name, condition_type, condition_value, action_type, action_value,
+    priority, created_at, updated_at
+) VALUES (
+    :id, :ledger_id, :name, :condition_type, :condition_value, :action_type, :action_value,
+    :priority, :created_at, :updated_at
+);
+
+updateRule:
+UPDATE rule
+SET name = :name,
+    condition_type = :condition_type,
+    condition_value = :condition_value,
+    action_type = :action_type,
+    action_value = :action_value,
+    priority = :priority,
+    updated_at = :updated_at
+WHERE id = :id AND ledger_id = :ledger_id AND deleted_at IS NULL;
+
+archiveRule:
+UPDATE rule SET deleted_at = :deleted_at, updated_at = :deleted_at
+WHERE id = :id AND deleted_at IS NULL;

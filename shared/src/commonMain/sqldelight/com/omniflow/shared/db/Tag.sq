@@ -1,0 +1,49 @@
+CREATE TABLE tag (
+    id TEXT NOT NULL PRIMARY KEY,
+    ledger_id TEXT NOT NULL REFERENCES ledger(id),
+    name TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER
+);
+
+CREATE UNIQUE INDEX tag_ledger_name ON tag(ledger_id, name) WHERE deleted_at IS NULL;
+
+CREATE TABLE transaction_tag (
+    transaction_id TEXT NOT NULL REFERENCES transaction_record(id),
+    tag_id TEXT NOT NULL REFERENCES tag(id),
+    PRIMARY KEY (transaction_id, tag_id)
+);
+
+activeTagsForLedger:
+SELECT * FROM tag WHERE ledger_id = :ledger_id AND deleted_at IS NULL ORDER BY name;
+
+activeTagIdForLedger:
+SELECT id FROM tag WHERE id = :id AND ledger_id = :ledger_id AND deleted_at IS NULL;
+
+activeTagIdByName:
+SELECT id FROM tag WHERE ledger_id = :ledger_id AND name = :name AND deleted_at IS NULL;
+
+activeTag:
+SELECT * FROM tag WHERE id = :id AND deleted_at IS NULL;
+
+insertTag:
+INSERT INTO tag(id, ledger_id, name, created_at, updated_at)
+VALUES (:id, :ledger_id, :name, :created_at, :updated_at);
+
+updateTag:
+UPDATE tag SET name = :name, updated_at = :updated_at
+WHERE id = :id AND ledger_id = :ledger_id AND deleted_at IS NULL;
+
+archiveTag:
+UPDATE tag SET deleted_at = :deleted_at, updated_at = :deleted_at
+WHERE id = :id AND deleted_at IS NULL;
+
+tagsForTransaction:
+SELECT tag_id FROM transaction_tag WHERE transaction_id = :transaction_id;
+
+deleteTransactionTags:
+DELETE FROM transaction_tag WHERE transaction_id = :transaction_id;
+
+insertTransactionTag:
+INSERT INTO transaction_tag(transaction_id, tag_id) VALUES (:transaction_id, :tag_id);
