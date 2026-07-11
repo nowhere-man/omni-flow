@@ -115,6 +115,7 @@ private struct ModuleView: View {
     @ViewBuilder
     var body: some View {
         switch title {
+        case "数据管理": DataManagementView()
         case "设置": SettingsView().navigationTitle(title)
         case "导入": ImportView()
         case "导出": ExportView()
