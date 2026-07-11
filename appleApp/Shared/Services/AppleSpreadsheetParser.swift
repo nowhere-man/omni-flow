@@ -236,26 +236,33 @@ private struct OLEReader {
 
     init(data: Data) throws {
         guard data.prefix(8) == Data([0xD0,0xCF,0x11,0xE0,0xA1,0xB1,0x1A,0xE1]) else { throw SpreadsheetError.invalidArchive }
-        self.data = data
-        sectorSize = 1 << data.u16(30)
-        miniSectorSize = 1 << data.u16(32)
-        miniCutoff = data.u32(56)
+        let sectorSize = 1 << data.u16(30)
+        let miniSectorSize = 1 << data.u16(32)
+        let miniCutoff = data.u32(56)
         let fatCount = data.u32(44)
         var fatSectors = (0..<109).map { UInt32(data.u32(76 + $0 * 4)) }.filter { $0 < 0xFFFFFFFA }
         fatSectors = Array(fatSectors.prefix(fatCount))
-        fat = fatSectors.flatMap { sector in
+        let fat = fatSectors.flatMap { sector in
             let bytes = data.sector(sector, size: sectorSize)
             return stride(from: 0, to: bytes.count, by: 4).map { UInt32(bytes.u32($0)) }
         }
         let directoryData = Self.chain(data: data, start: UInt32(data.u32(48)), table: fat, sectorSize: sectorSize)
-        directories = stride(from: 0, to: directoryData.count, by: 128).compactMap { DirectoryEntry(data: directoryData, offset: $0) }
+        let directories = stride(from: 0, to: directoryData.count, by: 128).compactMap { DirectoryEntry(data: directoryData, offset: $0) }
         let root = directories.first { $0.type == 5 }
-        miniStream = root.map {
+        let miniStream = root.map {
             let stream = Self.chain(data: data, start: $0.start, table: fat, sectorSize: sectorSize)
             return stream.subdata(in: 0..<Swift.min($0.size, stream.count))
         } ?? Data()
         let miniFatData = Self.chain(data: data, start: UInt32(data.u32(60)), table: fat, sectorSize: sectorSize)
-        miniFat = stride(from: 0, to: miniFatData.count, by: 4).map { UInt32(miniFatData.u32($0)) }
+        let miniFat = stride(from: 0, to: miniFatData.count, by: 4).map { UInt32(miniFatData.u32($0)) }
+        self.data = data
+        self.sectorSize = sectorSize
+        self.miniSectorSize = miniSectorSize
+        self.miniCutoff = miniCutoff
+        self.fat = fat
+        self.miniFat = miniFat
+        self.directories = directories
+        self.miniStream = miniStream
     }
 
     func stream(named names: [String]) throws -> Data {
