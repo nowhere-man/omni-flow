@@ -1,41 +1,33 @@
-# OmniFlow
+<div align="center">
+  <img src="docs/icon.png" alt="OmniFlow App 图标" width="112" />
+  <h1>OmniFlow</h1>
+  <p>一款原生多端记账 App，让账单自动流入账本 📥</p>
+  <p>Android · iOS · macOS</p>
+</div>
 
-OmniFlow 是一款面向 Android、iOS 和 macOS 的本地优先记账应用，通过导入账单代替繁琐的逐笔记账。
+## ✨ 核心特性
 
-## 核心优势
+### 📥 告别逐笔记账
 
-### 导入账单，不必逐笔记账
+支持导入支付宝、微信、京东、美团和建设银行账单，自动完成解析、分类与重复检测。
 
-支持直接导入主流支付平台、银行和记账应用的账单，自动完成解析、分类和重复检测。用户只需检查导入预览并确认入账。
+### ☁️ 多端数据同步
 
-| 来源 | 文件格式 |
-| --- | --- |
-| 支付宝 | CSV |
-| 微信 | XLSX |
-| 京东 | CSV |
-| 美团 | CSV |
-| 建设银行 | XLS |
+数据本地优先，可通过 iCloud 或 WebDAV 备份与恢复，在多个设备间保持数据一致。
 
-### 本地优先，多端同步
+### 📱 原生应用体验
 
-数据默认保存在本地，无网络时仍可正常使用。iOS 和 macOS 支持 iCloud、WebDAV，Android 支持 WebDAV，三端可通过 WebDAV 备份和恢复数据。
+Android 使用 Kotlin 与 Jetpack Compose，iOS 和 macOS 使用 SwiftUI，交互与界面遵循各平台习惯。
 
-### 三端原生应用
+## 🧩 核心功能
 
-Android 使用 Kotlin 与 Jetpack Compose，iOS 和 macOS 使用 SwiftUI。业务逻辑通过 Kotlin Multiplatform 共享，界面和交互保持平台原生。
+- 🧾 账单导入、预览、分类与批量处理
+- 📒 多账本、账户、分类、标签与资产管理
+- 📊 收支趋势、分类统计、排行与年度账单
+- 🔎 日历明细与多条件交易搜索
+- 🔔 还款和订阅提醒
+- 🔐 数据备份、应用锁与敏感凭据保护
 
-## 功能
+## 🤝 贡献
 
-- 多账本、账户、分类、标签和资产管理；
-- 收入、支出和不计入收支交易；
-- 月度日历、交易明细和组合搜索；
-- 趋势、同比、环比、分类占比、排行和年度账单；
-- 导入规则、分类记忆和重复检测；
-- 导入预览、逐条编辑和批量处理；
-- 还款与订阅提醒；
-- iCloud/WebDAV 备份与恢复；
-- 应用锁、外观设置和敏感凭据安全存储。
-
-## 贡献
-
-欢迎通过 GitHub Issues 提交问题和建议，或通过 Pull Request 参与开发。提交改动前，请确认相关平台能够编译，并将账单解析、规则、去重、统计和同步等业务逻辑保留在共享层。
+欢迎通过 [GitHub Issues](https://github.com/nowhere-man/OmniFlow/issues) 提交问题和建议，或通过 Pull Request 参与开发。
