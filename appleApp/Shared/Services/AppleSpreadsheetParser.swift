@@ -5,12 +5,18 @@ import zlib
 import OmniFlowShared
 
 final class PlatformSpreadsheetParser: NSObject, AppleSpreadsheetParser {
-    func parse(format: ImportFormat, bytes: KotlinByteArray) throws -> [RawTransaction] {
-        let data = bytes.data
-        switch format.name {
-        case "WECHAT": return try parseWechat(data)
-        case "CCB": return try parseCCB(data)
-        default: throw SpreadsheetError.unsupported
+    func parse(format: ImportFormat, bytes: KotlinByteArray) -> AppleSpreadsheetParseResult {
+        do {
+            let data = bytes.data
+            let rows: [RawTransaction]
+            switch format.name {
+            case "WECHAT": rows = try parseWechat(data)
+            case "CCB": rows = try parseCCB(data)
+            default: throw SpreadsheetError.unsupported
+            }
+            return AppleSpreadsheetParseResult(rows: rows, error: nil)
+        } catch {
+            return AppleSpreadsheetParseResult(rows: [], error: error.localizedDescription)
         }
     }
 
@@ -235,17 +241,20 @@ private struct OLEReader {
         miniSectorSize = 1 << data.u16(32)
         miniCutoff = data.u32(56)
         let fatCount = data.u32(44)
-        var fatSectors = (0..<109).map { data.u32(76 + $0 * 4) }.filter { $0 < 0xFFFFFFFA }
+        var fatSectors = (0..<109).map { UInt32(data.u32(76 + $0 * 4)) }.filter { $0 < 0xFFFFFFFA }
         fatSectors = Array(fatSectors.prefix(fatCount))
         fat = fatSectors.flatMap { sector in
             let bytes = data.sector(sector, size: sectorSize)
             return stride(from: 0, to: bytes.count, by: 4).map { bytes.u32($0) }
         }
-        let directoryData = Self.chain(data: data, start: data.u32(48), table: fat, sectorSize: sectorSize)
+        let directoryData = Self.chain(data: data, start: UInt32(data.u32(48)), table: fat, sectorSize: sectorSize)
         directories = stride(from: 0, to: directoryData.count, by: 128).compactMap { DirectoryEntry(data: directoryData, offset: $0) }
         let root = directories.first { $0.type == 5 }
-        miniStream = root.map { Self.chain(data: data, start: $0.start, table: fat, sectorSize: sectorSize).prefix($0.size) }.map(Data.init) ?? Data()
-        let miniFatData = Self.chain(data: data, start: data.u32(60), table: fat, sectorSize: sectorSize)
+        miniStream = root.map {
+            let stream = Self.chain(data: data, start: $0.start, table: fat, sectorSize: sectorSize)
+            return stream.subdata(in: 0..<Swift.min($0.size, stream.count))
+        } ?? Data()
+        let miniFatData = Self.chain(data: data, start: UInt32(data.u32(60)), table: fat, sectorSize: sectorSize)
         miniFat = stride(from: 0, to: miniFatData.count, by: 4).map { miniFatData.u32($0) }
     }
 
@@ -390,7 +399,7 @@ private extension Data {
     }
     func sector(_ id: UInt32, size: Int) -> Data {
         let start = (Int(id) + 1) * size
-        return subdata(in: start..<min(start + size, count))
+        return subdata(in: start..<Swift.min(start + size, count))
     }
     func inflateRaw(expectedSize: Int) throws -> Data {
         var stream = z_stream()

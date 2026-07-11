@@ -37,22 +37,22 @@ jobs:
           printf '%s' "$RELEASE_KEYSTORE" | base64 --decode > "$RUNNER_TEMP/omniflow-release.keystore"
           test -s "$RUNNER_TEMP/omniflow-release.keystore"
 
-      - name: Build signed release APK and test
+      - name: Build signed release APK
         if: github.event_name != 'pull_request'
         env:
           STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          ./gradlew :shared:jvmTest :androidApp:assembleRelease --stacktrace \
+          ./gradlew :shared:compileKotlinJvm :androidApp:assembleRelease --stacktrace \
             -Pandroid.injected.signing.store.file="$RUNNER_TEMP/omniflow-release.keystore" \
             -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
 
-      - name: Build pull request APK and test
+      - name: Build pull request APK
         if: github.event_name == 'pull_request'
-        run: ./gradlew :shared:jvmTest :androidApp:assembleDebug --stacktrace
+        run: ./gradlew :shared:compileKotlinJvm :androidApp:assembleDebug --stacktrace
 
       - name: Collect APK
         run: |

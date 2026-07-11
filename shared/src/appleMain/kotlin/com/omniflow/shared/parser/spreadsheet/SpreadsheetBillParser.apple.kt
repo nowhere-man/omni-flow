@@ -7,8 +7,13 @@ import com.omniflow.shared.domain.model.TransactionType
 import kotlinx.datetime.Instant
 
 interface AppleSpreadsheetParser {
-    fun parse(format: ImportFormat, bytes: ByteArray): List<RawTransaction>
+    fun parse(format: ImportFormat, bytes: ByteArray): AppleSpreadsheetParseResult
 }
+
+data class AppleSpreadsheetParseResult(
+    val rows: List<RawTransaction>,
+    val error: String? = null,
+)
 
 object AppleSpreadsheetParserBridge {
     private var parser: AppleSpreadsheetParser? = null
@@ -22,7 +27,10 @@ object AppleSpreadsheetParserBridge {
     }
 
     internal fun parse(format: ImportFormat, bytes: ByteArray): List<RawTransaction> =
-        parser?.parse(format, bytes) ?: error("Apple 表格解析器尚未安装")
+        parser?.parse(format, bytes)?.let { result ->
+            result.error?.let(::error)
+            result.rows
+        } ?: error("Apple 表格解析器尚未安装")
 }
 
 object AppleRawTransactionFactory {

@@ -137,20 +137,20 @@ final class AppStore: ObservableObject {
         ) { [weak self] value, message in
             Task { @MainActor in
                 self?.error = message
-                self?.analyticsExpenseMinor = value?.summary.expenseTotal.minor ?? 0
-                self?.analyticsIncomeMinor = value?.summary.incomeTotal.minor ?? 0
-                self?.analyticsPreviousExpenseChange = value?.previousPeriod.expenseChange.minor ?? 0
-                self?.analyticsPreviousIncomeChange = value?.previousPeriod.incomeChange.minor ?? 0
-                self?.analyticsPreviousNetChange = value?.previousPeriod.netIncomeChange.minor ?? 0
-                self?.analyticsYearExpenseChange = value?.yearOverYear.expenseChange.minor ?? 0
-                self?.analyticsYearIncomeChange = value?.yearOverYear.incomeChange.minor ?? 0
-                self?.analyticsYearNetChange = value?.yearOverYear.netIncomeChange.minor ?? 0
-                self?.analyticsPoints = value?.trend.points.map { AnalyticsPointUI(label: $0.label, expense: $0.expense.minor, income: $0.income.minor) } ?? []
+                self?.analyticsExpenseMinor = value?.summary.expenseTotal ?? 0
+                self?.analyticsIncomeMinor = value?.summary.incomeTotal ?? 0
+                self?.analyticsPreviousExpenseChange = value?.previousPeriod.expenseChange ?? 0
+                self?.analyticsPreviousIncomeChange = value?.previousPeriod.incomeChange ?? 0
+                self?.analyticsPreviousNetChange = value?.previousPeriod.netIncomeChange ?? 0
+                self?.analyticsYearExpenseChange = value?.yearOverYear.expenseChange ?? 0
+                self?.analyticsYearIncomeChange = value?.yearOverYear.incomeChange ?? 0
+                self?.analyticsYearNetChange = value?.yearOverYear.netIncomeChange ?? 0
+                self?.analyticsPoints = value?.trend.points.map { AnalyticsPointUI(label: $0.label, expense: $0.expense, income: $0.income) } ?? []
                 self?.analyticsRanking = value?.ranking.map { Self.transaction($0.transaction) } ?? []
-                self?.analyticsCategories = value?.categoryShares.map { CategoryShareUI(id: $0.categoryId, name: $0.categoryName, amount: $0.amount.minor) } ?? []
-                self?.analyticsTags = value?.tagSummary.map { TagSummaryUI(id: $0.tag.id, name: $0.tag.name, expense: $0.expense.minor, income: $0.income.minor) } ?? []
-                self?.analyticsAccountAssets = value?.accountAssets.map { AccountAssetUI(id: $0.accountId, name: $0.accountName, balance: $0.balance.minor) } ?? []
-                self?.analyticsAccountSummary = (value?.accountSummary.assets.minor ?? 0, value?.accountSummary.liabilities.minor ?? 0)
+                self?.analyticsCategories = value?.categoryShares.map { CategoryShareUI(id: $0.categoryId, name: $0.categoryName, amount: $0.amount) } ?? []
+                self?.analyticsTags = value?.tagSummary.map { TagSummaryUI(id: $0.tag.id, name: $0.tag.name, expense: $0.expense, income: $0.income) } ?? []
+                self?.analyticsAccountAssets = value?.accountAssets.map { AccountAssetUI(id: $0.accountId, name: $0.accountName, balance: $0.balance) } ?? []
+                self?.analyticsAccountSummary = (value?.accountSummary.assets ?? 0, value?.accountSummary.liabilities ?? 0)
             }
         }
         #endif
@@ -215,13 +215,15 @@ final class AppStore: ObservableObject {
         bridge.loadStatementTable(ledgerId: analyticsLedgerID, year: Int32(year)) { [weak self] value, message in
             Task { @MainActor in
                 self?.error = message
-                self?.analyticsStatement = value.map {
-                    StatementTableUI(
-                        year: Int($0.year),
-                        months: $0.months.map { StatementMonthUI(month: Int($0.month), expenseMinor: $0.expense.minor, incomeMinor: $0.income.minor) },
-                        expenseMinor: $0.total.expenseTotal.minor,
-                        incomeMinor: $0.total.incomeTotal.minor
+                if let table = value {
+                    self?.analyticsStatement = StatementTableUI(
+                        year: Int(table.year),
+                        months: table.months.map { StatementMonthUI(month: Int($0.month), expenseMinor: $0.expense, incomeMinor: $0.income) },
+                        expenseMinor: table.total.expenseTotal,
+                        incomeMinor: table.total.incomeTotal
                     )
+                } else {
+                    self?.analyticsStatement = nil
                 }
             }
         }
@@ -257,17 +259,17 @@ final class AppStore: ObservableObject {
             primaryCategoryId: searchPrimaryCategoryID,
             secondaryCategoryId: searchSecondaryCategoryID,
             tagId: searchTagID,
-            exactMinor: Self.minor(searchExact),
-            minimumMinor: searchExact.isEmpty ? Self.minor(searchMinimum) : nil,
-            maximumMinor: searchExact.isEmpty ? Self.minor(searchMaximum) : nil,
-            startMillis: searchDateEnabled ? Int64(Calendar.current.startOfDay(for: min(searchStartDate, searchEndDate)).timeIntervalSince1970 * 1000) : nil,
-            endMillis: searchDateEnabled ? Int64((Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: max(searchStartDate, searchEndDate))) ?? searchEndDate).timeIntervalSince1970 * 1000) : nil
+            exactMinor: Self.boxedLong(Self.minor(searchExact)),
+            minimumMinor: Self.boxedLong(searchExact.isEmpty ? Self.minor(searchMinimum) : nil),
+            maximumMinor: Self.boxedLong(searchExact.isEmpty ? Self.minor(searchMaximum) : nil),
+            startMillis: Self.boxedLong(searchDateEnabled ? Int64(Calendar.current.startOfDay(for: min(searchStartDate, searchEndDate)).timeIntervalSince1970 * 1000) : nil),
+            endMillis: Self.boxedLong(searchDateEnabled ? Int64((Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: max(searchStartDate, searchEndDate))) ?? searchEndDate).timeIntervalSince1970 * 1000) : nil)
         ) { [weak self] result, message in
             Task { @MainActor in
                 self?.error = message
                 self?.searchResults = result?.items.map { Self.transaction($0.transaction) } ?? []
-                self?.searchExpenseMinor = result?.summary.expenseTotal.minor ?? 0
-                self?.searchIncomeMinor = result?.summary.incomeTotal.minor ?? 0
+                self?.searchExpenseMinor = result?.summary.expenseTotal ?? 0
+                self?.searchIncomeMinor = result?.summary.incomeTotal ?? 0
             }
         }
         #else
@@ -324,7 +326,7 @@ final class AppStore: ObservableObject {
             ledgerId: ledgerID,
             accountId: accountID,
             categoryId: categoryID,
-            amountMinor: amountMinor,
+            amountMinor: Self.boxedLong(amountMinor),
             typeName: type.rawValue,
             occurredAtMillis: Int64(date.timeIntervalSince1970 * 1000),
             note: note.isEmpty ? nil : note,
@@ -624,8 +626,8 @@ final class AppStore: ObservableObject {
         let rangeEnd = orderedStart.flatMap { first in orderedEnd.map { max(first, $0) } }
             .flatMap { Calendar.current.date(byAdding: .day, value: 1, to: $0) }
         bridge.exportQingziRange(
-            startMillis: rangeStart.map { Int64($0.timeIntervalSince1970 * 1000) },
-            endMillis: rangeEnd.map { Int64($0.timeIntervalSince1970 * 1000) }
+            startMillis: Self.boxedLong(rangeStart.map { Int64($0.timeIntervalSince1970 * 1000) }),
+            endMillis: Self.boxedLong(rangeEnd.map { Int64($0.timeIntervalSince1970 * 1000) })
         ) { [weak self] payload, _, message in
             Task { @MainActor in self?.error = message; completion(payload) }
         }
@@ -734,7 +736,7 @@ final class AppStore: ObservableObject {
             ImportItemUI(
                 id: $0.id,
                 note: $0.note ?? "",
-                amountMinor: $0.raw.amount.minor,
+                amountMinor: $0.raw.amount,
                 date: Date(timeIntervalSince1970: TimeInterval($0.raw.occurredAt.epochSeconds)),
                 source: String(describing: $0.raw.format).components(separatedBy: ".").last ?? "",
                 type: $0.type.map { String(describing: $0).contains("INCOME") ? .income : .expense },
@@ -771,7 +773,7 @@ final class AppStore: ObservableObject {
                     AccountUI(
                         id: $0.id,
                         name: $0.name,
-                        balanceMinor: $0.balance.minor,
+                        balanceMinor: $0.balance,
                         type: String(describing: $0.type),
                         iconKey: $0.iconKey,
                         cardNumber: $0.cardNumber,
@@ -789,7 +791,7 @@ final class AppStore: ObservableObject {
                         id: $0.id,
                         name: $0.name,
                         type: String(describing: $0.type).components(separatedBy: ".").last?.uppercased() ?? "REPAYMENT",
-                        amountMinor: $0.amount?.minor,
+                        amountMinor: ($0.amount as? KotlinLong)?.int64Value,
                         scheduleKind: String(describing: $0.schedule.kind).components(separatedBy: ".").last?.uppercased() ?? "MONTHLY",
                         paused: $0.paused,
                         dayOfMonth: $0.schedule.dayOfMonth.map(Int.init),
@@ -829,15 +831,15 @@ final class AppStore: ObservableObject {
             Task { @MainActor in
                 self?.loading = false
                 self?.error = message
-                self?.expenseMinor = value?.summary.expenseTotal.minor ?? 0
-                self?.incomeMinor = value?.summary.incomeTotal.minor ?? 0
+                self?.expenseMinor = value?.summary.expenseTotal ?? 0
+                self?.incomeMinor = value?.summary.incomeTotal ?? 0
                 self?.transactions = value?.groups.flatMap { $0.items }.map(Self.transaction) ?? []
                 self?.calendarDays = value?.calendar.map {
                     CalendarDayUI(
                         id: "\($0.date.year)-\($0.date.monthNumber)-\($0.date.dayOfMonth)",
                         date: Self.date(year: Int($0.date.year), month: Int($0.date.monthNumber), day: Int($0.date.dayOfMonth)),
-                        expenseMinor: $0.expenseTotal.minor,
-                        incomeMinor: $0.incomeTotal.minor
+                        expenseMinor: $0.expenseTotal,
+                        incomeMinor: $0.incomeTotal
                     )
                 } ?? []
             }
@@ -896,8 +898,8 @@ final class AppStore: ObservableObject {
         ) { [weak self] value, message in
             Task { @MainActor in
                 self?.error = message
-                self?.dateDetailExpenseMinor = value?.summary.expenseTotal.minor ?? 0
-                self?.dateDetailIncomeMinor = value?.summary.incomeTotal.minor ?? 0
+                self?.dateDetailExpenseMinor = value?.summary.expenseTotal ?? 0
+                self?.dateDetailIncomeMinor = value?.summary.incomeTotal ?? 0
                 self?.dateDetailTransactions = value?.items.map(Self.transaction) ?? []
             }
         }
@@ -913,12 +915,16 @@ final class AppStore: ObservableObject {
             categoryID: value.categoryId,
             categoryName: value.categoryName,
             categoryIconKey: value.categoryIconKey,
-            amountMinor: value.amount.minor,
+            amountMinor: value.amount,
             type: String(describing: value.type).contains("INCOME") ? .income : .expense,
             date: Date(timeIntervalSince1970: TimeInterval(value.occurredAt.epochSeconds)),
             note: value.note ?? "",
             excluded: value.isExcluded
         )
+    }
+
+    private static func boxedLong(_ value: Int64?) -> KotlinLong? {
+        value.map { KotlinLong(value: $0) }
     }
     #else
     private func observeHome() {}
