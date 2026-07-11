@@ -10,13 +10,13 @@ struct HomeView: View {
                     ledgerPicker
                     Spacer()
                     Button { store.destination = .search } label: { Image(systemName: "magnifyingglass") }
-                    Button { store.startNewTransaction(ledgerID: store.selectedLedgerID) } label: { Image(systemName: "plus") }
                 }
                 monthHeader
-                HStack(spacing: 12) {
-                    SummaryCard(title: "支出", value: store.expenseMinor.rmb)
-                    SummaryCard(title: "收入", value: store.incomeMinor.rmb)
-                    SummaryCard(title: "结余", value: (store.incomeMinor - store.expenseMinor).rmb)
+                MonthlyBalanceCard(expense: store.expenseMinor, income: store.incomeMinor)
+                HStack {
+                    Text("本月日历").font(.headline)
+                    Spacer()
+                    CalendarFilterPicker()
                 }
                 HomeCalendarView()
                 HStack {
@@ -27,9 +27,13 @@ struct HomeView: View {
                 if store.loading {
                     ProgressView().frame(maxWidth: .infinity)
                 } else if store.ledgers.isEmpty {
-                    EmptyStateView(title: "还没有账本", systemImage: "books.vertical", detail: "请在更多中创建账本")
+                    EmptyStateView(title: "还没有账本", systemImage: "books.vertical", detail: "创建账本后即可开始记录交易", actionTitle: "前往更多") {
+                        store.destination = .more
+                    }
                 } else if store.transactions.isEmpty {
-                    EmptyStateView(title: "本月暂无交易", systemImage: "calendar", detail: "点击记账开始记录")
+                    EmptyStateView(title: "本月暂无交易", systemImage: "calendar", detail: "从第一笔交易开始记录资金流向", actionTitle: "新增交易") {
+                        store.startNewTransaction(ledgerID: store.selectedLedgerID)
+                    }
                 } else {
                     TransactionGroupsView(items: store.transactions, displayMode: store.transactionDisplayMode) { store.editTransaction($0) }
                 }
@@ -80,12 +84,6 @@ private struct HomeCalendarView: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Picker("日历筛选", selection: Binding(get: { store.calendarFilter }, set: store.setCalendarFilter)) {
-                Text("全部").tag("ALL")
-                Text("收入").tag("INCOME")
-                Text("支出").tag("EXPENSE")
-            }
-            .pickerStyle(.segmented)
             LazyVGrid(columns: columns, spacing: 8) {
                 ForEach(Calendar.current.veryShortStandaloneWeekdaySymbols, id: \.self) { Text($0).font(.caption).foregroundStyle(.secondary) }
                 ForEach(0..<leadingBlankCount, id: \.self) { _ in Color.clear.frame(height: 56) }
@@ -96,20 +94,19 @@ private struct HomeCalendarView: View {
                         VStack(spacing: 2) {
                             Text("\(day)").fontWeight(.medium)
                             if let summary {
-                                if summary.incomeMinor > 0 { Text("+\(compact(summary.incomeMinor))").foregroundStyle(.green) }
-                                if summary.expenseMinor > 0 { Text("-\(compact(summary.expenseMinor))").foregroundStyle(.red) }
+                                if summary.incomeMinor > 0 { Text("+\(compact(summary.incomeMinor))").foregroundStyle(.secondary) }
+                                if summary.expenseMinor > 0 { Text("-\(compact(summary.expenseMinor))").foregroundStyle(.secondary) }
                             }
                         }
                         .font(.caption2)
                         .frame(maxWidth: .infinity, minHeight: 52)
-                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 10))
+                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
                     }
                     .buttonStyle(.plain)
                 }
             }
         }
-        .padding()
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
+        .padding(.vertical, 4)
     }
 
     private var interval: DateInterval { Calendar.current.dateInterval(of: .month, for: store.selectedMonth) ?? DateInterval(start: store.selectedMonth, duration: 30 * 86_400) }
@@ -144,7 +141,12 @@ private struct DateTransactionDetailView: View {
                         Button(store.transactionDisplayMode.label, action: store.toggleTransactionDisplayMode)
                     }
                     if store.dateDetailTransactions.isEmpty {
-                        EmptyStateView(title: "当天暂无交易", systemImage: "calendar.badge.plus", detail: "可以直接新增一笔交易")
+                        EmptyStateView(title: "当天暂无交易", systemImage: "calendar.badge.plus", detail: "可以直接新增一笔交易", actionTitle: "新增交易") {
+                            let date = store.selectedDate
+                            let ledger = store.dateDetailLedgerID
+                            store.dismissDateDetail()
+                            store.startNewTransaction(date: date, ledgerID: ledger)
+                        }
                     } else {
                         TransactionCollectionView(items: store.dateDetailTransactions, displayMode: store.transactionDisplayMode) { item in
                             store.editTransaction(item)
@@ -244,7 +246,7 @@ private struct TransactionRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
     }
 }
 
@@ -252,12 +254,25 @@ struct EmptyStateView: View {
     let title: String
     let systemImage: String
     let detail: String
+    let actionTitle: String?
+    let action: (() -> Void)?
+
+    init(title: String, systemImage: String, detail: String, actionTitle: String? = nil, action: (() -> Void)? = nil) {
+        self.title = title
+        self.systemImage = systemImage
+        self.detail = detail
+        self.actionTitle = actionTitle
+        self.action = action
+    }
 
     var body: some View {
         VStack(spacing: 10) {
             Image(systemName: systemImage).font(.system(size: 34)).foregroundStyle(.secondary)
             Text(title).font(.headline)
             Text(detail).font(.subheadline).foregroundStyle(.secondary)
+            if let actionTitle, let action {
+                Button(actionTitle, action: action).buttonStyle(.borderedProminent)
+            }
         }
         .frame(maxWidth: .infinity, minHeight: 180)
     }
@@ -274,6 +289,41 @@ struct SummaryCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+private struct CalendarFilterPicker: View {
+    @EnvironmentObject private var store: AppStore
+
+    var body: some View {
+        Picker("日历筛选", selection: Binding(get: { store.calendarFilter }, set: store.setCalendarFilter)) {
+            Text("全部").tag("ALL")
+            Text("收入").tag("INCOME")
+            Text("支出").tag("EXPENSE")
+        }
+        .pickerStyle(.menu)
+    }
+}
+
+private struct MonthlyBalanceCard: View {
+    let expense: Int64
+    let income: Int64
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("本月结余").font(.caption.weight(.medium))
+            Text((income - expense).rmb).font(.title.bold())
+            HStack {
+                Text("支出 \(expense.rmb)")
+                Spacer()
+                Text("收入 \(income.rmb)")
+            }
+            .font(.subheadline)
+        }
+        .foregroundStyle(.white)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(.black, in: RoundedRectangle(cornerRadius: 8))
     }
 }

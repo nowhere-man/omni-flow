@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -62,6 +63,7 @@ internal fun SearchScreen(
     onToggleAdvanced: () -> Unit,
     onClear: () -> Unit,
     onEditTransaction: (String) -> Unit,
+    onAddTransaction: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var amountMode by remember { mutableStateOf(AmountMode.NONE) }
@@ -72,6 +74,15 @@ internal fun SearchScreen(
     var endDate by remember { mutableStateOf<LocalDate?>(null) }
     val primaryCategories = state.categories.filter { it.parentId == null }
     val secondaryCategories = state.categories.filter { it.parentId == state.query.primaryCategoryId }
+    fun clearFilters() {
+        amountMode = AmountMode.NONE
+        exact = ""
+        minimum = ""
+        maximum = ""
+        startDate = null
+        endDate = null
+        onClear()
+    }
 
     LazyColumn(
         modifier = modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -91,15 +102,7 @@ internal fun SearchScreen(
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 TextButton(onClick = onToggleAdvanced) { Text(if (state.isAdvancedExpanded) "收起高级筛选" else "展开高级筛选") }
-                TextButton(onClick = {
-                    amountMode = AmountMode.NONE
-                    exact = ""
-                    minimum = ""
-                    maximum = ""
-                    startDate = null
-                    endDate = null
-                    onClear()
-                }) { Text("清除") }
+                TextButton(onClick = ::clearFilters) { Text("清除") }
             }
         }
         if (state.isAdvancedExpanded) {
@@ -210,20 +213,29 @@ internal fun SearchScreen(
         }
         state.error?.let { error -> item { Text(error, color = MaterialTheme.colorScheme.error) } }
         if (state.isLoading) item { Text("搜索中…", Modifier.fillMaxWidth().padding(24.dp)) }
+        if (!state.isLoading && state.error == null && state.result == null) {
+            item { SearchEmptyState(hasFilters = false, onClear = ::clearFilters, onAddTransaction = onAddTransaction) }
+        }
         state.result?.let { result ->
             item {
-                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
+                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
                     Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("收入 ${result.summary.incomeTotal.asRmb()}")
                         Text("支出 ${result.summary.expenseTotal.asRmb()}")
                     }
                 }
             }
-            if (result.items.isEmpty()) item { Text("没有符合条件的交易", Modifier.fillMaxWidth().padding(32.dp)) }
+            if (result.items.isEmpty()) item {
+                SearchEmptyState(
+                    hasFilters = state.query.hasFilters,
+                    onClear = ::clearFilters,
+                    onAddTransaction = onAddTransaction,
+                )
+            }
             items(result.items, key = { it.transaction.id }) { item ->
                 Card(
                     Modifier.fillMaxWidth().clickable { onEditTransaction(item.transaction.id) },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(8.dp),
                 ) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -243,10 +255,35 @@ internal fun SearchScreen(
 
 @Composable
 private fun FilterCard(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             content()
+        }
+    }
+}
+
+@Composable
+private fun SearchEmptyState(
+    hasFilters: Boolean,
+    onClear: () -> Unit,
+    onAddTransaction: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(if (hasFilters) "没有符合条件的交易" else "还没有可搜索的交易", fontWeight = FontWeight.SemiBold)
+        Text(
+            if (hasFilters) "调整筛选条件，或清除筛选后再试。" else "新增一笔交易后，可按备注、分类或账户检索。",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        if (hasFilters) {
+            TextButton(onClick = onClear) { Text("清除筛选") }
+        } else {
+            Button(onClick = onAddTransaction) { Text("新增交易") }
         }
     }
 }

@@ -3,20 +3,16 @@ import SwiftUI
 struct SearchView: View {
     @EnvironmentObject private var store: AppStore
     @State private var advanced = true
+    @State private var hasSearched = false
 
     var body: some View {
         VStack(spacing: 0) {
             HStack {
                 TextField("备注、分类、账户或标签", text: $store.searchText)
                     .textFieldStyle(.roundedBorder)
-                    .onSubmit(store.search)
-                Button("搜索", action: store.search)
-                Button("清除") {
-                    store.searchText = ""
-                    store.searchResults = []
-                    store.searchExpenseMinor = 0
-                    store.searchIncomeMinor = 0
-                }
+                    .onSubmit { store.search(); hasSearched = true }
+                Button("搜索") { store.search(); hasSearched = true }
+                Button("清除", action: clear)
             }
             .padding()
             DisclosureGroup("高级筛选", isExpanded: $advanced) {
@@ -58,29 +54,22 @@ struct SearchView: View {
                         }
                     }
                     HStack {
-                        Button("应用筛选", action: store.search)
-                        Button("清除") {
-                            store.searchText = ""
-                            store.searchType = nil
-                            store.searchAccountID = nil
-                            store.searchPrimaryCategoryID = nil
-                            store.searchSecondaryCategoryID = nil
-                            store.searchTagID = nil
-                            store.searchExact = ""
-                            store.searchMinimum = ""
-                            store.searchMaximum = ""
-                            store.searchDateEnabled = false
-                            store.searchResults = []
-                            store.searchExpenseMinor = 0
-                            store.searchIncomeMinor = 0
-                        }
+                        Button("应用筛选") { store.search(); hasSearched = true }
+                        Button("清除", action: clear)
                     }
                 }
                 .formStyle(.grouped)
             }
             .padding(.horizontal)
             if store.searchResults.isEmpty {
-                EmptyStateView(title: "没有搜索结果", systemImage: "magnifyingglass", detail: "输入关键词或调整筛选条件")
+                EmptyStateView(
+                    title: hasSearched ? "没有搜索结果" : "还没有可搜索的交易",
+                    systemImage: "magnifyingglass",
+                    detail: hasSearched ? "调整筛选条件后再试" : "新增交易后，可按备注、分类或账户检索",
+                    actionTitle: hasSearched ? "清除筛选" : "新增交易"
+                ) {
+                    if hasSearched { clear() } else { store.startNewTransaction() }
+                }
             } else {
                 HStack(spacing: 12) {
                     SummaryCard(title: "支出", value: store.searchExpenseMinor.rmb)
@@ -101,5 +90,22 @@ struct SearchView: View {
             }
         }
         .navigationTitle("搜索")
+    }
+
+    private func clear() {
+        store.searchText = ""
+        store.searchType = nil
+        store.searchAccountID = nil
+        store.searchPrimaryCategoryID = nil
+        store.searchSecondaryCategoryID = nil
+        store.searchTagID = nil
+        store.searchExact = ""
+        store.searchMinimum = ""
+        store.searchMaximum = ""
+        store.searchDateEnabled = false
+        store.searchResults = []
+        store.searchExpenseMinor = 0
+        store.searchIncomeMinor = 0
+        hasSearched = false
     }
 }

@@ -36,13 +36,18 @@ struct AnalyticsView: View {
                         Button { shift(1) } label: { Image(systemName: "chevron.right") }
                     }
                 }
-                HStack(spacing: 12) {
-                    SummaryCard(title: "总支出", value: store.analyticsExpenseMinor.rmb)
-                    SummaryCard(title: "总收入", value: store.analyticsIncomeMinor.rmb)
-                    SummaryCard(title: "总结余", value: (store.analyticsIncomeMinor - store.analyticsExpenseMinor).rmb)
-                }
-                Button("查看年度账单") { store.loadAnalyticsStatement(year: Calendar.current.component(.year, from: anchor)) }
-                VStack(alignment: .leading, spacing: 10) {
+                if store.analyticsExpenseMinor == 0 && store.analyticsIncomeMinor == 0 {
+                    EmptyStateView(title: "当前范围还没有收支", systemImage: "chart.bar", detail: "新增交易后即可查看趋势、分类和资产分析", actionTitle: "新增交易") {
+                        store.startNewTransaction()
+                    }
+                } else {
+                    HStack(spacing: 12) {
+                        SummaryCard(title: "总支出", value: store.analyticsExpenseMinor.rmb)
+                        SummaryCard(title: "总收入", value: store.analyticsIncomeMinor.rmb)
+                        SummaryCard(title: "总结余", value: (store.analyticsIncomeMinor - store.analyticsExpenseMinor).rmb)
+                    }
+                    Button("查看年度账单") { store.loadAnalyticsStatement(year: Calendar.current.component(.year, from: anchor)) }
+                    VStack(alignment: .leading, spacing: 10) {
                     Picker("排行榜", selection: $store.analyticsRankingType) {
                         ForEach(EntryType.allCases) { Text($0.label).tag($0) }
                     }
@@ -56,7 +61,7 @@ struct AnalyticsView: View {
                         }
                     }
                 }
-                Group {
+                    Group {
                     AnalyticsCard(title: "收支趋势") {
                         HStack {
                             Toggle("收入", isOn: $showIncome).toggleStyle(.button)
@@ -71,7 +76,7 @@ struct AnalyticsView: View {
                                     if showExpense { AmountBar(label: "支出", value: point.expense, maximum: maximum) }
                                 }
                                 .padding(8)
-                                .background(selectedPointLabel == point.label ? Color.accentColor.opacity(0.15) : Color.clear, in: RoundedRectangle(cornerRadius: 10))
+                                .background(selectedPointLabel == point.label ? Color.primary.opacity(0.12) : Color.clear, in: RoundedRectangle(cornerRadius: 8))
                             }
                             .buttonStyle(.plain)
                         }
@@ -119,7 +124,7 @@ struct AnalyticsView: View {
                         }
                     }
                 }
-                Group {
+                    Group {
                     AnalyticsCard(title: "标签分析") {
                         ForEach(store.analyticsTags) { tag in
                             HStack { Text(tag.name); Spacer(); Text("支出 \(tag.expense.rmb) · 收入 \(tag.income.rmb)") }
@@ -131,6 +136,7 @@ struct AnalyticsView: View {
                         ForEach(store.analyticsAccountAssets) { account in
                             HStack { Text(account.name); Spacer(); Text(account.balance.rmb) }
                         }
+                    }
                     }
                 }
             }
@@ -194,8 +200,8 @@ private struct StatementTableView: View {
         HStack {
             Text(label)
             Spacer()
-            Text(income.rmb).foregroundStyle(.green)
-            Text(expense.rmb).foregroundStyle(.red)
+            Text(income.rmb).foregroundStyle(.secondary)
+            Text(expense.rmb).foregroundStyle(.secondary)
             Text((income - expense).rmb)
         }
     }
@@ -218,7 +224,7 @@ private struct AnalyticsCard<Content: View>: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
     }
 }
 

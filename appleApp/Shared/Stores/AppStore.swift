@@ -37,6 +37,7 @@ final class AppStore: ObservableObject {
     @Published var editingTransaction: TransactionUI?
     @Published var editingTagIDs: Set<String> = []
     @Published var draftTransactionDate: Date?
+    @Published private(set) var transactionDraftRevision = UUID()
     @Published var searchLedgerID: String?
     @Published var searchType: EntryType?
     @Published var searchAccountID: String?
@@ -344,6 +345,7 @@ final class AppStore: ObservableObject {
         editingTransaction = nil
         editingTagIDs = []
         draftTransactionDate = date
+        transactionDraftRevision = UUID()
         selectResourceLedger(ledgerID ?? defaultLedgerID ?? selectedLedgerID ?? ledgers.first?.id)
         destination = .transaction
     }
@@ -352,6 +354,7 @@ final class AppStore: ObservableObject {
         editingTransaction = transaction
         editingTagIDs = []
         draftTransactionDate = nil
+        transactionDraftRevision = UUID()
         selectResourceLedger(transaction.ledgerID)
         #if canImport(OmniFlowShared)
         bridge.loadTransaction(id: transaction.id) { [weak self] value, message in

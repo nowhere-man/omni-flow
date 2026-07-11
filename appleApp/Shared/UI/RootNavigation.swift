@@ -5,12 +5,34 @@ struct PhoneRootView: View {
     @EnvironmentObject private var store: AppStore
 
     var body: some View {
-        TabView(selection: $store.destination) {
-            HomeView().tabItem { Label("首页", systemImage: "house") }.tag(MainDestination.home)
-            AnalyticsView().tabItem { Label("统计", systemImage: "chart.bar") }.tag(MainDestination.analytics)
-            TransactionEditorView().tabItem { Label("记账", systemImage: "plus.circle") }.tag(MainDestination.transaction)
-            SearchView().tabItem { Label("搜索", systemImage: "magnifyingglass") }.tag(MainDestination.search)
-            MoreView().tabItem { Label("更多", systemImage: "ellipsis.circle") }.tag(MainDestination.more)
+        ZStack(alignment: .bottom) {
+            TabView(selection: Binding(
+                get: { store.destination == .transaction ? .home : store.destination },
+                set: { store.destination = $0 }
+            )) {
+                NavigationStack { HomeView() }.tabItem { Label("首页", systemImage: "house") }.tag(MainDestination.home)
+                NavigationStack { AnalyticsView() }.tabItem { Label("统计", systemImage: "chart.bar") }.tag(MainDestination.analytics)
+                NavigationStack { SearchView() }.tabItem { Label("搜索", systemImage: "magnifyingglass") }.tag(MainDestination.search)
+                NavigationStack { MoreView() }.tabItem { Label("更多", systemImage: "ellipsis.circle") }.tag(MainDestination.more)
+            }
+            Button { store.startNewTransaction() } label: {
+                Image(systemName: "plus")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 52, height: 52)
+                    .background(.black, in: Circle())
+            }
+            .accessibilityLabel("新增交易")
+            .offset(y: -26)
+        }
+        .fullScreenCover(isPresented: Binding(
+            get: { store.destination == .transaction },
+            set: { if !$0 { store.destination = .home } }
+        )) {
+            NavigationStack {
+                TransactionEditorView()
+                    .toolbar { ToolbarItem(placement: .topBarLeading) { Button("关闭") { store.destination = .home } } }
+            }
         }
     }
 }
@@ -29,13 +51,25 @@ struct MacRootView: View {
             .listStyle(.sidebar)
             .navigationTitle("OmniFlow")
         } detail: {
-            Group {
-                switch store.destination {
-                case .home: HomeView()
-                case .analytics: AnalyticsView()
-                case .transaction: TransactionEditorView()
-                case .search: SearchView()
-                case .more: MoreView()
+            NavigationStack {
+                Group {
+                    switch store.destination {
+                    case .home: HomeView()
+                    case .analytics: AnalyticsView()
+                    case .transaction: TransactionEditorView()
+                    case .search: SearchView()
+                    case .more: MoreView()
+                    }
+                }
+                .frame(maxWidth: 1200, maxHeight: .infinity, alignment: .topLeading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .toolbar {
+                    if store.destination != .transaction {
+                        ToolbarItem(placement: .primaryAction) {
+                            Button { store.startNewTransaction() } label: { Image(systemName: "plus") }
+                                .help("新建交易")
+                        }
+                    }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

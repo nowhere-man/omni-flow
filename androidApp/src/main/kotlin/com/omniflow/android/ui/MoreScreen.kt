@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +26,7 @@ import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.Rule
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
@@ -40,11 +43,13 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -96,9 +101,10 @@ internal enum class MorePage(val label: String, val icon: ImageVector) {
 internal fun MoreScreen(
     state: MoreUiState,
     viewModel: OmniFlowViewModel,
+    initialPage: MorePage = MorePage.HOME,
     modifier: Modifier = Modifier,
 ) {
-    var page by remember { mutableStateOf(MorePage.HOME) }
+    var page by remember(initialPage) { mutableStateOf(initialPage) }
     Column(modifier.fillMaxSize()) {
         if (page != MorePage.HOME) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -127,65 +133,74 @@ internal fun MoreScreen(
 
 @Composable
 private fun MoreHome(state: MoreUiState, onPage: (MorePage) -> Unit) {
-    val modules = listOf(
-        MorePage.SETTINGS,
-        MorePage.IMPORT,
-        MorePage.EXPORT,
-        MorePage.RULES,
-        MorePage.REMINDERS,
-        MorePage.LEDGERS,
-        MorePage.ACCOUNTS,
-        MorePage.ASSETS,
-        MorePage.CATEGORIES,
-        MorePage.TAGS,
-    )
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item { Spacer(Modifier.height(8.dp)) }
-        item { Text("更多", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold) }
         item {
-            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp)) {
-                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("全局净资产", style = MaterialTheme.typography.labelLarge)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = RoundedCornerShape(8.dp),
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("净资产", style = MaterialTheme.typography.labelLarge)
                     Text(state.accountSummary.netAssets.asRmb(), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
                     Text("资产 ${state.accountSummary.assets.asRmb()} · 负债 ${state.accountSummary.liabilities.asRmb()}")
-                }
-            }
-        }
-        item {
-            Card(
-                Modifier.fillMaxWidth().clickable { onPage(MorePage.DATA) },
-                shape = RoundedCornerShape(20.dp),
-            ) {
-                Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.CloudSync, contentDescription = null)
-                    Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                        Text("数据管理", fontWeight = FontWeight.SemiBold)
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.CloudSync, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
                         Text(syncLabel(state), style = MaterialTheme.typography.bodySmall)
                     }
-                    Text("进入")
                 }
             }
         }
-        items(modules.chunked(2)) { row ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                row.forEach { page -> ModuleCard(page, Modifier.weight(1f)) { onPage(page) } }
-                if (row.size == 1) Spacer(Modifier.weight(1f))
-            }
-        }
+        item { MoreSection("数据", listOf(MorePage.DATA, MorePage.IMPORT, MorePage.EXPORT, MorePage.SETTINGS), state, onPage) }
+        item { MoreSection("账本与账户", listOf(MorePage.LEDGERS, MorePage.ACCOUNTS, MorePage.ASSETS, MorePage.CATEGORIES, MorePage.TAGS), state, onPage) }
+        item { MoreSection("自动化", listOf(MorePage.RULES, MorePage.REMINDERS), state, onPage) }
         state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
         item { Spacer(Modifier.height(24.dp)) }
     }
 }
 
 @Composable
-private fun ModuleCard(page: MorePage, modifier: Modifier, onClick: () -> Unit) {
-    Card(modifier.clickable(onClick = onClick), shape = RoundedCornerShape(18.dp)) {
-        Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Icon(page.icon, contentDescription = null)
-            Text(page.label, fontWeight = FontWeight.SemiBold)
+private fun MoreSection(
+    title: String,
+    pages: List<MorePage>,
+    state: MoreUiState,
+    onPage: (MorePage) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(8.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        ) {
+            Column {
+                pages.forEachIndexed { index, page ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onPage(page) }
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(page.icon, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                            Text(page.label, fontWeight = FontWeight.Medium)
+                            if (page == MorePage.DATA) {
+                                Text(syncLabel(state), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        Icon(Icons.Default.ChevronRight, contentDescription = page.label)
+                    }
+                    if (index != pages.lastIndex) HorizontalDivider()
+                }
+            }
         }
     }
 }
@@ -194,7 +209,7 @@ private fun ModuleCard(page: MorePage, modifier: Modifier, onClick: () -> Unit) 
 private fun SettingsPage(state: MoreUiState, viewModel: OmniFlowViewModel, onData: () -> Unit) {
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
                 Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("应用锁", fontWeight = FontWeight.SemiBold)
@@ -205,7 +220,7 @@ private fun SettingsPage(state: MoreUiState, viewModel: OmniFlowViewModel, onDat
             }
         }
         item {
-            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("界面外观", fontWeight = FontWeight.SemiBold)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -239,7 +254,7 @@ private fun DataManagementPage(
     var pendingRestore by remember { mutableStateOf<com.omniflow.shared.domain.model.RemoteBackupMeta?>(null) }
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("WebDAV 全量备份", fontWeight = FontWeight.SemiBold)
                     OutlinedTextField(endpoint, { endpoint = it }, label = { Text("服务器目录 URL") }, modifier = Modifier.fillMaxWidth())
@@ -388,7 +403,7 @@ private fun ImportPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
 
 @Composable
 private fun ImportPreviewCard(item: ImportPreviewItem, state: MoreUiState, viewModel: OmniFlowViewModel) {
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(item.id in state.selectedImportItemIds, { viewModel.toggleImportItem(item.id) })
@@ -488,7 +503,7 @@ private fun ExportPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
         }
     }
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+        Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("青子记账兼容 JSON", fontWeight = FontWeight.SemiBold)
                 Text("默认导出全部有效交易，也可按日期范围增量导出。")

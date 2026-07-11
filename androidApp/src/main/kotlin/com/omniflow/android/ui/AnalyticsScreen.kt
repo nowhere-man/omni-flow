@@ -65,6 +65,7 @@ internal fun AnalyticsScreen(
     onStatementTable: (Int) -> Unit,
     onDismissStatementTable: () -> Unit,
     onEditTransaction: (String) -> Unit,
+    onAddTransaction: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -112,14 +113,18 @@ internal fun AnalyticsScreen(
             state.error != null && state.dashboard == null -> item { ErrorBlock(state.error) }
             state.dashboard != null -> {
                 val dashboard = state.dashboard
-                item {
-                    SummaryRow(
-                        dashboard.summary.expenseTotal,
-                        dashboard.summary.incomeTotal,
-                        dashboard.summary.netIncome,
-                    )
-                }
-                item {
+                val hasTransactions = dashboard.summary.expenseTotal != Money.Zero || dashboard.summary.incomeTotal != Money.Zero
+                if (!hasTransactions) {
+                    item { AnalyticsEmptyState(onAddTransaction) }
+                } else {
+                    item {
+                        SummaryRow(
+                            dashboard.summary.expenseTotal,
+                            dashboard.summary.incomeTotal,
+                            dashboard.summary.netIncome,
+                        )
+                    }
+                    item {
                     AnalyticsCard("收支趋势") {
                         var showIncome by remember { mutableStateOf(true) }
                         var showExpense by remember { mutableStateOf(true) }
@@ -139,7 +144,7 @@ internal fun AnalyticsScreen(
                                     .background(
                                         if (selectedPointLabel == point.label) MaterialTheme.colorScheme.secondaryContainer
                                         else MaterialTheme.colorScheme.surface,
-                                        RoundedCornerShape(12.dp),
+                                        RoundedCornerShape(8.dp),
                                     )
                                     .padding(8.dp),
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -159,7 +164,7 @@ internal fun AnalyticsScreen(
                         }) { Text("查看账单表格") }
                     }
                 }
-                item {
+                    item {
                     AnalyticsCard("环比 / 同比") {
                         Text("环比支出 ${dashboard.previousPeriod.expenseChange.asRmb()}")
                         Text("环比收入 ${dashboard.previousPeriod.incomeChange.asRmb()}")
@@ -169,7 +174,7 @@ internal fun AnalyticsScreen(
                         Text("同比结余 ${dashboard.yearOverYear.netIncomeChange.asRmb()}")
                     }
                 }
-                item {
+                    item {
                     AnalyticsCard(if (state.rankingType == TransactionType.EXPENSE) "支出排行榜" else "收入排行榜") {
                         TypeSwitch(state.rankingType, onRankingType)
                         if (dashboard.ranking.isEmpty()) EmptyText("暂无排行数据")
@@ -188,7 +193,7 @@ internal fun AnalyticsScreen(
                         }
                     }
                 }
-                item {
+                    item {
                     AnalyticsCard("分类占比") {
                         TypeSwitch(state.categoryType) { type ->
                             onCategoryAnalysis(type, state.categoryGranularity)
@@ -218,7 +223,7 @@ internal fun AnalyticsScreen(
                         }
                     }
                 }
-                item {
+                    item {
                     AnalyticsCard("标签分析") {
                         if (dashboard.tagSummary.isEmpty()) EmptyText("暂无标签数据")
                         dashboard.tagSummary.forEach { item ->
@@ -229,7 +234,7 @@ internal fun AnalyticsScreen(
                         }
                     }
                 }
-                item {
+                    item {
                     AnalyticsCard("账户资产分布") {
                         Text("净资产 ${dashboard.accountSummary.netAssets.asRmb()} · 资产 ${dashboard.accountSummary.assets.asRmb()} · 负债 ${dashboard.accountSummary.liabilities.asRmb()}")
                         if (dashboard.accountAssets.isEmpty()) EmptyText("暂无计入总资产的账户")
@@ -239,12 +244,26 @@ internal fun AnalyticsScreen(
                         }
                     }
                 }
-                item { Spacer(Modifier.height(24.dp)) }
+                    item { Spacer(Modifier.height(24.dp)) }
+                }
             }
         }
     }
 
     state.statementTable?.let { table -> StatementTableSheet(table, onDismissStatementTable) }
+}
+
+@Composable
+private fun AnalyticsEmptyState(onAddTransaction: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text("当前范围还没有收支", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text("新增交易后，这里会生成趋势、分类和资产分析。", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        TextButton(onClick = onAddTransaction) { Text("新增交易") }
+    }
 }
 
 @Composable
@@ -318,7 +337,7 @@ private fun SummaryRow(expense: Money, income: Money, net: Money) {
 
 @Composable
 private fun SummaryCard(label: String, amount: Money, modifier: Modifier) {
-    Card(modifier) {
+    Card(modifier, shape = RoundedCornerShape(8.dp)) {
         Column(Modifier.padding(12.dp)) {
             Text(label, style = MaterialTheme.typography.labelMedium)
             Text(amount.asRmb(), fontWeight = FontWeight.SemiBold)
@@ -328,7 +347,7 @@ private fun SummaryCard(label: String, amount: Money, modifier: Modifier) {
 
 @Composable
 private fun AnalyticsCard(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             content()

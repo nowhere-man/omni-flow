@@ -29,7 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Category
@@ -46,7 +46,9 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -102,7 +104,7 @@ import com.omniflow.android.ReminderScheduler
 private enum class MainDestination(val label: String, val icon: ImageVector) {
     HOME("首页", Icons.Default.Home),
     ANALYTICS("统计", Icons.AutoMirrored.Filled.ShowChart),
-    ADD("记账", Icons.Default.AddCircle),
+    ADD("记账", Icons.Default.Add),
     SEARCH("搜索", Icons.Default.Search),
     MORE("更多", Icons.Default.MoreHoriz),
 }
@@ -118,6 +120,7 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
     val transactionState by viewModel.transactionUiState.collectAsState()
     val moreState by viewModel.moreUiState.collectAsState()
     var destination by rememberSaveable { mutableStateOf(MainDestination.HOME) }
+    var moreStartPage by rememberSaveable { mutableStateOf(MorePage.HOME) }
     val darkTheme = when (homeState.appearanceMode) {
         AppearanceMode.SYSTEM -> isSystemInDarkTheme()
         AppearanceMode.LIGHT -> false
@@ -140,33 +143,63 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
 
     MaterialTheme(
         colorScheme = if (darkTheme) {
-            darkColorScheme(primary = Color(0xFFB5CCB6), secondary = Color(0xFFD6C790))
+            darkColorScheme(
+                primary = Color(0xFFF5F5F5),
+                onPrimary = Color(0xFF111111),
+                primaryContainer = Color(0xFF2A2A2A),
+                onPrimaryContainer = Color(0xFFF5F5F5),
+                secondary = Color(0xFFC7C7C7),
+                secondaryContainer = Color(0xFF242424),
+                surface = Color(0xFF141414),
+                surfaceVariant = Color(0xFF202020),
+                background = Color(0xFF101010),
+                onSurface = Color(0xFFF5F5F5),
+                onSurfaceVariant = Color(0xFFB9B9B9),
+                outline = Color(0xFF454545),
+            )
         } else {
             lightColorScheme(
-                primary = Color(0xFF355E3B),
-                secondary = Color(0xFF6A5D35),
-                surface = Color(0xFFFFFBFF),
-                background = Color(0xFFFFFBFF),
+                primary = Color(0xFF171717),
+                onPrimary = Color.White,
+                primaryContainer = Color(0xFFE7E7E7),
+                onPrimaryContainer = Color(0xFF171717),
+                secondary = Color(0xFF626262),
+                secondaryContainer = Color(0xFFF1F1F1),
+                surface = Color.White,
+                surfaceVariant = Color(0xFFF5F5F5),
+                background = Color.White,
+                onSurface = Color(0xFF171717),
+                onSurfaceVariant = Color(0xFF656565),
+                outline = Color(0xFFD2D2D2),
             )
         },
     ) {
         AppLockGate(moreState.preferences.appLockEnabled) {
         Scaffold(
             bottomBar = {
-                NavigationBar {
-                    MainDestination.entries.forEach { item ->
-                        NavigationBarItem(
-                            selected = destination == item,
-                            onClick = {
-                                if (item == MainDestination.ADD && destination != MainDestination.ADD) viewModel.startNewTransaction()
-                                destination = item
-                            },
-                            icon = { Icon(item.icon, contentDescription = item.label) },
-                            label = { Text(item.label) },
-                        )
+                if (destination != MainDestination.ADD) {
+                    PrimaryNavigation(destination) {
+                        destination = it
+                        if (it == MainDestination.MORE) moreStartPage = MorePage.HOME
                     }
                 }
             },
+            floatingActionButton = {
+                if (destination != MainDestination.ADD) {
+                    FloatingActionButton(
+                        onClick = {
+                            viewModel.startNewTransaction()
+                            destination = MainDestination.ADD
+                        },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        shape = CircleShape,
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "新增交易")
+                    }
+                }
+            },
+            floatingActionButtonPosition = FabPosition.Center,
         ) { padding ->
             when (destination) {
                 MainDestination.HOME -> HomeScreen(
@@ -189,6 +222,10 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
                         viewModel.editTransaction(transactionId)
                         destination = MainDestination.ADD
                     },
+                    onManageLedgers = {
+                        moreStartPage = MorePage.LEDGERS
+                        destination = MainDestination.MORE
+                    },
                     modifier = Modifier.padding(padding),
                 )
                 MainDestination.ANALYTICS -> AnalyticsScreen(
@@ -204,6 +241,10 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
                     onDismissStatementTable = viewModel::dismissStatementTable,
                     onEditTransaction = { transactionId ->
                         viewModel.editTransaction(transactionId)
+                        destination = MainDestination.ADD
+                    },
+                    onAddTransaction = {
+                        viewModel.startNewTransaction()
                         destination = MainDestination.ADD
                     },
                     modifier = Modifier.padding(padding),
@@ -222,6 +263,7 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
                     onSaveAgain = { viewModel.saveTransaction(true) },
                     onDone = { viewModel.saveTransaction(false) },
                     onDelete = viewModel::deleteEditingTransaction,
+                    onDismiss = { destination = MainDestination.HOME },
                     modifier = Modifier.padding(padding),
                 )
                 MainDestination.SEARCH -> SearchScreen(
@@ -241,11 +283,46 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
                         viewModel.editTransaction(transactionId)
                         destination = MainDestination.ADD
                     },
+                    onAddTransaction = {
+                        viewModel.startNewTransaction()
+                        destination = MainDestination.ADD
+                    },
                     modifier = Modifier.padding(padding),
                 )
-                MainDestination.MORE -> MoreScreen(moreState, viewModel, Modifier.padding(padding))
+                MainDestination.MORE -> MoreScreen(
+                    state = moreState,
+                    viewModel = viewModel,
+                    initialPage = moreStartPage,
+                    modifier = Modifier.padding(padding),
+                )
             }
         }
+        }
+    }
+}
+
+@Composable
+private fun PrimaryNavigation(
+    destination: MainDestination,
+    onDestination: (MainDestination) -> Unit,
+) {
+    NavigationBar {
+        listOf(MainDestination.HOME, MainDestination.ANALYTICS).forEach { item ->
+            NavigationBarItem(
+                selected = destination == item,
+                onClick = { onDestination(item) },
+                icon = { Icon(item.icon, contentDescription = item.label) },
+                label = { Text(item.label) },
+            )
+        }
+        Spacer(Modifier.weight(1.2f))
+        listOf(MainDestination.SEARCH, MainDestination.MORE).forEach { item ->
+            NavigationBarItem(
+                selected = destination == item,
+                onClick = { onDestination(item) },
+                icon = { Icon(item.icon, contentDescription = item.label) },
+                label = { Text(item.label) },
+            )
         }
     }
 }
@@ -306,6 +383,7 @@ private fun HomeScreen(
     onDateScope: (LedgerScope) -> Unit,
     onAdd: (LocalDate?, String?) -> Unit,
     onEdit: (String) -> Unit,
+    onManageLedgers: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val home = state.home
@@ -318,19 +396,27 @@ private fun HomeScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 Spacer(Modifier.height(8.dp))
-                LedgerSelector(
-                    scope = home.scope,
-                    ledgers = state.ledgers,
-                    expanded = state.isLedgerMenuExpanded,
-                    onToggle = onLedgerMenu,
-                    onSelected = onLedgerSelected,
-                )
-                MonthSelector(home.month.startInclusive.toLocalDateTime(ChinaTimeZone).date, onPreviousMonth, onNextMonth, onMonthSelected)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    LedgerSelector(
+                        scope = home.scope,
+                        ledgers = state.ledgers,
+                        expanded = state.isLedgerMenuExpanded,
+                        onToggle = onLedgerMenu,
+                        onSelected = onLedgerSelected,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    MonthSelector(home.month.startInclusive.toLocalDateTime(ChinaTimeZone).date, onPreviousMonth, onNextMonth, onMonthSelected)
+                }
                 MonthlySummary(home.summary.expenseTotal, home.summary.incomeTotal)
-                CalendarFilter(state.calendarFilter, onCalendarFilter)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("本月日历", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.weight(1f))
+                    CalendarFilter(state.calendarFilter, onCalendarFilter)
+                }
                 CalendarMonth(
                     month = home.month.startInclusive.toLocalDateTime(ChinaTimeZone).date,
                     summaries = home.calendar,
@@ -349,9 +435,22 @@ private fun HomeScreen(
                     }
                 }
                 if (state.ledgers.isEmpty()) {
-                    Text("请先在“更多 → 账本”中创建账本", color = MaterialTheme.colorScheme.error)
+                    HomeEmptyState(
+                        title = "先创建一个账本",
+                        message = "账本准备好后，就可以开始记录每一笔交易。",
+                        actionLabel = "管理账本",
+                        onAction = onManageLedgers,
+                    )
+                } else if (home.groups.isEmpty()) {
+                    HomeEmptyState(
+                        title = "本月还没有账单",
+                        message = "从第一笔交易开始，看到资金的真实流向。",
+                        actionLabel = "新增交易",
+                        onAction = { onAdd(null, (home.scope as? LedgerScope.Single)?.ledgerId) },
+                    )
+                } else {
+                    TransactionGroups(home.groups, state.displayMode, onEdit)
                 }
-                TransactionGroups(home.groups, state.displayMode, onEdit)
                 Spacer(Modifier.height(12.dp))
             }
         }
@@ -380,9 +479,10 @@ private fun LedgerSelector(
     expanded: Boolean,
     onToggle: () -> Unit,
     onSelected: (LedgerScope) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Box {
-        TextButton(onClick = onToggle) {
+    Box(modifier) {
+        TextButton(onClick = onToggle, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Default.AccountBalance, contentDescription = null)
             Spacer(Modifier.width(8.dp))
             Text(
@@ -391,6 +491,8 @@ private fun LedgerSelector(
                     is LedgerScope.Single -> ledgers.firstOrNull { it.id == scope.ledgerId }?.name ?: "账本"
                 },
                 style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = onToggle) {
@@ -406,8 +508,7 @@ private fun LedgerSelector(
 private fun MonthSelector(month: LocalDate, onPrevious: () -> Unit, onNext: () -> Unit, onSelected: (LocalDate) -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onPrevious) {
@@ -435,14 +536,22 @@ private fun MonthSelector(month: LocalDate, onPrevious: () -> Unit, onNext: () -
 
 @Composable
 private fun MonthlySummary(expense: Money, income: Money) {
-    Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(8.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            SummaryAmount("支出", expense, ExpenseColor)
-            SummaryAmount("收入", income, IncomeColor)
-            SummaryAmount("结余", income - expense, MaterialTheme.colorScheme.onSurface)
+    Surface(
+        color = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+        shape = RoundedCornerShape(8.dp),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("本月结余", style = MaterialTheme.typography.labelLarge)
+            Text(
+                (income - expense).asRmb(),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                SummaryAmount("支出", expense, MaterialTheme.colorScheme.onPrimary)
+                SummaryAmount("收入", income, MaterialTheme.colorScheme.onPrimary)
+            }
         }
     }
 }
@@ -450,7 +559,7 @@ private fun MonthlySummary(expense: Money, income: Money) {
 @Composable
 private fun SummaryAmount(label: String, amount: Money, color: Color) {
     Column {
-        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+        Text(label, style = MaterialTheme.typography.labelMedium)
         Text(amount.asRmb(), color = color, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
     }
 }
@@ -460,7 +569,7 @@ private fun CalendarFilter(
     selectedFilter: CalendarTransactionFilter,
     onSelected: (CalendarTransactionFilter) -> Unit,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         CalendarTransactionFilter.entries.forEach { filter ->
             FilterChip(
                 selected = selectedFilter == filter,
@@ -476,6 +585,29 @@ private fun CalendarFilter(
                 },
             )
         }
+    }
+}
+
+@Composable
+private fun HomeEmptyState(
+    title: String,
+    message: String,
+    actionLabel: String,
+    onAction: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(
+            message,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Button(onClick = onAction) { Text(actionLabel) }
     }
 }
 

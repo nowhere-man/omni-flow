@@ -4,54 +4,51 @@ import UniformTypeIdentifiers
 struct MoreView: View {
     @EnvironmentObject private var store: AppStore
 
-    private let modules: [(String, String)] = [
-        ("设置", "gearshape"), ("导入", "square.and.arrow.down"),
-        ("导出", "square.and.arrow.up"), ("规则", "list.bullet.rectangle"),
-        ("提醒", "bell"), ("账本", "books.vertical"),
-        ("账户", "wallet.pass"), ("资产", "chart.pie"),
-        ("分类管理", "square.grid.2x2"), ("标签管理", "tag"),
-    ]
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text("更多").font(.largeTitle.bold())
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("全局净资产").font(.caption).foregroundStyle(.secondary)
+                    Text("净资产").font(.caption.weight(.medium))
                     Text(store.accounts.filter(\.includeInTotalAssets).map(\.balanceMinor).reduce(0, +).rmb).font(.largeTitle.bold())
+                    Label(store.backups.isEmpty ? "尚未同步" : "最近同步 \(store.backups.first?.createdAt ?? "")", systemImage: "arrow.triangle.2.circlepath")
+                        .font(.caption)
                 }
+                .foregroundStyle(.white)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
-                NavigationLink {
-                    DataManagementView()
-                } label: {
-                    Label("数据管理", systemImage: "arrow.triangle.2.circlepath")
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding()
-                }
-                .buttonStyle(.plain)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
-                    ForEach(modules, id: \.0) { module in
-                        NavigationLink {
-                            ModuleView(title: module.0)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 12) {
-                                Image(systemName: module.1).font(.title2)
-                                Text(module.0).fontWeight(.medium)
-                            }
-                            .frame(maxWidth: .infinity, minHeight: 76, alignment: .leading)
-                            .padding()
-                        }
-                        .buttonStyle(.plain)
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
-                    }
-                }
+                .padding(16)
+                .background(.black, in: RoundedRectangle(cornerRadius: 8))
+                ModuleSection(title: "数据", modules: [("数据管理", "arrow.triangle.2.circlepath"), ("导入", "square.and.arrow.down"), ("导出", "square.and.arrow.up"), ("设置", "gearshape")])
+                ModuleSection(title: "账本与账户", modules: [("账本", "books.vertical"), ("账户", "wallet.pass"), ("资产", "chart.pie"), ("分类管理", "square.grid.2x2"), ("标签管理", "tag")])
+                ModuleSection(title: "自动化", modules: [("规则", "list.bullet.rectangle"), ("提醒", "bell")])
             }
             .padding()
         }
         .navigationTitle("更多")
+        .onAppear(perform: store.loadBackups)
+    }
+}
+
+private struct ModuleSection: View {
+    let title: String
+    let modules: [(String, String)]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title).font(.headline)
+            VStack(spacing: 0) {
+                ForEach(modules, id: \.0) { module in
+                    NavigationLink { ModuleView(title: module.0) } label: {
+                        Label(module.0, systemImage: module.1)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.plain)
+                    if module.0 != modules.last?.0 { Divider() }
+                }
+            }
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+        }
     }
 }
 
