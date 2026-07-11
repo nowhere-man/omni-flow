@@ -245,7 +245,7 @@ private struct OLEReader {
         fatSectors = Array(fatSectors.prefix(fatCount))
         fat = fatSectors.flatMap { sector in
             let bytes = data.sector(sector, size: sectorSize)
-            return stride(from: 0, to: bytes.count, by: 4).map { bytes.u32($0) }
+            return stride(from: 0, to: bytes.count, by: 4).map { UInt32(bytes.u32($0)) }
         }
         let directoryData = Self.chain(data: data, start: UInt32(data.u32(48)), table: fat, sectorSize: sectorSize)
         directories = stride(from: 0, to: directoryData.count, by: 128).compactMap { DirectoryEntry(data: directoryData, offset: $0) }
@@ -255,7 +255,7 @@ private struct OLEReader {
             return stream.subdata(in: 0..<Swift.min($0.size, stream.count))
         } ?? Data()
         let miniFatData = Self.chain(data: data, start: UInt32(data.u32(60)), table: fat, sectorSize: sectorSize)
-        miniFat = stride(from: 0, to: miniFatData.count, by: 4).map { miniFatData.u32($0) }
+        miniFat = stride(from: 0, to: miniFatData.count, by: 4).map { UInt32(miniFatData.u32($0)) }
     }
 
     func stream(named names: [String]) throws -> Data {

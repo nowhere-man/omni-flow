@@ -326,7 +326,7 @@ final class AppStore: ObservableObject {
             ledgerId: ledgerID,
             accountId: accountID,
             categoryId: categoryID,
-            amountMinor: Self.boxedLong(amountMinor),
+            amountMinor: amountMinor,
             typeName: type.rawValue,
             occurredAtMillis: Int64(date.timeIntervalSince1970 * 1000),
             note: note.isEmpty ? nil : note,
@@ -530,7 +530,7 @@ final class AppStore: ObservableObject {
             id: id,
             typeName: type,
             name: name,
-            amountMinor: amountMinor,
+            amountMinor: Self.boxedLong(amountMinor),
             scheduleKindName: schedule,
             dayOfMonth: dayOfMonth.map(Int32.init),
             daysAfter: daysAfter.map(Int32.init),
@@ -784,22 +784,24 @@ final class AppStore: ObservableObject {
             }
         })
         subscriptions.append(bridge.watchReminders { [weak self] values, message in
+            let reminders: [ReminderUI] = values?.map { value -> ReminderUI in
+                let amountMinor: Int64? = (value.amount as? KotlinLong)?.int64Value
+                return ReminderUI(
+                    id: value.id,
+                    name: value.name,
+                    type: String(describing: value.type).components(separatedBy: ".").last?.uppercased() ?? "REPAYMENT",
+                    amountMinor: amountMinor,
+                    scheduleKind: String(describing: value.schedule.kind).components(separatedBy: ".").last?.uppercased() ?? "MONTHLY",
+                    paused: value.paused,
+                    dayOfMonth: value.schedule.dayOfMonth.map(Int.init),
+                    daysAfter: value.schedule.daysAfter.map(Int.init),
+                    dayOfWeek: value.schedule.dayOfWeek.map(Int.init),
+                    month: value.schedule.month.map(Int.init)
+                )
+            } ?? []
             Task { @MainActor in
                 self?.error = message
-                self?.reminders = values?.map {
-                    ReminderUI(
-                        id: $0.id,
-                        name: $0.name,
-                        type: String(describing: $0.type).components(separatedBy: ".").last?.uppercased() ?? "REPAYMENT",
-                        amountMinor: ($0.amount as? KotlinLong)?.int64Value,
-                        scheduleKind: String(describing: $0.schedule.kind).components(separatedBy: ".").last?.uppercased() ?? "MONTHLY",
-                        paused: $0.paused,
-                        dayOfMonth: $0.schedule.dayOfMonth.map(Int.init),
-                        daysAfter: $0.schedule.daysAfter.map(Int.init),
-                        dayOfWeek: $0.schedule.dayOfWeek.map(Int.init),
-                        month: $0.schedule.month.map(Int.init)
-                    )
-                } ?? []
+                self?.reminders = reminders
             }
         })
         subscriptions.append(bridge.watchPreferenceSnapshot { [weak self] value, message in
