@@ -1,218 +1,207 @@
-# OmniFlow Release Workflow
-#
-# 触发方式：
-#   - 推送 vX.Y.Z 格式的 tag（正式发布）
-#   - 手动触发 workflow_dispatch（测试构建）
-#
-# 产物：
-#   - Android: 签名 APK（使用 GitHub Secrets 中的 keystore）
-#   - iOS:     未签名 IPA（本地自签）
-#   - macOS:   未签名 DMG（本地自签）
-#
-# ── Android Secrets 配置（已在 GitHub 仓库 Settings > Secrets 配置）──
-#   RELEASE_KEYSTORE   : base64 编码的 .jks / .keystore 文件
-#   STORE_PASSWORD     : keystore 密码
-#   KEY_ALIAS          : key alias
-#   KEY_PASSWORD       : key 密码
-#
-# ── 使用前需要修改的占位符 ──────────────────────────────────────────
-#   appleApp/OmniFlow.xcodeproj  → 实际 Xcode 工程路径
-#   OmniFlow-iOS                 → 实际 iOS scheme 名称
-#   OmniFlow-macOS               → 实际 macOS scheme 名称
-#   :androidApp:assembleRelease  → 实际 Android Gradle task
-#   :shared:assembleXCFramework  → 实际 KMP shared module Gradle task
-
-name: Release
+name: Build Three Platforms
 
 on:
   push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+    branches: [master]
+    tags: ['v*']
+  pull_request:
+    branches: [master]
   workflow_dispatch:
-    inputs:
-      build_note:
-        description: '构建备注（可选）'
-        required: false
-        default: 'Manual build'
 
-# 并发控制：同一 ref 只允许一个 Release 流程运行
+permissions:
+  contents: read
+
 concurrency:
-  group: release-${{ github.ref }}
+  group: build-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-
-  # ────────────────────────────────────────────────────────────────
-  # Job 1: Android — 在 Linux runner 上构建，成本低
-  # ────────────────────────────────────────────────────────────────
   android:
     name: Android APK
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Java 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
+          distribution: temurin
           java-version: '17'
-          distribution: 'temurin'
-          cache: gradle
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+      - uses: gradle/actions/setup-gradle@v4
 
-      - name: Decode keystore
+      - name: Decode Android keystore
+        if: github.event_name != 'pull_request'
+        env:
+          RELEASE_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE }}
         run: |
-          echo "${{ secrets.RELEASE_KEYSTORE }}" \
-            | base64 --decode > $GITHUB_WORKSPACE/release.keystore
+          printf '%s' "$RELEASE_KEYSTORE" | base64 --decode > "$RUNNER_TEMP/omniflow-release.keystore"
+          test -s "$RUNNER_TEMP/omniflow-release.keystore"
 
-      - name: Build signed release APK
+      - name: Build signed release APK and test
+        if: github.event_name != 'pull_request'
+        env:
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          ./gradlew :androidApp:assembleRelease \
-            -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/release.keystore \
-            -Pandroid.injected.signing.store.password=${{ secrets.STORE_PASSWORD }} \
-            -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
-            -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
+          ./gradlew :shared:jvmTest :androidApp:assembleRelease --stacktrace \
+            -Pandroid.injected.signing.store.file="$RUNNER_TEMP/omniflow-release.keystore" \
+            -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
 
-      - name: Rename APK with version
+      - name: Build pull request APK and test
+        if: github.event_name == 'pull_request'
+        run: ./gradlew :shared:jvmTest :androidApp:assembleDebug --stacktrace
+
+      - name: Collect APK
         run: |
-          VERSION="${{ github.ref_name }}"
-          APK=$(find androidApp/build/outputs/apk/release -name "*.apk" | head -1)
-          mv "$APK" "$(dirname $APK)/OmniFlow-${VERSION}.apk"
+          mkdir -p dist
+          APK=$(find androidApp/build/outputs/apk -type f -name '*.apk' -print -quit)
+          test -n "$APK"
+          cp "$APK" "dist/OmniFlow-Android-${GITHUB_SHA::7}.apk"
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: OmniFlow-Android
-          path: androidApp/build/outputs/apk/release/OmniFlow-*.apk
+          path: dist/*.apk
+          if-no-files-found: error
           retention-days: 30
 
-  # ────────────────────────────────────────────────────────────────
-  # Job 2: Apple — iOS + macOS 在同一个 macOS runner 完成
-  #         KMP XCFramework 只需编译一次，两个平台共用
-  # ────────────────────────────────────────────────────────────────
-  apple:
-    name: Apple (iOS + macOS)
-    runs-on: macos-latest
-
+  ios:
+    name: iOS Simulator App
+    runs-on: macos-14
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Java 17 (Gradle / KMP)
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
+          distribution: temurin
           java-version: '17'
-          distribution: 'temurin'
-          cache: gradle
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+      - uses: gradle/actions/setup-gradle@v4
 
-      # KMP K/N 编译只能在 macOS 上运行
-      - name: Build KMP XCFramework
-        run: ./gradlew :shared:assembleXCFramework
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
 
-      # ── iOS ──────────────────────────────────────────────────────
+      - name: Build KMP framework
+        run: |
+          if [[ "$(uname -m)" == "arm64" ]]; then
+            ./gradlew :shared:linkReleaseFrameworkIosSimulatorArm64 --stacktrace
+            echo "APPLE_ARCH=arm64" >> "$GITHUB_ENV"
+            echo "FRAMEWORK_DIR=$GITHUB_WORKSPACE/shared/build/bin/iosSimulatorArm64/releaseFramework" >> "$GITHUB_ENV"
+          else
+            ./gradlew :shared:linkReleaseFrameworkIosX64 --stacktrace
+            echo "APPLE_ARCH=x86_64" >> "$GITHUB_ENV"
+            echo "FRAMEWORK_DIR=$GITHUB_WORKSPACE/shared/build/bin/iosX64/releaseFramework" >> "$GITHUB_ENV"
+          fi
 
-      - name: Build iOS (unsigned)
+      - name: Build unsigned iOS Simulator app
         run: |
           xcodebuild build \
             -project appleApp/OmniFlow.xcodeproj \
             -scheme OmniFlow-iOS \
-            -sdk iphoneos \
             -configuration Release \
-            -derivedDataPath build/DerivedData \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+            -sdk iphonesimulator \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath build/ios-derived-data \
+            ARCHS="$APPLE_ARCH" \
+            ONLY_ACTIVE_ARCH=YES \
+            FRAMEWORK_SEARCH_PATHS="$FRAMEWORK_DIR" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
 
-      - name: Package iOS to IPA
+      - name: Package iOS app
         run: |
-          VERSION="${{ github.ref_name }}"
-          APP=$(find build/DerivedData/Build/Products/Release-iphoneos \
-                  -maxdepth 1 -name "*.app" | head -1)
-          if [ -z "$APP" ]; then
-            echo "ERROR: iOS .app not found"; exit 1
-          fi
-          mkdir -p build/ios-payload/Payload
-          cp -r "$APP" build/ios-payload/Payload/
-          cd build/ios-payload
-          zip -r "../../OmniFlow-iOS-${VERSION}.ipa" Payload/
+          APP="build/ios-derived-data/Build/Products/Release-iphonesimulator/OmniFlow-iOS.app"
+          test -d "$APP"
+          mkdir -p dist
+          ditto -c -k --sequesterRsrc --keepParent "$APP" \
+            "dist/OmniFlow-iOS-Simulator-${GITHUB_SHA::7}.zip"
 
-      - name: Upload iOS IPA artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: OmniFlow-iOS
-          path: OmniFlow-iOS-*.ipa
+          name: OmniFlow-iOS-Simulator
+          path: dist/*.zip
+          if-no-files-found: error
           retention-days: 30
 
-      # ── macOS ────────────────────────────────────────────────────
+  macos:
+    name: macOS App
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Build macOS (unsigned)
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Build KMP framework
+        run: |
+          if [[ "$(uname -m)" == "arm64" ]]; then
+            ./gradlew :shared:linkReleaseFrameworkMacosArm64 --stacktrace
+            echo "APPLE_ARCH=arm64" >> "$GITHUB_ENV"
+            echo "FRAMEWORK_DIR=$GITHUB_WORKSPACE/shared/build/bin/macosArm64/releaseFramework" >> "$GITHUB_ENV"
+          else
+            ./gradlew :shared:linkReleaseFrameworkMacosX64 --stacktrace
+            echo "APPLE_ARCH=x86_64" >> "$GITHUB_ENV"
+            echo "FRAMEWORK_DIR=$GITHUB_WORKSPACE/shared/build/bin/macosX64/releaseFramework" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build unsigned macOS app
         run: |
           xcodebuild build \
             -project appleApp/OmniFlow.xcodeproj \
             -scheme OmniFlow-macOS \
-            -sdk macosx \
             -configuration Release \
-            -derivedDataPath build/DerivedData \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+            -sdk macosx \
+            -derivedDataPath build/macos-derived-data \
+            ARCHS="$APPLE_ARCH" \
+            ONLY_ACTIVE_ARCH=YES \
+            FRAMEWORK_SEARCH_PATHS="$FRAMEWORK_DIR" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
 
-      - name: Package macOS to DMG
+      - name: Package macOS app
         run: |
-          VERSION="${{ github.ref_name }}"
-          APP=$(find build/DerivedData/Build/Products/Release \
-                  -maxdepth 1 -name "*.app" | head -1)
-          if [ -z "$APP" ]; then
-            echo "ERROR: macOS .app not found"; exit 1
-          fi
-          # hdiutil 系统内置，无需额外安装
-          hdiutil create \
-            -volname "OmniFlow" \
-            -srcfolder "$APP" \
-            -ov \
-            -format UDZO \
-            "OmniFlow-macOS-${VERSION}.dmg"
+          APP="build/macos-derived-data/Build/Products/Release/OmniFlow-macOS.app"
+          test -d "$APP"
+          mkdir -p dist
+          ditto -c -k --sequesterRsrc --keepParent "$APP" \
+            "dist/OmniFlow-macOS-${GITHUB_SHA::7}.zip"
 
-      - name: Upload macOS DMG artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: OmniFlow-macOS
-          path: OmniFlow-macOS-*.dmg
+          path: dist/*.zip
+          if-no-files-found: error
           retention-days: 30
 
-  # ────────────────────────────────────────────────────────────────
-  # Job 3: 创建 GitHub Release（仅 tag 触发时）
-  #         等待 android 和 apple 两个 job 都完成后执行
-  # ────────────────────────────────────────────────────────────────
   release:
-    name: Create GitHub Release
-    runs-on: ubuntu-latest
-    needs: [android, apple]
+    name: Publish Tag Artifacts
     if: startsWith(github.ref, 'refs/tags/')
-
+    needs: [android, ios, macos]
+    runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          path: dist/
+          path: dist
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
-          name: "OmniFlow ${{ github.ref_name }}"
-          draft: false
-          prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: true
           files: |
             dist/**/*.apk
-            dist/**/*.ipa
-            dist/**/*.dmg
+            dist/**/*.zip
