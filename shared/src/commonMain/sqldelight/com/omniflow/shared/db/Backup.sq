@@ -89,9 +89,9 @@ VALUES (:id, :account_id, :date, :balance_minor, :delta_minor, :created_at);
 
 restoreCategory:
 INSERT INTO category(
-    id, ledger_id, parent_id, name, icon_key, type, created_at, updated_at, deleted_at
+    id, ledger_id, parent_id, name, icon_key, type, sort_order, created_at, updated_at, deleted_at
 ) VALUES (
-    :id, :ledger_id, :parent_id, :name, :icon_key, :type, :created_at, :updated_at, :deleted_at
+    :id, :ledger_id, :parent_id, :name, :icon_key, :type, :sort_order, :created_at, :updated_at, :deleted_at
 );
 
 restoreTag:

@@ -19,46 +19,42 @@ import androidx.compose.foundation.layout.size
 import org.xmlpull.v1.XmlPullParser
 
 private sealed interface SvgShape {
-    data class PathShape(val path: Path) : SvgShape
+    data class PathShape(val path: Path, val fill: Color?) : SvgShape
     data class Line(val start: Offset, val end: Offset) : SvgShape
     data class Circle(val center: Offset, val radius: Float) : SvgShape
     data class Rectangle(val rect: Rect, val radius: Float) : SvgShape
     data class Polyline(val points: List<Offset>) : SvgShape
 }
 
+private data class SvgDocument(
+    val width: Float,
+    val height: Float,
+    val shapes: List<SvgShape>,
+)
+
 @Composable
 internal fun SvgIcon(iconKey: String, modifier: Modifier = Modifier, tint: Color = androidx.compose.material3.LocalContentColor.current) {
     val context = LocalContext.current
-    val shapes = remember(iconKey) {
+    val document = remember(iconKey) {
         runCatching {
-            context.assets.open("icons/$iconKey.svg").use { input ->
-                val parser = Xml.newPullParser().apply { setInput(input, null) }
-                buildList {
-                    while (parser.eventType != XmlPullParser.END_DOCUMENT) {
-                        if (parser.eventType == XmlPullParser.START_TAG) parser.shape()?.let(::add)
-                        parser.next()
-                    }
-                }
-            }
+            context.assets.open("icons/$iconKey.svg").use(::parseSvg)
         }.getOrElse {
-            context.assets.open("icons/category.svg").use { input ->
-                val parser = Xml.newPullParser().apply { setInput(input, null) }
-                buildList {
-                    while (parser.eventType != XmlPullParser.END_DOCUMENT) {
-                        if (parser.eventType == XmlPullParser.START_TAG) parser.shape()?.let(::add)
-                        parser.next()
-                    }
-                }
-            }
+            context.assets.open("icons/category.svg").use(::parseSvg)
         }
     }
     Canvas(modifier.size(24.dp)) {
-        val scale = size.minDimension / 24f
+        val scale = minOf(size.width / document.width, size.height / document.height)
+        val offset = Offset(
+            (size.width - document.width * scale) / 2f,
+            (size.height - document.height * scale) / 2f,
+        )
         withTransform({ scale(scale, scale, Offset.Zero) }) {
             val stroke = Stroke(width = 2f)
-            shapes.forEach { shape ->
+            withTransform({ translate(offset.x / scale, offset.y / scale) }) {
+            document.shapes.forEach { shape ->
                 when (shape) {
-                    is SvgShape.PathShape -> drawPath(shape.path, tint, style = stroke)
+                    is SvgShape.PathShape -> shape.fill?.let { drawPath(shape.path, it) }
+                        ?: drawPath(shape.path, tint, style = stroke)
                     is SvgShape.Line -> drawLine(tint, shape.start, shape.end, strokeWidth = 2f)
                     is SvgShape.Circle -> drawCircle(tint, shape.radius, shape.center, style = stroke)
                     is SvgShape.Rectangle -> drawRoundRect(
@@ -73,12 +69,39 @@ internal fun SvgIcon(iconKey: String, modifier: Modifier = Modifier, tint: Color
                     }
                 }
             }
+            }
         }
     }
 }
 
+private fun parseSvg(input: java.io.InputStream): SvgDocument {
+    val parser = Xml.newPullParser().apply { setInput(input, null) }
+    var width = 24f
+    var height = 24f
+    val shapes = buildList {
+        while (parser.eventType != XmlPullParser.END_DOCUMENT) {
+            if (parser.eventType == XmlPullParser.START_TAG) {
+                if (parser.name == "svg") {
+                    parser.attribute("viewBox")?.trim()?.split(Regex("\\s+"))?.let { values ->
+                        if (values.size == 4) {
+                            width = values[2].toFloatOrNull() ?: width
+                            height = values[3].toFloatOrNull() ?: height
+                        }
+                    }
+                } else {
+                    parser.shape()?.let(::add)
+                }
+            }
+            parser.next()
+        }
+    }
+    return SvgDocument(width, height, shapes)
+}
+
 private fun XmlPullParser.shape(): SvgShape? = when (name) {
-    "path" -> attribute("d")?.let { SvgShape.PathShape(PathParser().parsePathString(it).toPath()) }
+    "path" -> attribute("d")?.let {
+        SvgShape.PathShape(PathParser().parsePathString(it).toPath(), attribute("fill").svgColor())
+    }
     "line" -> SvgShape.Line(
         Offset(attribute("x1").float(), attribute("y1").float()),
         Offset(attribute("x2").float(), attribute("y2").float()),
@@ -105,3 +128,6 @@ private fun XmlPullParser.shape(): SvgShape? = when (name) {
 
 private fun XmlPullParser.attribute(name: String): String? = getAttributeValue(null, name)
 private fun String?.float(): Float = this?.toFloatOrNull() ?: 0f
+private fun String?.svgColor(): Color? = this
+    ?.takeUnless { it == "none" || it == "currentColor" }
+    ?.let { value -> runCatching { Color(android.graphics.Color.parseColor(value)) }.getOrNull() }

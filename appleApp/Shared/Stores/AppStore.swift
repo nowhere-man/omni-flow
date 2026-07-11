@@ -454,6 +454,17 @@ final class AppStore: ObservableObject {
         #endif
     } }
 
+    func reorderPrimaryCategories(type: EntryType, orderedIDs: [String]) {
+        guard let ledgerID = resourceLedgerID else { error = "请先选择账本"; return }
+        perform { done in
+            #if canImport(OmniFlowShared)
+            bridge.reorderPrimaryCategories(ledgerId: ledgerID, typeName: type.rawValue, orderedIds: orderedIDs, callback: done)
+            #else
+            done("共享 Framework 尚未构建")
+            #endif
+        }
+    }
+
     func saveTag(id: String?, name: String) {
         guard let ledgerID = resourceLedgerID else { error = "请先选择账本"; return }
         perform { done in

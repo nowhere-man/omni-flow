@@ -3,12 +3,16 @@ package com.omniflow.shared.data
 import com.omniflow.shared.data.facade.SqlDelightManagementFacade
 import com.omniflow.shared.data.local.createJvmDatabase
 import com.omniflow.shared.data.repository.SqlDelightLedgerRepository
+import com.omniflow.shared.data.repository.SqlDelightCategoryRepository
 import com.omniflow.shared.data.repository.SqlDelightRuleRepository
 import com.omniflow.shared.domain.model.Rule
+import com.omniflow.shared.domain.model.Category
 import com.omniflow.shared.domain.model.RuleActionType
 import com.omniflow.shared.domain.model.RuleConditionType
+import com.omniflow.shared.domain.model.TransactionType
 import com.omniflow.shared.domain.usecase.CreateRuleUseCase
 import com.omniflow.shared.domain.usecase.ReorderRulesUseCase
+import com.omniflow.shared.domain.usecase.ReorderPrimaryCategoriesUseCase
 import com.omniflow.shared.domain.usecase.DeleteLedgerUseCase
 import com.omniflow.shared.domain.usecase.SetDefaultLedgerUseCase
 import kotlinx.coroutines.flow.first
@@ -18,6 +22,27 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class SqlDelightManagementFacadeTest {
+    @Test
+    fun persistsPrimaryCategoryOrder() = runBlocking {
+        val database = createJvmDatabase()
+        database.ledgerQueries.insertLedger("ledger", "日常", null, 1, 1)
+        val categories = SqlDelightCategoryRepository(database)
+        val facade = SqlDelightManagementFacade(database)
+        categories.create(Category("food", "ledger", null, "餐饮", "utensils", TransactionType.EXPENSE))
+        categories.create(Category("travel", "ledger", null, "出行", "bus", TransactionType.EXPENSE))
+
+        ReorderPrimaryCategoriesUseCase(categories)(
+            "ledger",
+            TransactionType.EXPENSE,
+            listOf("travel", "food"),
+        ).getOrThrow()
+
+        assertEquals(
+            listOf("travel", "food"),
+            facade.observeCategories("ledger").first().getOrThrow().map(Category::id),
+        )
+    }
+
     @Test
     fun exposesDefaultLedgerAndLedgerScopedRules() = runBlocking {
         val database = createJvmDatabase()

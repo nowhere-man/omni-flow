@@ -12,6 +12,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 
 class SqlDelightBackupStore(
     private val database: OmniFlowDatabase,
@@ -34,7 +35,7 @@ class SqlDelightBackupStore(
                 ) }),
                 "categories" to JsonArray(queries.allCategoriesForBackup().executeAsList().map { row(
                     it.id, it.ledger_id, it.parent_id, it.name, it.icon_key, it.type,
-                    it.created_at, it.updated_at, it.deleted_at,
+                    it.created_at, it.updated_at, it.deleted_at, it.sort_order,
                 ) }),
                 "tags" to JsonArray(queries.allTagsForBackup().executeAsList().map { row(
                     it.id, it.ledger_id, it.name, it.created_at, it.updated_at, it.deleted_at,
@@ -102,7 +103,8 @@ class SqlDelightBackupStore(
             root.rows("categories").forEach { element -> element.jsonArray.let { values ->
                 queries.restoreCategory(
                     values.text(0), values.text(1), values.nullableText(2), values.text(3), values.nullableText(4),
-                    values.text(5), values.long(6), values.long(7), values.nullableLong(8),
+                    values.text(5), values.getOrNull(9)?.jsonPrimitive?.longOrNull ?: 0L,
+                    values.long(6), values.long(7), values.nullableLong(8),
                 )
             } }
             root.rows("tags").forEach { element -> element.jsonArray.let { values ->

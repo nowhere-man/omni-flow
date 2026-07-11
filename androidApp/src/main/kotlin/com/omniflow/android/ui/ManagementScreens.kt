@@ -1,6 +1,8 @@
 package com.omniflow.android.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -9,7 +11,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -32,7 +39,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.omniflow.shared.domain.model.Account
 import com.omniflow.shared.domain.model.AccountType
@@ -222,7 +231,8 @@ private fun CategoryDialog(
     var type by remember(category) { mutableStateOf(category?.type ?: TransactionType.EXPENSE) }
     var parentId by remember(category) { mutableStateOf(category?.parentId) }
     var name by remember(category) { mutableStateOf(category?.name.orEmpty()) }
-    var icon by remember(category) { mutableStateOf(category?.iconKey ?: "category") }
+    var icon by remember(category) { mutableStateOf(category?.iconKey ?: CategoryIconOptions.first().key) }
+    var showIconPicker by remember(category) { mutableStateOf(false) }
     val parents = categories.filter { it.ledgerId == ledgerId && it.parentId == null && it.type == type && it.id != category?.id }
     FormDialog(if (category == null) "新建分类" else "编辑分类", onDismiss, {
         onSave(parentId, name, if (parentId == null) icon else null, type)
@@ -241,8 +251,85 @@ private fun CategoryDialog(
             onSelected = { parentId = it.id },
         )
         OutlinedTextField(name, { name = it }, label = { Text("名称") }, modifier = Modifier.fillMaxWidth())
-        if (parentId == null) ValueMenu(icon, BundledIconKeys, { it }) { icon = it }
+        if (parentId == null) {
+            CategoryIconButton(icon) { showIconPicker = true }
+        }
     }
+    if (showIconPicker) {
+        CategoryIconPickerDialog(
+            selectedKey = icon,
+            onDismiss = { showIconPicker = false },
+            onSelected = {
+                icon = it
+                showIconPicker = false
+            },
+        )
+    }
+}
+
+@Composable
+private fun CategoryIconButton(selectedKey: String, onClick: () -> Unit) {
+    val option = CategoryIconOptions.firstOrNull { it.key == selectedKey }
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(12.dp),
+    ) {
+        Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            SvgIcon(colorCategoryIconKey(selectedKey), Modifier.size(36.dp))
+            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                Text("分类图标", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(option?.label ?: "默认图标", fontWeight = FontWeight.SemiBold)
+            }
+            Text("更换", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+@Composable
+private fun CategoryIconPickerDialog(
+    selectedKey: String,
+    onDismiss: () -> Unit,
+    onSelected: (String) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("选择分类图标") },
+        text = {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(5),
+                modifier = Modifier.fillMaxWidth().height(420.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                gridItems(CategoryIconOptions, key = CategoryIconOption::key) { option ->
+                    val selected = option.key == selectedKey
+                    Surface(
+                        onClick = { onSelected(option.key) },
+                        modifier = Modifier.height(66.dp),
+                        color = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                        border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            SvgIcon(colorCategoryIconKey(option.key), Modifier.size(34.dp))
+                            Text(
+                                option.label,
+                                style = MaterialTheme.typography.labelSmall,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("关闭") } },
+    )
 }
 
 @Composable

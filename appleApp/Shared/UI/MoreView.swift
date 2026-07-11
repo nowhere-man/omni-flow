@@ -16,7 +16,7 @@ struct MoreView: View {
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
-                .background(.black, in: RoundedRectangle(cornerRadius: 8))
+                .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 8))
                 ModuleSection(title: "数据", modules: [("数据管理", "arrow.triangle.2.circlepath"), ("导入", "square.and.arrow.down"), ("导出", "square.and.arrow.up"), ("设置", "gearshape")])
                 ModuleSection(title: "账本与账户", modules: [("账本", "books.vertical"), ("账户", "wallet.pass"), ("资产", "chart.pie"), ("分类管理", "square.grid.2x2"), ("标签管理", "tag")])
                 ModuleSection(title: "自动化", modules: [("规则", "list.bullet.rectangle"), ("提醒", "bell")])
@@ -203,9 +203,37 @@ private struct CategoryManagementView: View {
     var body: some View {
         ManagementContainer(title: "分类管理", add: { showingEditor = true }) {
             LedgerResourcePicker()
-            ForEach(store.categories) { category in
-                ManagementRow(title: category.name, subtitle: category.type.label, edit: { editing = category; showingEditor = true }, delete: { store.deleteCategory(category.id) })
+            ForEach(EntryType.allCases) { type in
+                Section("\(type.label)一级分类") {
+                    ForEach(primaryCategories(type)) { category in
+                        ManagementRow(
+                            title: category.name,
+                            subtitle: "一级分类",
+                            edit: { editing = category; showingEditor = true },
+                            delete: { store.deleteCategory(category.id) }
+                        )
+                    }
+                    .onMove { offsets, destination in move(type, offsets, destination) }
+                }
             }
+            if !secondaryCategories.isEmpty {
+                Section("二级分类") {
+                    ForEach(secondaryCategories) { category in
+                        let parent = store.categories.first { $0.id == category.parentID }
+                        ManagementRow(
+                            title: category.name,
+                            subtitle: [parent?.name, category.type.label].compactMap { $0 }.joined(separator: " · "),
+                            edit: { editing = category; showingEditor = true },
+                            delete: { store.deleteCategory(category.id) }
+                        )
+                    }
+                }
+            }
+        }
+        .toolbar {
+            #if os(iOS)
+            EditButton()
+            #endif
         }
         .sheet(isPresented: $showingEditor) {
             CategoryEditor(category: editing) { name, type, parentID, iconKey in
@@ -214,6 +242,18 @@ private struct CategoryManagementView: View {
                 showingEditor = false
             }
         }
+    }
+
+    private func primaryCategories(_ type: EntryType) -> [CategoryUI] {
+        store.categories.filter { $0.parentID == nil && $0.type == type }
+    }
+
+    private var secondaryCategories: [CategoryUI] { store.categories.filter { $0.parentID != nil } }
+
+    private func move(_ type: EntryType, _ offsets: IndexSet, _ destination: Int) {
+        var ordered = primaryCategories(type)
+        ordered.move(fromOffsets: offsets, toOffset: destination)
+        store.reorderPrimaryCategories(type: type, orderedIDs: ordered.map(\.id))
     }
 }
 
@@ -556,7 +596,7 @@ private struct CategoryEditor: View {
         _name = State(initialValue: category?.name ?? "")
         _type = State(initialValue: category?.type ?? .expense)
         _parentID = State(initialValue: category?.parentID)
-        _iconKey = State(initialValue: category?.iconKey ?? "category")
+        _iconKey = State(initialValue: category?.iconKey ?? categoryIconOptions[0].key)
         self.save = save
     }
     var body: some View {
@@ -567,9 +607,51 @@ private struct CategoryEditor: View {
                 Text("一级分类").tag(String?.none)
                 ForEach(store.categories.filter { $0.parentID == nil && $0.type == type }) { Text($0.name).tag(Optional($0.id)) }
             }
-            if parentID == nil { BundledIconPicker(selection: $iconKey) }
+            if parentID == nil { CategoryIconPicker(selection: $iconKey) }
             Button("保存") { save(name, type, parentID, parentID == nil ? iconKey : nil) }
-        }.padding().frame(minWidth: 320)
+        }.padding().frame(minWidth: 360)
+    }
+}
+
+private struct CategoryIconPicker: View {
+    @Binding var selection: String
+    private let columns = [GridItem(.adaptive(minimum: 62), spacing: 8)]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("分类图标").font(.headline)
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 8) {
+                    ForEach(categoryIconOptions) { option in
+                        CategoryIconOptionButton(option: option, selected: selection == option.key) {
+                            selection = option.key
+                        }
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            .frame(height: 300)
+        }
+    }
+}
+
+private struct CategoryIconOptionButton: View {
+    let option: CategoryIconOptionUI
+    let selected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 3) {
+                SVGIconView(key: categoryIconAssetKey(option.key), size: 34)
+                Text(option.label).font(.caption2).lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, minHeight: 58)
+            .background(selected ? Color.accentColor.opacity(0.16) : Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+            .overlay { RoundedRectangle(cornerRadius: 10).stroke(selected ? Color.accentColor : .clear, lineWidth: 1.5) }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(option.label)
     }
 }
 

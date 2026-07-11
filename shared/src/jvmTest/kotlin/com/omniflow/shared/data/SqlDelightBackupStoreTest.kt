@@ -13,6 +13,7 @@ class SqlDelightBackupStoreTest {
         database.ledgerQueries.insertLedger("ledger", "日常", null, 1, 1)
         database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 500, 1, 1, 1)
         database.categoryQueries.insertCategory("category", "ledger", null, "餐饮", "utensils", "EXPENSE", 1, 1)
+        database.categoryQueries.updatePrimaryCategorySortOrder(3, 2, "category", "ledger", "EXPENSE")
         database.tagQueries.insertTag("tag", "ledger", "工作", 1, 1)
         database.transactionQueries.insertTransaction(
             "transaction", "ledger", "account", "category", 100, "EXPENSE", 1_000,
@@ -42,5 +43,6 @@ class SqlDelightBackupStoreTest {
         assertEquals("tag", database.tagQueries.tagsForTransaction("transaction").executeAsOne())
         assertEquals("会员", database.reminderQueries.activeReminders().executeAsOne().name)
         assertEquals("DARK", database.appPreferenceQueries.preference("appearance_mode").executeAsOne())
+        assertEquals(3L, database.categoryQueries.activeCategory("category").executeAsOne().sort_order)
     }
 }

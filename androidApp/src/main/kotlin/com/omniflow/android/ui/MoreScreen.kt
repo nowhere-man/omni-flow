@@ -4,9 +4,11 @@ import android.content.Context
 import android.app.DatePickerDialog
 import android.net.Uri
 import android.provider.OpenableColumns
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,7 +21,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -69,6 +73,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.omniflow.shared.domain.model.AppearanceMode
 import com.omniflow.shared.domain.model.DateRange
@@ -111,20 +116,30 @@ internal fun MoreScreen(
     initialPage: MorePage = MorePage.HOME,
     modifier: Modifier = Modifier,
 ) {
-    var page by remember(initialPage) { mutableStateOf(initialPage) }
+    var pageStack by remember(initialPage) {
+        mutableStateOf(if (initialPage == MorePage.HOME) listOf(MorePage.HOME) else listOf(MorePage.HOME, initialPage))
+    }
+    val page = pageStack.last()
+    fun navigate(next: MorePage) {
+        if (next != page) pageStack = pageStack + next
+    }
+    fun navigateBack() {
+        if (pageStack.size > 1) pageStack = pageStack.dropLast(1)
+    }
+    BackHandler(enabled = page != MorePage.HOME, onBack = ::navigateBack)
     Column(modifier.fillMaxSize()) {
         if (page != MorePage.HOME) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { page = MorePage.HOME }) {
+                IconButton(onClick = ::navigateBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                 }
                 Text(page.label, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             }
         }
         when (page) {
-            MorePage.HOME -> MoreHome(state, onPage = { page = it })
-            MorePage.SETTINGS -> SettingsPage(state, viewModel) { page = MorePage.DATA }
-            MorePage.DATA -> DataManagementPage(state, viewModel, onPage = { page = it })
+            MorePage.HOME -> MoreHome(state, onPage = ::navigate)
+            MorePage.SETTINGS -> SettingsPage(state, viewModel) { navigate(MorePage.DATA) }
+            MorePage.DATA -> DataManagementPage(state, viewModel, onPage = ::navigate)
             MorePage.IMPORT -> ImportPage(state, viewModel)
             MorePage.EXPORT -> ExportPage(state, viewModel)
             MorePage.RULES,
@@ -133,7 +148,7 @@ internal fun MoreScreen(
             MorePage.ACCOUNTS,
             MorePage.ASSETS,
             MorePage.CATEGORIES,
-            MorePage.TAGS -> ManagementPage(page, state, viewModel) { page = it }
+            MorePage.TAGS -> ManagementPage(page, state, viewModel, onPage = ::navigate)
         }
     }
 }
@@ -294,25 +309,32 @@ private fun SettingsPage(state: MoreUiState, viewModel: OmniFlowViewModel, onDat
                     icon = Icons.Default.Palette,
                     shape = groupedOptionShape(2, 4),
                     content = {
-                        ThemeColor.entries.chunked(2).forEach { colors ->
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                colors.forEach { color ->
-                                    FilterChip(
-                                        selected = state.preferences.themeColor == color,
-                                        onClick = { viewModel.setThemeColor(color) },
-                                        modifier = Modifier.weight(1f),
-                                        label = {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Surface(
-                                                    modifier = Modifier.size(12.dp),
-                                                    shape = CircleShape,
-                                                    color = themePrimaryColor(color, false),
-                                                ) {}
-                                                Spacer(Modifier.width(6.dp))
-                                                Text(themeColorLabel(color))
-                                            }
-                                        },
-                                    )
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(ThemeColor.entries, key = { it.name }) { color ->
+                                val selected = state.preferences.themeColor == color
+                                Column(
+                                    modifier = Modifier
+                                        .width(72.dp)
+                                        .selectable(
+                                            selected = selected,
+                                            onClick = { viewModel.setThemeColor(color) },
+                                            role = Role.RadioButton,
+                                        ),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                                ) {
+                                    Surface(
+                                        modifier = Modifier
+                                            .size(56.dp)
+                                            .border(
+                                                width = if (selected) 3.dp else 0.dp,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                shape = CircleShape,
+                                            ),
+                                        shape = CircleShape,
+                                        color = themePrimaryColor(color, false),
+                                    ) {}
+                                    Text(themeColorLabel(color), style = MaterialTheme.typography.bodySmall, maxLines = 1)
                                 }
                             }
                         }

@@ -4,6 +4,7 @@ import android.app.DatePickerDialog
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -17,13 +18,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.ArrowForwardIos
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -48,6 +52,7 @@ import com.omniflow.shared.domain.model.LedgerScope
 import com.omniflow.shared.domain.model.Money
 import com.omniflow.shared.domain.model.StatementTable
 import com.omniflow.shared.domain.model.TransactionType
+import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toLocalDateTime
@@ -58,6 +63,7 @@ internal fun AnalyticsScreen(
     onScope: (LedgerScope) -> Unit,
     onRangeMode: (AnalyticsRangeMode) -> Unit,
     onShiftRange: (Long) -> Unit,
+    onCurrentRange: () -> Unit,
     onCustomRange: (DateRange) -> Unit,
     onRankingType: (TransactionType) -> Unit,
     onCategoryAnalysis: (TransactionType, CategoryShareGranularity) -> Unit,
@@ -68,6 +74,9 @@ internal fun AnalyticsScreen(
     onAddTransaction: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val now = Clock.System.now()
+    val showCurrentRangeButton = state.rangeMode != AnalyticsRangeMode.CUSTOM &&
+        (now < state.range.startInclusive || now >= state.range.endExclusive)
     LazyColumn(
         modifier = modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -82,46 +91,51 @@ internal fun AnalyticsScreen(
                     FilterChip(
                         selected = state.rangeMode == mode,
                         onClick = { onRangeMode(mode) },
-                        label = { Text(mode.label) },
+                        label = {
+                            Text(
+                                mode.label,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center,
+                            )
+                        },
                         modifier = Modifier.weight(1f),
                     )
                 }
             }
         }
-        item {
-            val customRange = state.rangeMode == AnalyticsRangeMode.CUSTOM
-            val context = LocalContext.current
+        if (state.rangeMode == AnalyticsRangeMode.CUSTOM) {
+            item { CustomRangeControls(state.range, onCustomRange) }
+        } else {
+            item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                if (customRange) {
-                    Spacer(Modifier.width(48.dp))
-                } else {
-                    IconButton(onClick = { onShiftRange(-1) }) {
-                        Icon(Icons.Default.ArrowBackIosNew, contentDescription = "上一个范围")
-                    }
+                IconButton(onClick = { onShiftRange(-1) }) {
+                    Icon(Icons.Default.ArrowBackIosNew, contentDescription = "上一个范围")
                 }
                 Text(
                     state.range.displayLabel(state.rangeMode),
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable(enabled = customRange) {
-                            showCustomRangePicker(context, state.range, onCustomRange)
-                        },
+                    modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center,
                     maxLines = 1,
                     softWrap = false,
-                    style = when (state.rangeMode) {
-                        AnalyticsRangeMode.WEEK -> MaterialTheme.typography.titleMedium
-                        AnalyticsRangeMode.MONTH,
-                        AnalyticsRangeMode.YEAR -> MaterialTheme.typography.titleLarge
-                        AnalyticsRangeMode.CUSTOM -> MaterialTheme.typography.bodySmall
+                    style = if (state.rangeMode == AnalyticsRangeMode.WEEK) {
+                        MaterialTheme.typography.titleMedium
+                    } else {
+                        MaterialTheme.typography.titleLarge
                     },
                     fontWeight = FontWeight.SemiBold,
                 )
-                if (customRange) {
-                    Spacer(Modifier.width(48.dp))
-                } else {
-                    IconButton(onClick = { onShiftRange(1) }) {
-                        Icon(Icons.Default.ArrowForwardIos, contentDescription = "下一个范围")
+                IconButton(onClick = { onShiftRange(1) }) {
+                    Icon(Icons.Default.ArrowForwardIos, contentDescription = "下一个范围")
+                }
+            }
+        }
+            if (showCurrentRangeButton) {
+                item {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                        FilledTonalButton(
+                            onClick = onCurrentRange,
+                            shape = RoundedCornerShape(16.dp),
+                        ) { Text(state.rangeMode.currentRangeLabel()) }
                     }
                 }
             }
@@ -280,60 +294,100 @@ private fun AnalyticsEmptyState(onAddTransaction: () -> Unit) {
     ) {
         Text("当前范围还没有收支", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Text("新增交易后，这里会生成趋势、分类和资产分析。", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        TextButton(onClick = onAddTransaction) { Text("新增交易") }
+        Button(onClick = onAddTransaction) { Text("新增交易") }
     }
 }
 
-private fun showCustomRangePicker(
-    context: android.content.Context,
-    range: DateRange,
-    onRange: (DateRange) -> Unit,
-) {
-    val currentStart = range.startInclusive.toLocalDateTime(ChinaTimeZone).date
-    val currentEnd = kotlinx.datetime.Instant.fromEpochMilliseconds(range.endExclusive.toEpochMilliseconds() - 1)
-        .toLocalDateTime(ChinaTimeZone).date
+@Composable
+private fun CustomRangeControls(range: DateRange, onRange: (DateRange) -> Unit) {
+    val context = LocalContext.current
+    var start by remember(range) { mutableStateOf(range.startInclusive.toLocalDateTime(ChinaTimeZone).date) }
+    var end by remember(range) {
+        mutableStateOf(
+            kotlinx.datetime.Instant.fromEpochMilliseconds(range.endExclusive.toEpochMilliseconds() - 1)
+                .toLocalDateTime(ChinaTimeZone).date,
+        )
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilledTonalButton(
+                onClick = { showDatePicker(context, start) { start = it } },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(16.dp),
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("开始", style = MaterialTheme.typography.labelSmall)
+                    Text(start.numericDate(), style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+            FilledTonalButton(
+                onClick = { showDatePicker(context, end) { end = it } },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(16.dp),
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("结束", style = MaterialTheme.typography.labelSmall)
+                    Text(end.numericDate(), style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+        Button(
+            onClick = { onRange(inclusiveDateRange(start, end)) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+        ) { Text("应用") }
+    }
+}
+
+private fun showDatePicker(context: android.content.Context, date: LocalDate, onDate: (LocalDate) -> Unit) {
     DatePickerDialog(
         context,
-        { _, startYear, startMonth, startDay ->
-            val selectedStart = LocalDate(startYear, startMonth + 1, startDay)
-            DatePickerDialog(
-                context,
-                { _, endYear, endMonth, endDay ->
-                    val selectedEnd = LocalDate(endYear, endMonth + 1, endDay)
-                    val orderedStart = minOf(selectedStart, selectedEnd)
-                    val orderedEnd = maxOf(selectedStart, selectedEnd)
-                    val next = java.time.LocalDate.of(orderedEnd.year, orderedEnd.monthNumber, orderedEnd.dayOfMonth).plusDays(1)
-                    onRange(
-                        DateRange(
-                            orderedStart.atStartOfDayIn(ChinaTimeZone),
-                            LocalDate(next.year, next.monthValue, next.dayOfMonth).atStartOfDayIn(ChinaTimeZone),
-                        ),
-                    )
-                },
-                currentEnd.year,
-                currentEnd.monthNumber - 1,
-                currentEnd.dayOfMonth,
-            ).show()
-        },
-        currentStart.year,
-        currentStart.monthNumber - 1,
-        currentStart.dayOfMonth,
+        { _, year, month, day -> onDate(LocalDate(year, month + 1, day)) },
+        date.year,
+        date.monthNumber - 1,
+        date.dayOfMonth,
     ).show()
+}
+
+private fun inclusiveDateRange(start: LocalDate, end: LocalDate): DateRange {
+    val orderedStart = minOf(start, end)
+    val orderedEnd = maxOf(start, end)
+    val next = java.time.LocalDate.of(orderedEnd.year, orderedEnd.monthNumber, orderedEnd.dayOfMonth).plusDays(1)
+    return DateRange(
+        orderedStart.atStartOfDayIn(ChinaTimeZone),
+        LocalDate(next.year, next.monthValue, next.dayOfMonth).atStartOfDayIn(ChinaTimeZone),
+    )
+}
+
+private fun LocalDate.numericDate(): String = "$year-${monthNumber.toString().padStart(2, '0')}-${dayOfMonth.toString().padStart(2, '0')}"
+
+private fun AnalyticsRangeMode.currentRangeLabel(): String = when (this) {
+    AnalyticsRangeMode.WEEK -> "回到本周"
+    AnalyticsRangeMode.MONTH -> "回到本月"
+    AnalyticsRangeMode.YEAR -> "回到今年"
+    AnalyticsRangeMode.CUSTOM -> ""
 }
 
 @Composable
 private fun LedgerScopeMenu(scope: LedgerScope, ledgers: List<com.omniflow.shared.domain.model.Ledger>, onScope: (LedgerScope) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    TextButton(onClick = { expanded = true }) {
-        Text(when (scope) {
+    val currentLabel = when (scope) {
             LedgerScope.All -> "所有账本"
             is LedgerScope.Single -> ledgers.firstOrNull { it.id == scope.ledgerId }?.name ?: "账本"
-        })
     }
-    DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
-        DropdownMenuItem(text = { Text("所有账本") }, onClick = { expanded = false; onScope(LedgerScope.All) })
-        ledgers.forEach { ledger ->
-            DropdownMenuItem(text = { Text(ledger.name) }, onClick = { expanded = false; onScope(LedgerScope.Single(ledger.id)) })
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(
+                Icons.AutoMirrored.Filled.MenuBook,
+                contentDescription = currentLabel,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
+        DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(text = { Text("所有账本") }, onClick = { expanded = false; onScope(LedgerScope.All) })
+            ledgers.forEach { ledger ->
+                DropdownMenuItem(text = { Text(ledger.name) }, onClick = { expanded = false; onScope(LedgerScope.Single(ledger.id)) })
+            }
         }
     }
 }

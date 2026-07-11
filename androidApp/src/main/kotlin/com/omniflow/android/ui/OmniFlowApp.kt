@@ -30,16 +30,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.ShowChart
-import androidx.compose.material.icons.automirrored.filled.TrendingDown
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.ViewModule
@@ -94,6 +93,7 @@ import com.omniflow.shared.domain.model.TransactionDetailState
 import com.omniflow.shared.domain.model.TransactionDetailDisplayMode
 import com.omniflow.shared.domain.model.TransactionListItem
 import com.omniflow.shared.domain.model.TransactionType
+import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toLocalDateTime
 import java.time.LocalDate as JavaLocalDate
@@ -226,7 +226,6 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
                     onMonthSelected = viewModel::selectHomeMonth,
                     onToggleDisplayMode = viewModel::toggleDisplayMode,
                     onDismissDate = viewModel::dismissDate,
-                    onDateScope = viewModel::selectDateScope,
                     onAdd = { date, ledgerId ->
                         viewModel.startNewTransaction(date, ledgerId)
                         destination = MainDestination.ADD
@@ -246,6 +245,7 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
                     onScope = viewModel::setAnalyticsScope,
                     onRangeMode = viewModel::setAnalyticsRangeMode,
                     onShiftRange = viewModel::shiftAnalyticsRange,
+                    onCurrentRange = viewModel::resetAnalyticsRange,
                     onCustomRange = viewModel::setAnalyticsCustomRange,
                     onRankingType = viewModel::setRankingType,
                     onCategoryAnalysis = viewModel::setCategoryAnalysis,
@@ -268,6 +268,8 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
                     onLedger = viewModel::setTransactionLedger,
                     onAccount = viewModel::setTransactionAccount,
                     onCategory = viewModel::setTransactionCategory,
+                    onReorderPrimary = viewModel::reorderTransactionPrimaryCategories,
+                    onCreateSecondary = viewModel::createTransactionSecondaryCategory,
                     onTag = viewModel::toggleTransactionTag,
                     onNote = viewModel::setTransactionNote,
                     onDate = viewModel::setTransactionDate,
@@ -425,7 +427,6 @@ private fun HomeScreen(
     onMonthSelected: (LocalDate) -> Unit,
     onToggleDisplayMode: () -> Unit,
     onDismissDate: () -> Unit,
-    onDateScope: (LedgerScope) -> Unit,
     onAdd: (LocalDate?, String?) -> Unit,
     onEdit: (String) -> Unit,
     onManageLedgers: () -> Unit,
@@ -504,12 +505,7 @@ private fun HomeScreen(
                 state = state.selectedDate,
                 isLoading = state.isDateLoading,
                 error = state.dateError,
-                displayMode = state.displayMode,
-                ledgers = state.ledgers,
-                scope = state.selectedDateScope ?: state.selectedDate?.scope ?: LedgerScope.All,
                 onDismiss = onDismissDate,
-                onScope = onDateScope,
-                onAdd = onAdd,
                 onEdit = onEdit,
             )
         }
@@ -532,7 +528,7 @@ private fun LedgerSelector(
         }
         IconButton(onClick = onToggle) {
             Icon(
-                Icons.Default.AccountBalance,
+                Icons.AutoMirrored.Filled.MenuBook,
                 contentDescription = currentLabel,
                 tint = MaterialTheme.colorScheme.primary,
             )
@@ -621,8 +617,8 @@ private fun CalendarFilter(
             }
             val icon = when (filter) {
                 CalendarTransactionFilter.ALL -> Icons.AutoMirrored.Filled.List
-                CalendarTransactionFilter.INCOME -> Icons.AutoMirrored.Filled.TrendingUp
-                CalendarTransactionFilter.EXPENSE -> Icons.AutoMirrored.Filled.TrendingDown
+                CalendarTransactionFilter.INCOME -> Icons.Default.Add
+                CalendarTransactionFilter.EXPENSE -> Icons.Default.Remove
             }
             IconButton(
                 onClick = { onSelected(filter) },
@@ -673,6 +669,7 @@ private fun CalendarMonth(
     onDateSelected: (LocalDate) -> Unit,
 ) {
     val totals = remember(summaries) { summaries.associateBy(CalendarDaySummary::date) }
+    val today = remember { Clock.System.now().toLocalDateTime(ChinaTimeZone).date }
     val first = JavaLocalDate.of(month.year, month.monthNumber, 1)
     val leading = first.dayOfWeek.value % 7
     val cells = List(leading) { null } + (1..first.lengthOfMonth()).map { day ->
@@ -693,7 +690,7 @@ private fun CalendarMonth(
         cells.chunked(7).forEach { week ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 week.forEach { date ->
-                    CalendarCell(date, date?.let(totals::get), onDateSelected, Modifier.weight(1f))
+                    CalendarCell(date, date == today, date?.let(totals::get), onDateSelected, Modifier.weight(1f))
                 }
                 repeat(7 - week.size) { Spacer(Modifier.weight(1f).aspectRatio(1f)) }
             }
@@ -704,6 +701,7 @@ private fun CalendarMonth(
 @Composable
 private fun CalendarCell(
     date: LocalDate?,
+    isToday: Boolean,
     summary: CalendarDaySummary?,
     onDateSelected: (LocalDate) -> Unit,
     modifier: Modifier,
@@ -720,7 +718,22 @@ private fun CalendarCell(
             .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(date.dayOfMonth.toString(), style = MaterialTheme.typography.labelMedium)
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .background(
+                    if (isToday) MaterialTheme.colorScheme.primary else Color.Transparent,
+                    CircleShape,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                date.dayOfMonth.toString(),
+                color = if (isToday) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (isToday) FontWeight.SemiBold else FontWeight.Normal,
+            )
+        }
         if (summary != null) {
             if (summary.expenseTotal != Money.Zero) {
                 Text(summary.expenseTotal.asCompactRmb(), color = ExpenseColor, style = MaterialTheme.typography.labelSmall)
@@ -844,12 +857,7 @@ private fun DateDetailSheet(
     state: TransactionDetailState?,
     isLoading: Boolean,
     error: String?,
-    displayMode: TransactionDetailDisplayMode,
-    ledgers: List<com.omniflow.shared.domain.model.Ledger>,
-    scope: LedgerScope,
     onDismiss: () -> Unit,
-    onScope: (LedgerScope) -> Unit,
-    onAdd: (LocalDate?, String?) -> Unit,
     onEdit: (String) -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -861,47 +869,14 @@ private fun DateDetailSheet(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 val date = state.date.startInclusive.toLocalDateTime(ChinaTimeZone).date
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(date.displayName(), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                    TextButton(onClick = { onAdd(date, (scope as? LedgerScope.Single)?.ledgerId) }) { Text("新增") }
+                Text(date.displayName(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    SummaryAmount("当日支出", state.summary.expenseTotal, ExpenseColor)
+                    SummaryAmount("当日收入", state.summary.incomeTotal, IncomeColor)
                 }
-                DateLedgerSelector(scope, ledgers, onScope)
-                MonthlySummary(state.summary.expenseTotal, state.summary.incomeTotal)
-                Text(
-                    "支出 ${state.items.count { it.type == TransactionType.EXPENSE }} 笔 · 收入 ${state.items.count { it.type == TransactionType.INCOME }} 笔",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                TransactionItems(state.items, displayMode, onEdit)
-                if (state.items.isEmpty()) Text("当日暂无交易，可点击新增开始记账")
+                TransactionItems(state.items, TransactionDetailDisplayMode.LIST, onEdit)
+                if (state.items.isEmpty()) Text("当日暂无交易")
                 Spacer(Modifier.height(20.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun DateLedgerSelector(
-    scope: LedgerScope,
-    ledgers: List<com.omniflow.shared.domain.model.Ledger>,
-    onScope: (LedgerScope) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        TextButton(onClick = { expanded = true }) {
-            Text(
-                when (scope) {
-                    LedgerScope.All -> "所有账本"
-                    is LedgerScope.Single -> ledgers.firstOrNull { it.id == scope.ledgerId }?.name ?: "账本"
-                },
-            )
-        }
-        DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(text = { Text("所有账本") }, onClick = { expanded = false; onScope(LedgerScope.All) })
-            ledgers.forEach { ledger ->
-                DropdownMenuItem(
-                    text = { Text(ledger.name) },
-                    onClick = { expanded = false; onScope(LedgerScope.Single(ledger.id)) },
-                )
             }
         }
     }

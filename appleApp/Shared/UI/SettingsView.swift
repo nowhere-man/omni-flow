@@ -71,20 +71,34 @@ struct SettingsView: View {
                 Text("浅色").tag("LIGHT")
                 Text("深色").tag("DARK")
             }
-            Picker("主题色", selection: Binding(get: { store.themeColor }, set: store.setThemeColor)) {
-                ForEach(AppThemeColor.allCases) { theme in
-                    HStack {
-                        Circle().fill(theme.color(for: .light)).frame(width: 12, height: 12)
-                        Text(theme.label)
+            VStack(alignment: .leading, spacing: 10) {
+                Text("主题色").font(.headline)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 18) {
+                        ForEach(AppThemeColor.allCases) { theme in
+                            Button { store.setThemeColor(theme.rawValue) } label: {
+                                VStack(spacing: 6) {
+                                    Circle()
+                                        .fill(theme.color(for: .light))
+                                        .frame(width: 46, height: 46)
+                                        .overlay {
+                                            Circle().stroke(store.themeColor == theme.rawValue ? Color.primary : .clear, lineWidth: 3)
+                                        }
+                                    Text(theme.label).font(.caption).foregroundStyle(.primary)
+                                }
+                                .frame(width: 64)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(theme.label)
+                        }
                     }
-                    .tag(theme.rawValue)
                 }
             }
             Button("数据管理") { store.destination = .more }
         }
         .formStyle(.grouped)
         #if os(macOS)
-        .frame(width: 460, height: 270)
+        .frame(width: 520, height: 330)
         .padding()
         #endif
     }

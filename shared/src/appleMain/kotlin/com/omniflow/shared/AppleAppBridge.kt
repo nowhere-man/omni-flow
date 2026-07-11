@@ -408,6 +408,20 @@ class AppleAppBridge(val app: SharedApp) {
         scope.launch { callback(app.deleteCategory(id).exceptionOrNull()?.message) }
     }
 
+    fun reorderPrimaryCategories(
+        ledgerId: String,
+        typeName: String,
+        orderedIds: List<String>,
+        callback: (String?) -> Unit,
+    ) {
+        scope.launch {
+            callback(
+                app.reorderPrimaryCategories(ledgerId, TransactionType.valueOf(typeName), orderedIds)
+                    .exceptionOrNull()?.message,
+            )
+        }
+    }
+
     fun saveTag(id: String?, ledgerId: String, name: String, callback: (String?) -> Unit) {
         scope.launch {
             val tag = Tag(id ?: ids.next(), ledgerId, name)

@@ -12,6 +12,9 @@ struct TransactionEditorView: View {
     @State private var excluded = false
     @State private var saving = false
     @State private var message: String?
+    @State private var showingDatePicker = false
+    @State private var showingSecondaryEditor = false
+    @State private var secondaryName = ""
 
     var body: some View {
         editorLayout
@@ -21,6 +24,17 @@ struct TransactionEditorView: View {
         .onChange(of: ledgerID) { store.selectResourceLedger($0.isEmpty ? nil : $0) }
         .onChange(of: type) { value in
             if let category = store.categories.first(where: { $0.id == categoryID }), category.type != value { categoryID = "" }
+        }
+        .alert("新建二级分类", isPresented: $showingSecondaryEditor) {
+            TextField("分类名称", text: $secondaryName)
+            Button("取消", role: .cancel) { secondaryName = "" }
+            Button("创建") {
+                guard let primaryID = selectedPrimaryID, !secondaryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                store.saveCategory(id: nil, name: secondaryName, type: type, parentID: primaryID)
+                secondaryName = ""
+            }
+        } message: {
+            Text("创建后可在当前一级分类下选择")
         }
     }
 
@@ -42,7 +56,7 @@ struct TransactionEditorView: View {
     }
 
     private var editorFields: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 10) {
             Picker("类型", selection: $type) {
                 ForEach(EntryType.allCases) { Text($0.label).tag($0) }
             }
@@ -56,17 +70,39 @@ struct TransactionEditorView: View {
             .padding(.vertical, 4)
             .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
 
-            TransactionCategoryPicker(categories: store.categories, type: type, selectedID: $categoryID)
+            TransactionCategoryPicker(
+                categories: store.categories,
+                type: type,
+                selectedID: $categoryID,
+                onAddSecondary: { showingSecondaryEditor = true }
+            )
             TransactionTagPicker(tags: store.tags, selectedIDs: Binding(
                 get: { store.editingTagIDs },
                 set: { store.editingTagIDs = $0 }
             ))
-            TextField("备注", text: $note)
-                .textFieldStyle(.roundedBorder)
-            HStack {
-                DatePicker("日期", selection: $date, displayedComponents: .date)
+            HStack(spacing: 8) {
+                Image(systemName: "note.text").foregroundStyle(.secondary)
+                TextField("添加备注", text: $note)
+                    .textFieldStyle(.plain)
+                DatePicker("时间", selection: $date, displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+                    .accessibilityLabel("交易时间")
+            }
+            .padding(.horizontal, 12)
+            .frame(minHeight: 42)
+            .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
+            HStack(spacing: 8) {
+                Button { showingDatePicker.toggle() } label: {
+                    Label(Calendar.current.isDateInToday(date) ? "日期" : date.formatted(.dateTime.month(.twoDigits).day(.twoDigits)), systemImage: "calendar")
+                }
+                .buttonStyle(.borderless)
+                .popover(isPresented: $showingDatePicker) {
+                    DatePicker("日期", selection: $date, displayedComponents: .date)
+                        .datePickerStyle(.graphical)
+                        .padding()
+                }
                 Spacer()
-                Toggle("不计入收支", isOn: $excluded).labelsHidden()
+                Toggle("不计入收支", isOn: $excluded)
             }
         }
     }
@@ -103,8 +139,24 @@ struct TransactionEditorView: View {
         amount = ""
         note = ""
         excluded = false
-        date = store.draftTransactionDate ?? Date()
+        date = draftDate(store.draftTransactionDate)
         store.editingTagIDs = []
+    }
+
+    private var selectedPrimaryID: String? {
+        guard let category = store.categories.first(where: { $0.id == categoryID }) else { return nil }
+        return category.parentID ?? category.id
+    }
+
+    private func draftDate(_ selectedDay: Date?) -> Date {
+        let calendar = Calendar.current
+        let now = Date()
+        var components = calendar.dateComponents([.year, .month, .day], from: selectedDay ?? now)
+        let time = calendar.dateComponents([.hour, .minute], from: now)
+        components.hour = time.hour
+        components.minute = time.minute
+        components.second = 0
+        return calendar.date(from: components) ?? now
     }
 
     private func save(again: Bool) {
@@ -197,25 +249,33 @@ private struct TransactionCategoryPicker: View {
     let categories: [CategoryUI]
     let type: EntryType
     @Binding var selectedID: String
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 4)
+    let onAddSecondary: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("分类").font(.headline)
+        VStack(alignment: .leading, spacing: 6) {
+            Text("分类").font(.subheadline.weight(.semibold))
             if primaryCategories.isEmpty {
                 Text("选择账本后加载分类").font(.subheadline).foregroundStyle(.secondary)
             } else {
-                LazyVGrid(columns: columns, spacing: 8) {
+                LazyVGrid(columns: columns, spacing: 4) {
                     ForEach(primaryCategories) { category in
                         CategoryTile(category: category, selected: primaryID == category.id) { selectedID = category.id }
                     }
                 }
             }
-            if !secondaryCategories.isEmpty {
-                Text("二级分类").font(.subheadline.weight(.semibold))
-                LazyVGrid(columns: columns, spacing: 8) {
-                    ForEach(secondaryCategories) { category in
-                        CategoryTile(category: category, selected: selectedID == category.id) { selectedID = category.id }
+            if primaryID != nil {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        Text("二级").font(.caption).foregroundStyle(.secondary)
+                        ForEach(secondaryCategories) { category in
+                            Button(category.name) { selectedID = category.id }
+                                .buttonStyle(.bordered)
+                                .tint(selectedID == category.id ? .accentColor : .secondary)
+                                .controlSize(.small)
+                        }
+                        Button(action: onAddSecondary) { Image(systemName: "plus") }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
                     }
                 }
             }
@@ -229,6 +289,14 @@ private struct TransactionCategoryPicker: View {
         guard let primaryID else { return [] }
         return categories.filter { $0.type == type && $0.parentID == primaryID }
     }
+
+    private var columns: [GridItem] {
+        #if os(iOS)
+        return Array(repeating: GridItem(.flexible(), spacing: 4), count: 6)
+        #else
+        return [GridItem(.adaptive(minimum: 68), spacing: 6)]
+        #endif
+    }
 }
 
 private struct CategoryTile: View {
@@ -240,12 +308,13 @@ private struct CategoryTile: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: 4) {
-                SVGIconView(key: category.iconKey ?? "category", size: 22)
+                SVGIconView(key: categoryIconAssetKey(category.iconKey), size: 32)
                 Text(category.name).font(.caption).lineLimit(1)
             }
-            .frame(maxWidth: .infinity, minHeight: 64)
-            .foregroundStyle(selected ? (colorScheme == .dark ? .black : .white) : .primary)
-            .background(selected ? (colorScheme == .dark ? Color.white : Color.black) : Color.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+            .frame(maxWidth: .infinity, minHeight: 58)
+            .foregroundStyle(.primary)
+            .background(selected ? Color.accentColor.opacity(colorScheme == .dark ? 0.28 : 0.16) : .clear, in: RoundedRectangle(cornerRadius: 10))
+            .overlay { RoundedRectangle(cornerRadius: 10).stroke(selected ? Color.accentColor : .clear, lineWidth: 1) }
         }
         .buttonStyle(.plain)
     }
@@ -258,7 +327,9 @@ private struct TransactionAmountPanel: View {
     let message: String?
     let onSecondary: () -> Void
     let onDone: () -> Void
-    private let rows = [["1", "2", "3", "+"], ["4", "5", "6", "-"], ["7", "8", "9", "⌫"], [".", "0"]]
+    private var rows: [[String]] {
+        [["1", "2", "3", "+"], ["4", "5", "6", "-"], ["7", "8", "9", secondaryTitle], [".", "0", "⌫", "完成"]]
+    }
 
     var body: some View {
         VStack(spacing: 8) {
@@ -269,18 +340,8 @@ private struct TransactionAmountPanel: View {
             }
             if let message { Text(message).font(.caption).foregroundStyle(.red).frame(maxWidth: .infinity, alignment: .leading) }
             ForEach(rows, id: \.self) { row in
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     ForEach(row, id: \.self) { key in keypadButton(key) }
-                    if row.count == 2 {
-                        Button(secondaryTitle, action: onSecondary)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                            .buttonStyle(.bordered)
-                            .disabled(saving)
-                        Button(saving ? "保存中" : "完成", action: onDone)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                            .buttonStyle(.borderedProminent)
-                            .disabled(saving)
-                    }
                 }
             }
         }
@@ -289,9 +350,20 @@ private struct TransactionAmountPanel: View {
     }
 
     private func keypadButton(_ key: String) -> some View {
-        Button(key) { press(key) }
-            .frame(maxWidth: .infinity, minHeight: 44)
-            .buttonStyle(.bordered)
+        let done = key == "完成"
+        let secondary = key == secondaryTitle
+        let operation = key == "+" || key == "-"
+        return Button(done && saving ? "保存中" : key) {
+            if done { onDone() } else if secondary { onSecondary() } else { press(key) }
+        }
+            .frame(maxWidth: .infinity, minHeight: 46)
+            .background(
+                done ? Color.accentColor : secondaryTitle == "删除" && secondary ? Color.red.opacity(0.18) : secondary || operation ? Color.accentColor.opacity(0.14) : Color.secondary.opacity(0.10),
+                in: RoundedRectangle(cornerRadius: 12)
+            )
+            .foregroundStyle(done ? Color.white : Color.primary)
+            .fontWeight(done || secondary || operation ? .semibold : .medium)
+            .buttonStyle(.plain)
             .disabled(saving)
     }
 
@@ -327,15 +399,16 @@ private struct TransactionTagPicker: View {
 
     var body: some View {
         if !tags.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("标签").font(.subheadline.weight(.semibold))
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 76), spacing: 8)], spacing: 8) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    Text("标签").font(.caption).foregroundStyle(.secondary)
                     ForEach(tags) { tag in
                         Button(tag.name) {
                             if !selectedIDs.insert(tag.id).inserted { selectedIDs.remove(tag.id) }
                         }
                         .buttonStyle(.bordered)
                         .tint(selectedIDs.contains(tag.id) ? .primary : .secondary)
+                        .controlSize(.small)
                     }
                 }
             }

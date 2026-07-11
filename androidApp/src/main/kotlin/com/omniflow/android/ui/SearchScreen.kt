@@ -4,7 +4,6 @@ import android.app.DatePickerDialog
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,11 +13,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -30,6 +36,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -86,61 +93,86 @@ internal fun SearchScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item { Spacer(Modifier.height(8.dp)) }
-        item { Text("搜索", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold) }
         item {
             OutlinedTextField(
                 value = state.query.keyword,
                 onValueChange = onKeyword,
-                label = { Text("关键词：备注、分类、账户或标签") },
+                placeholder = { Text("关键词、分类、账户或标签") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = if (state.query.keyword.isBlank()) null else {
+                    { IconButton(onClick = { onKeyword("") }) { Icon(Icons.Default.Close, contentDescription = "清除关键词") } }
+                },
                 modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
                 singleLine = true,
             )
         }
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                TextButton(onClick = onToggleAdvanced) { Text(if (state.isAdvancedExpanded) "收起高级筛选" else "展开高级筛选") }
-                TextButton(onClick = ::clearFilters) { Text("清除") }
-            }
-        }
-        if (state.isAdvancedExpanded) {
-            item {
-                FilterCard("账本与类型") {
-                    ValueMenu(
-                        label = when (val scope = state.query.scope) {
-                            LedgerScope.All -> "所有账本"
-                            is LedgerScope.Single -> state.ledgers.firstOrNull { it.id == scope.ledgerId }?.name ?: "账本"
-                        },
-                        allLabel = "所有账本",
-                        values = state.ledgers,
-                        valueLabel = Ledger::name,
-                        onAll = { onScope(LedgerScope.All) },
-                        onSelected = { onScope(LedgerScope.Single(it.id)) },
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        Modifier.fillMaxWidth().clickable(onClick = onToggleAdvanced),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("筛选", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.weight(1f))
+                        if (state.query.hasFilters) {
+                            TextButton(onClick = ::clearFilters) { Text("清除") }
+                        }
+                        Icon(
+                            if (state.isAdvancedExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = if (state.isAdvancedExpanded) "收起筛选" else "展开筛选",
+                        )
+                    }
+                    if (state.isAdvancedExpanded) {
+                        Text("类型", style = MaterialTheme.typography.labelLarge)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(null, TransactionType.EXPENSE, TransactionType.INCOME).forEach { type ->
                             FilterChip(
                                 selected = state.query.type == type,
                                 onClick = { onType(type) },
+                                modifier = Modifier.weight(1f),
                                 label = { Text(type?.let { if (it == TransactionType.EXPENSE) "支出" else "收入" } ?: "不限") },
                             )
                         }
                     }
-                }
-            }
-            item {
-                FilterCard("分类、标签与账户") {
-                    ValueMenu(
-                        label = primaryCategories.firstOrNull { it.id == state.query.primaryCategoryId }?.name ?: "不限一级分类",
-                        allLabel = "不限一级分类",
-                        values = primaryCategories,
-                        valueLabel = Category::name,
-                        onAll = { onPrimaryCategory(null) },
-                        onSelected = { onPrimaryCategory(it.id) },
-                    )
-                    if (secondaryCategories.isNotEmpty()) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            ValueMenu(
+                                label = when (val scope = state.query.scope) {
+                                    LedgerScope.All -> "所有账本"
+                                    is LedgerScope.Single -> state.ledgers.firstOrNull { it.id == scope.ledgerId }?.name ?: "账本"
+                                },
+                                allLabel = "所有账本",
+                                values = state.ledgers,
+                                valueLabel = Ledger::name,
+                                onAll = { onScope(LedgerScope.All) },
+                                onSelected = { onScope(LedgerScope.Single(it.id)) },
+                                modifier = Modifier.weight(1f),
+                            )
+                            ValueMenu(
+                                label = state.accounts.firstOrNull { it.id == state.query.accountId }?.name ?: "不限账户",
+                                allLabel = "不限账户",
+                                values = state.accounts,
+                                valueLabel = Account::name,
+                                onAll = { onAccount(null) },
+                                onSelected = { onAccount(it.id) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            ValueMenu(
+                                label = primaryCategories.firstOrNull { it.id == state.query.primaryCategoryId }?.name ?: "不限一级分类",
+                                allLabel = "不限一级分类",
+                                values = primaryCategories,
+                                valueLabel = Category::name,
+                                onAll = { onPrimaryCategory(null) },
+                                onSelected = { onPrimaryCategory(it.id) },
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (secondaryCategories.isNotEmpty()) {
                         ValueMenu(
                             label = secondaryCategories.firstOrNull { it.id == state.query.secondaryCategoryId }?.name ?: "不限二级分类",
                             allLabel = "不限二级分类",
@@ -148,7 +180,11 @@ internal fun SearchScreen(
                             valueLabel = Category::name,
                             onAll = { onSecondaryCategory(null) },
                             onSelected = { onSecondaryCategory(it.id) },
+                                    modifier = Modifier.weight(1f),
                         )
+                            } else {
+                                Spacer(Modifier.weight(1f))
+                            }
                     }
                     ValueMenu(
                         label = state.tags.firstOrNull { it.id == state.query.tagId }?.name ?: "不限标签",
@@ -157,19 +193,9 @@ internal fun SearchScreen(
                         valueLabel = Tag::name,
                         onAll = { onTag(null) },
                         onSelected = { onTag(it.id) },
+                                modifier = Modifier.fillMaxWidth(),
                     )
-                    ValueMenu(
-                        label = state.accounts.firstOrNull { it.id == state.query.accountId }?.name ?: "不限账户",
-                        allLabel = "不限账户",
-                        values = state.accounts,
-                        valueLabel = Account::name,
-                        onAll = { onAccount(null) },
-                        onSelected = { onAccount(it.id) },
-                    )
-                }
-            }
-            item {
-                FilterCard("金额") {
+                        Text("金额", style = MaterialTheme.typography.labelLarge)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         AmountMode.entries.forEach { mode ->
                             FilterChip(
@@ -180,6 +206,7 @@ internal fun SearchScreen(
                                     if (mode != AmountMode.RANGE) { minimum = ""; maximum = "" }
                                     onAmount(exact, minimum, maximum)
                                 },
+                                    modifier = Modifier.weight(1f),
                                 label = { Text(when (mode) { AmountMode.NONE -> "不限"; AmountMode.EXACT -> "精确"; AmountMode.RANGE -> "范围" }) },
                             )
                         }
@@ -193,10 +220,7 @@ internal fun SearchScreen(
                             MoneyField("最大金额", maximum, Modifier.weight(1f)) { maximum = it; onAmount("", minimum, maximum) }
                         }
                     }
-                }
-            }
-            item {
-                FilterCard("日期") {
+                        Text("日期", style = MaterialTheme.typography.labelLarge)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         DateButton("开始", startDate, Modifier.weight(1f)) { date ->
                             startDate = date
@@ -207,7 +231,10 @@ internal fun SearchScreen(
                             updateDateRange(startDate, endDate, onDateRange)
                         }
                     }
-                    TextButton(onClick = { startDate = null; endDate = null; onDateRange(null) }) { Text("不限日期") }
+                        if (startDate != null || endDate != null) {
+                            TextButton(onClick = { startDate = null; endDate = null; onDateRange(null) }) { Text("不限日期") }
+                        }
+                    }
                 }
             }
         }
@@ -250,16 +277,6 @@ internal fun SearchScreen(
             }
         }
         item { Spacer(Modifier.height(24.dp)) }
-    }
-}
-
-@Composable
-private fun FilterCard(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            content()
-        }
     }
 }
 
@@ -343,9 +360,10 @@ private fun <T> ValueMenu(
     valueLabel: (T) -> String,
     onAll: () -> Unit,
     onSelected: (T) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Column {
+    Column(modifier) {
         OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) { Text(label) }
         DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(text = { Text(allLabel) }, onClick = { expanded = false; onAll() })

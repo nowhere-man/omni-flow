@@ -20,6 +20,7 @@ import com.omniflow.shared.domain.model.Tag
 import com.omniflow.shared.domain.model.TagId
 import com.omniflow.shared.domain.model.Transaction
 import com.omniflow.shared.domain.model.TransactionId
+import com.omniflow.shared.domain.model.TransactionType
 
 interface LedgerRepository {
     suspend fun activeLedgers(): List<Ledger>
@@ -55,6 +56,7 @@ interface CategoryRepository {
     suspend fun activeCategories(ledgerId: LedgerId): List<Category>
     suspend fun create(category: Category)
     suspend fun update(category: Category)
+    suspend fun reorderPrimary(ledgerId: LedgerId, type: TransactionType, categoryIds: List<CategoryId>)
     suspend fun archive(categoryId: CategoryId)
 }
 

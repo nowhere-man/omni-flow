@@ -43,6 +43,7 @@ import com.omniflow.shared.domain.usecase.CreateReminderUseCase
 import com.omniflow.shared.domain.usecase.CreateTagUseCase
 import com.omniflow.shared.domain.usecase.DeleteAccountUseCase
 import com.omniflow.shared.domain.usecase.DeleteCategoryUseCase
+import com.omniflow.shared.domain.usecase.ReorderPrimaryCategoriesUseCase
 import com.omniflow.shared.domain.usecase.DeleteLedgerUseCase
 import com.omniflow.shared.domain.usecase.DeleteRuleUseCase
 import com.omniflow.shared.domain.usecase.DeleteReminderUseCase
@@ -110,6 +111,7 @@ class SharedApp(
     val createCategory = CreateCategoryUseCase(categories)
     val updateCategory = UpdateCategoryUseCase(categories)
     val deleteCategory = DeleteCategoryUseCase(categories)
+    val reorderPrimaryCategories = ReorderPrimaryCategoriesUseCase(categories)
     val createTag = CreateTagUseCase(tags)
     val updateTag = UpdateTagUseCase(tags)
     val deleteTag = DeleteTagUseCase(tags)

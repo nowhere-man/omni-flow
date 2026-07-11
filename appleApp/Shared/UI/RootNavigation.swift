@@ -20,7 +20,7 @@ struct PhoneRootView: View {
                     .font(.headline.weight(.bold))
                     .foregroundStyle(.white)
                     .frame(width: 52, height: 52)
-                    .background(.black, in: Circle())
+                    .background(Color.accentColor, in: Circle())
             }
             .accessibilityLabel("新增交易")
             .offset(y: -26)

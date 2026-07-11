@@ -23,6 +23,46 @@ let bundledIconKeys = [
     "shirt", "chart-line", "briefcase-business", "trophy", "gift", "play", "category",
 ]
 
+struct CategoryIconOptionUI: Identifiable, Hashable {
+    let key: String
+    let label: String
+    var id: String { key }
+}
+
+let categoryIconOptions = [
+    CategoryIconOptionUI(key: "utensils", label: "餐饮"), CategoryIconOptionUI(key: "hot-beverage", label: "饮品"),
+    CategoryIconOptionUI(key: "bread", label: "面包"), CategoryIconOptionUI(key: "pizza", label: "披萨"),
+    CategoryIconOptionUI(key: "hamburger", label: "快餐"), CategoryIconOptionUI(key: "cake", label: "甜点"),
+    CategoryIconOptionUI(key: "groceries", label: "买菜"), CategoryIconOptionUI(key: "bus", label: "公交"),
+    CategoryIconOptionUI(key: "bicycle", label: "骑行"), CategoryIconOptionUI(key: "train", label: "火车"),
+    CategoryIconOptionUI(key: "taxi", label: "打车"), CategoryIconOptionUI(key: "fuel", label: "加油"),
+    CategoryIconOptionUI(key: "parking", label: "停车"), CategoryIconOptionUI(key: "shopping-bag", label: "购物"),
+    CategoryIconOptionUI(key: "shirt", label: "服饰"), CategoryIconOptionUI(key: "beauty", label: "美妆"),
+    CategoryIconOptionUI(key: "house", label: "住房"), CategoryIconOptionUI(key: "furniture", label: "家居"),
+    CategoryIconOptionUI(key: "electricity", label: "电费"), CategoryIconOptionUI(key: "water", label: "水费"),
+    CategoryIconOptionUI(key: "internet", label: "网络"), CategoryIconOptionUI(key: "phone", label: "话费"),
+    CategoryIconOptionUI(key: "smartphone", label: "数码"), CategoryIconOptionUI(key: "education", label: "教育"),
+    CategoryIconOptionUI(key: "books", label: "书籍"), CategoryIconOptionUI(key: "baby", label: "育儿"),
+    CategoryIconOptionUI(key: "pet", label: "宠物"), CategoryIconOptionUI(key: "film", label: "电影"),
+    CategoryIconOptionUI(key: "game", label: "游戏"), CategoryIconOptionUI(key: "music", label: "音乐"),
+    CategoryIconOptionUI(key: "sports", label: "运动"), CategoryIconOptionUI(key: "fitness", label: "健身"),
+    CategoryIconOptionUI(key: "camera", label: "摄影"), CategoryIconOptionUI(key: "party", label: "聚会"),
+    CategoryIconOptionUI(key: "wine", label: "酒水"), CategoryIconOptionUI(key: "plane", label: "旅行"),
+    CategoryIconOptionUI(key: "car", label: "汽车"), CategoryIconOptionUI(key: "heart-pulse", label: "医疗"),
+    CategoryIconOptionUI(key: "medicine", label: "药品"), CategoryIconOptionUI(key: "insurance", label: "保险"),
+    CategoryIconOptionUI(key: "wrench", label: "维修"), CategoryIconOptionUI(key: "donation", label: "公益"),
+    CategoryIconOptionUI(key: "tax", label: "税费"), CategoryIconOptionUI(key: "refund", label: "退款"),
+    CategoryIconOptionUI(key: "banknote", label: "工资"), CategoryIconOptionUI(key: "chart-line", label: "理财"),
+    CategoryIconOptionUI(key: "briefcase-business", label: "工作"), CategoryIconOptionUI(key: "office", label: "办公"),
+    CategoryIconOptionUI(key: "trophy", label: "奖金"), CategoryIconOptionUI(key: "gift", label: "礼物"),
+]
+
+private let categoryIconKeys = Set(categoryIconOptions.map(\.key))
+
+func categoryIconAssetKey(_ key: String?) -> String {
+    "fluent-\(key.flatMap { categoryIconKeys.contains($0) ? $0 : nil } ?? "category")"
+}
+
 struct CategoryUI: Identifiable, Hashable {
     let id: String
     var name: String

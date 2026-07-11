@@ -61,9 +61,12 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.minus
+import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 
 data class HomeUiState(
@@ -379,6 +382,13 @@ class OmniFlowViewModel(
         )
         observeAnalytics()
     }
+    fun resetAnalyticsRange() {
+        val mode = _analyticsUiState.value.rangeMode
+        if (mode == AnalyticsRangeMode.CUSTOM) return
+        analyticsAnchor = Clock.System.now().toLocalDateTime(ChinaTimeZone).date
+        _analyticsUiState.value = _analyticsUiState.value.copy(range = analyticsRange(mode, analyticsAnchor))
+        observeAnalytics()
+    }
     fun setAnalyticsCustomRange(range: DateRange) {
         _analyticsUiState.value = _analyticsUiState.value.copy(rangeMode = AnalyticsRangeMode.CUSTOM, range = range)
         observeAnalytics()
@@ -519,12 +529,16 @@ class OmniFlowViewModel(
         editingTransaction = null
         val accounts = _transactionUiState.value.accounts
         val selectedLedger = ledgerId ?: defaultLedgerId
+        val now = Clock.System.now().toLocalDateTime(ChinaTimeZone)
         _transactionUiState.value = TransactionEditorUiState(
             ledgers = _transactionUiState.value.ledgers,
             accounts = accounts,
             ledgerId = selectedLedger,
             accountId = accounts.firstOrNull { it.name == "现金" }?.id ?: accounts.firstOrNull()?.id,
-            occurredAt = date?.atStartOfDayIn(ChinaTimeZone) ?: Clock.System.now(),
+            occurredAt = LocalDateTime(
+                date ?: now.date,
+                LocalTime(now.hour, now.minute),
+            ).toInstant(ChinaTimeZone),
         )
         observeEditorLedger(selectedLedger)
     }
@@ -572,6 +586,26 @@ class OmniFlowViewModel(
     }
     fun setTransactionCategory(categoryId: String?) {
         _transactionUiState.value = _transactionUiState.value.copy(categoryId = categoryId)
+    }
+    fun reorderTransactionPrimaryCategories(categoryIds: List<String>) {
+        val state = _transactionUiState.value
+        val ledgerId = state.ledgerId ?: return
+        viewModelScope.launch {
+            sharedApp.reorderPrimaryCategories(ledgerId, state.type, categoryIds)
+                .onFailure { error -> _transactionUiState.value = state.copy(error = error.message) }
+        }
+    }
+    fun createTransactionSecondaryCategory(name: String) {
+        val state = _transactionUiState.value
+        val ledgerId = state.ledgerId ?: return
+        val selected = state.categories.firstOrNull { it.id == state.categoryId } ?: return
+        val parentId = selected.parentId ?: selected.id
+        val id = UUID.randomUUID().toString()
+        viewModelScope.launch {
+            sharedApp.createCategory(Category(id, ledgerId, parentId, name, null, state.type))
+                .onSuccess { _transactionUiState.value = _transactionUiState.value.copy(categoryId = id) }
+                .onFailure { error -> _transactionUiState.value = state.copy(error = error.message) }
+        }
     }
     fun toggleTransactionTag(tagId: String) {
         val tags = _transactionUiState.value.selectedTagIds.toMutableSet()

@@ -13,27 +13,40 @@ struct AnalyticsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text("统计").font(.largeTitle.bold())
-                HStack {
-                    Picker("账本", selection: Binding(get: { store.analyticsLedgerID }, set: store.selectAnalyticsLedger)) {
-                        Text("所有账本").tag(String?.none)
-                        ForEach(store.ledgers) { Text($0.name).tag(Optional($0.id)) }
-                    }.pickerStyle(.menu)
+                HStack(spacing: 10) {
+                    Menu {
+                        Button("所有账本") { store.selectAnalyticsLedger(nil) }
+                        ForEach(store.ledgers) { ledger in Button(ledger.name) { store.selectAnalyticsLedger(ledger.id) } }
+                    } label: {
+                        Image(systemName: "books.vertical")
+                    }
+                    .accessibilityLabel("选择统计账本")
                     Picker("范围", selection: $mode) {
                         ForEach(RangeMode.allCases) { Text($0.label).tag($0) }
-                    }.pickerStyle(.segmented)
+                    }
+                    .pickerStyle(.segmented)
                 }
                 if mode == .custom {
-                    HStack {
-                        DatePicker("开始", selection: $customStart, displayedComponents: .date)
-                        DatePicker("结束", selection: $customEnd, displayedComponents: .date)
-                        Button("应用", action: refresh)
+                    HStack(spacing: 8) {
+                        compactDatePicker("开始", selection: $customStart)
+                        compactDatePicker("结束", selection: $customEnd)
+                        Button("应用", action: refresh).buttonStyle(.borderedProminent)
                     }
                 } else {
                     HStack {
                         Button { shift(-1) } label: { Image(systemName: "chevron.left") }
-                        Spacer(); Text(range.start.formatted(date: .abbreviated, time: .omitted)); Spacer()
+                        Spacer()
+                        Text(rangeLabel)
+                            .font(.headline)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                        Spacer()
                         Button { shift(1) } label: { Image(systemName: "chevron.right") }
+                    }
+                    if !range.contains(Date()) {
+                        Button(currentRangeTitle) { anchor = Date(); refresh() }
+                            .buttonStyle(.bordered)
+                            .frame(maxWidth: .infinity, alignment: .center)
                     }
                 }
                 if store.analyticsExpenseMinor == 0 && store.analyticsIncomeMinor == 0 {
@@ -174,6 +187,38 @@ struct AnalyticsView: View {
     }
 
     private func refresh() { store.observeAnalytics(start: range.start, end: range.end, ledgerID: store.analyticsLedgerID) }
+
+    private var rangeLabel: String {
+        let end = Calendar.current.date(byAdding: .day, value: -1, to: range.end) ?? range.end
+        switch mode {
+        case .week: return "\(format(range.start, "MM-dd")) 至 \(format(end, "MM-dd"))"
+        case .month: return format(range.start, "yyyy-MM")
+        case .year: return format(range.start, "yyyy")
+        case .custom: return "\(format(range.start, "yyyy-MM-dd")) 至 \(format(end, "yyyy-MM-dd"))"
+        }
+    }
+
+    private var currentRangeTitle: String {
+        switch mode { case .week: return "回到本周"; case .month: return "回到本月"; case .year: return "回到今年"; case .custom: return "" }
+    }
+
+    private func compactDatePicker(_ label: String, selection: Binding<Date>) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label).font(.caption).foregroundStyle(.secondary)
+            DatePicker(label, selection: selection, displayedComponents: .date).labelsHidden()
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func format(_ date: Date, _ pattern: String) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = pattern
+        return formatter.string(from: date)
+    }
 }
 
 private struct StatementTableView: View {

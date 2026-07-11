@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject private var store: AppStore
+    @State private var showingMonthPicker = false
 
     var body: some View {
         ScrollView {
@@ -9,18 +10,15 @@ struct HomeView: View {
                 HStack {
                     ledgerPicker
                     Spacer()
+                    monthHeader
+                    Spacer()
                     Button { store.destination = .search } label: { Image(systemName: "magnifyingglass") }
                 }
-                monthHeader
                 MonthlyBalanceCard(expense: store.expenseMinor, income: store.incomeMinor)
-                HStack {
-                    Text("本月日历").font(.headline)
-                    Spacer()
-                    CalendarFilterPicker()
-                }
+                HStack { Spacer(); CalendarFilterPicker() }
                 HomeCalendarView()
                 HStack {
-                    Text("记账明细").font(.title2.bold())
+                    Text("明细").font(.title2.bold())
                     Spacer()
                     Button(store.transactionDisplayMode.label, action: store.toggleTransactionDisplayMode)
                 }
@@ -48,31 +46,43 @@ struct HomeView: View {
                 set: { if !$0 { store.dismissDateDetail() } }
             )
         ) {
+            #if os(macOS)
             DateTransactionDetailView()
                 .environmentObject(store)
                 .frame(minWidth: 420, minHeight: 520)
+            #else
+            DateTransactionDetailView()
+                .environmentObject(store)
+            #endif
         }
     }
 
     private var ledgerPicker: some View {
-        Picker("账本", selection: Binding(get: { store.selectedLedgerID }, set: store.selectLedger)) {
-            Text("所有账本").tag(String?.none)
-            ForEach(store.ledgers) { ledger in Text(ledger.name).tag(Optional(ledger.id)) }
+        Menu {
+            Button("所有账本") { store.selectLedger(nil) }
+            ForEach(store.ledgers) { ledger in Button(ledger.name) { store.selectLedger(ledger.id) } }
+        } label: {
+            Image(systemName: "books.vertical")
+                .font(.title3.weight(.semibold))
         }
-        .pickerStyle(.menu)
+        .accessibilityLabel(store.selectedLedgerID.flatMap { id in store.ledgers.first { $0.id == id }?.name } ?? "所有账本")
     }
 
     private var monthHeader: some View {
-        HStack {
+        HStack(spacing: 4) {
             Button { store.shiftMonth(-1) } label: { Image(systemName: "chevron.left") }
-            Spacer()
-            DatePicker(
-                "月份",
-                selection: Binding(get: { store.selectedMonth }, set: store.selectMonth),
-                displayedComponents: [.date]
-            )
-            .labelsHidden()
-            Spacer()
+            Button(store.selectedMonth.formatted(.dateTime.year().month())) { showingMonthPicker.toggle() }
+                .font(.headline)
+                .buttonStyle(.plain)
+                .popover(isPresented: $showingMonthPicker) {
+                    DatePicker(
+                        "月份",
+                        selection: Binding(get: { store.selectedMonth }, set: store.selectMonth),
+                        displayedComponents: [.date]
+                    )
+                    .datePickerStyle(.graphical)
+                    .padding()
+                }
             Button { store.shiftMonth(1) } label: { Image(systemName: "chevron.right") }
         }
     }
@@ -90,9 +100,14 @@ private struct HomeCalendarView: View {
                 ForEach(1...dayCount, id: \.self) { day in
                     let date = date(day)
                     let summary = summaries[Calendar.current.startOfDay(for: date)]
+                    let isToday = Calendar.current.isDateInToday(date)
                     Button { store.showDate(date) } label: {
                         VStack(spacing: 2) {
-                            Text("\(day)").fontWeight(.medium)
+                            Text("\(day)")
+                                .fontWeight(isToday ? .bold : .medium)
+                                .foregroundStyle(isToday ? Color.white : Color.primary)
+                                .frame(width: 28, height: 28)
+                                .background(isToday ? Color.accentColor : .clear, in: Circle())
                             if let summary {
                                 if summary.incomeMinor > 0 { Text("+\(compact(summary.incomeMinor))").foregroundStyle(.secondary) }
                                 if summary.expenseMinor > 0 { Text("-\(compact(summary.expenseMinor))").foregroundStyle(.secondary) }
@@ -100,7 +115,6 @@ private struct HomeCalendarView: View {
                         }
                         .font(.caption2)
                         .frame(maxWidth: .infinity, minHeight: 52)
-                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
                     }
                     .buttonStyle(.plain)
                 }
@@ -127,26 +141,11 @@ private struct DateTransactionDetailView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    HStack(spacing: 12) {
-                        SummaryCard(title: "支出 \(expenseCount) 笔", value: store.dateDetailExpenseMinor.rmb)
-                        SummaryCard(title: "收入 \(incomeCount) 笔", value: store.dateDetailIncomeMinor.rmb)
-                    }
-                    HStack {
-                        Picker("账本", selection: Binding(get: { store.dateDetailLedgerID }, set: store.setDateDetailLedger)) {
-                            Text("所有账本").tag(String?.none)
-                            ForEach(store.ledgers) { Text($0.name).tag(Optional($0.id)) }
-                        }
-                        .pickerStyle(.menu)
-                        Spacer()
-                        Button(store.transactionDisplayMode.label, action: store.toggleTransactionDisplayMode)
-                    }
+                    Text("支出 \(store.dateDetailExpenseMinor.rmb) · 收入 \(store.dateDetailIncomeMinor.rmb)")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
                     if store.dateDetailTransactions.isEmpty {
-                        EmptyStateView(title: "当天暂无交易", systemImage: "calendar.badge.plus", detail: "可以直接新增一笔交易", actionTitle: "新增交易") {
-                            let date = store.selectedDate
-                            let ledger = store.dateDetailLedgerID
-                            store.dismissDateDetail()
-                            store.startNewTransaction(date: date, ledgerID: ledger)
-                        }
+                        EmptyStateView(title: "当天暂无明细", systemImage: "calendar", detail: "这一天没有记录")
                     } else {
                         TransactionCollectionView(items: store.dateDetailTransactions, displayMode: store.transactionDisplayMode) { item in
                             store.editTransaction(item)
@@ -158,19 +157,11 @@ private struct DateTransactionDetailView: View {
             }
             .navigationTitle(store.selectedDate?.formatted(date: .abbreviated, time: .omitted) ?? "日期明细")
             .toolbar {
-                Button("新增") {
-                    let date = store.selectedDate
-                    let ledger = store.dateDetailLedgerID
-                    store.startNewTransaction(date: date, ledgerID: ledger)
-                    store.dismissDateDetail()
-                }
                 Button("关闭", action: store.dismissDateDetail)
             }
         }
     }
 
-    private var expenseCount: Int { store.dateDetailTransactions.filter { $0.type == .expense }.count }
-    private var incomeCount: Int { store.dateDetailTransactions.filter { $0.type == .income }.count }
 }
 
 private struct TransactionGroupsView: View {
@@ -231,7 +222,7 @@ private struct TransactionRow: View {
     var body: some View {
         Button { onEdit(item) } label: {
             HStack {
-                SVGIconView(key: item.categoryIconKey ?? (item.type == .expense ? "shopping-bag" : "banknote"), size: 28)
+                SVGIconView(key: categoryIconAssetKey(item.categoryIconKey ?? (item.type == .expense ? "shopping-bag" : "banknote")), size: 28)
                 VStack(alignment: .leading) {
                     Text(item.categoryName).fontWeight(.medium)
                     Text("\(item.accountName) · \(item.note)").font(.caption).foregroundStyle(.secondary).lineLimit(2)
@@ -297,12 +288,22 @@ private struct CalendarFilterPicker: View {
     @EnvironmentObject private var store: AppStore
 
     var body: some View {
-        Picker("日历筛选", selection: Binding(get: { store.calendarFilter }, set: store.setCalendarFilter)) {
-            Text("全部").tag("ALL")
-            Text("收入").tag("INCOME")
-            Text("支出").tag("EXPENSE")
+        HStack(spacing: 4) {
+            filterButton("ALL", "list.bullet", "全部")
+            filterButton("INCOME", "plus", "收入")
+            filterButton("EXPENSE", "minus", "支出")
         }
-        .pickerStyle(.menu)
+    }
+
+    private func filterButton(_ value: String, _ systemImage: String, _ label: String) -> some View {
+        Button { store.setCalendarFilter(value) } label: {
+            Image(systemName: systemImage)
+                .frame(width: 40, height: 40)
+                .background(store.calendarFilter == value ? Color.accentColor.opacity(0.18) : .clear, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(store.calendarFilter == value ? Color.accentColor : Color.secondary)
+        .accessibilityLabel(label)
     }
 }
 
@@ -324,6 +325,6 @@ private struct MonthlyBalanceCard: View {
         .foregroundStyle(.white)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(.black, in: RoundedRectangle(cornerRadius: 8))
+        .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 8))
     }
 }

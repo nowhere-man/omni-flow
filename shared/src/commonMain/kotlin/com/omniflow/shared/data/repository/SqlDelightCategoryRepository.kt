@@ -57,6 +57,31 @@ class SqlDelightCategoryRepository(
         )
     }
 
+    override suspend fun reorderPrimary(
+        ledgerId: String,
+        type: TransactionType,
+        categoryIds: List<CategoryId>,
+    ) {
+        val activeIds = activeCategories(ledgerId)
+            .filter { it.parentId == null && it.type == type }
+            .map(Category::id)
+        require(categoryIds.size == activeIds.size && categoryIds.toSet() == activeIds.toSet()) {
+            "分类顺序与当前一级分类不一致"
+        }
+        val timestamp = now().toEpochMilliseconds()
+        database.transaction {
+            categoryIds.forEachIndexed { index, id ->
+                database.categoryQueries.updatePrimaryCategorySortOrder(
+                    sort_order = index.toLong(),
+                    updated_at = timestamp,
+                    id = id,
+                    ledger_id = ledgerId,
+                    type = type.name,
+                )
+            }
+        }
+    }
+
     override suspend fun archive(categoryId: CategoryId) {
         require(database.categoryQueries.activeCategoryId(categoryId).executeAsOneOrNull() != null) {
             "分类不存在或已删除"
