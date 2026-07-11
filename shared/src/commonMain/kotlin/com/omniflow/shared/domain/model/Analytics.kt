@@ -12,6 +12,7 @@ data class AnalyticsQuery(
     val rankingType: TransactionType = TransactionType.EXPENSE,
     val categoryShareType: TransactionType = TransactionType.EXPENSE,
     val categoryShareGranularity: CategoryShareGranularity = CategoryShareGranularity.PRIMARY,
+    val primaryCategoryId: CategoryId? = null,
 )
 
 data class ChartPoint(
@@ -54,6 +55,13 @@ data class TagSummaryItem(
     val income: Money,
 )
 
+data class AccountAssetItem(
+    val accountId: AccountId,
+    val accountName: String,
+    val iconKey: String,
+    val balance: Money,
+)
+
 data class StatementMonth(
     val month: Int,
     val expense: Money,
@@ -72,9 +80,11 @@ data class AnalyticsDashboardState(
     val query: AnalyticsQuery,
     val summary: TransactionSummary,
     val previousPeriod: PeriodCompareResult,
+    val yearOverYear: PeriodCompareResult,
     val trend: ChartData,
     val ranking: List<TransactionRankingItem>,
     val categoryShares: List<CategoryShareItem>,
     val tagSummary: List<TagSummaryItem>,
     val accountSummary: AccountSummary,
+    val accountAssets: List<AccountAssetItem>,
 )

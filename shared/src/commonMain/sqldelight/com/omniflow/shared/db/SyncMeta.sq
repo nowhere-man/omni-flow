@@ -3,3 +3,9 @@ CREATE TABLE sync_meta (
     value TEXT NOT NULL,
     updated_at INTEGER NOT NULL
 );
+
+syncMeta:
+SELECT value FROM sync_meta WHERE key = :key;
+
+upsertSyncMeta:
+INSERT OR REPLACE INTO sync_meta(key, value, updated_at) VALUES (:key, :value, :updated_at);

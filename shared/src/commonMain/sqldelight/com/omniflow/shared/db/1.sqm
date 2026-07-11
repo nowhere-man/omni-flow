@@ -1,0 +1,2 @@
+CREATE INDEX IF NOT EXISTS reminder_active_schedule
+ON reminder(deleted_at, paused, schedule_kind);

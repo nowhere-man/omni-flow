@@ -1,5 +1,7 @@
 package com.omniflow.shared.domain.model
 
+import kotlin.jvm.JvmInline
+
 @JvmInline
 value class Money(val minor: Long) : Comparable<Money> {
     operator fun plus(other: Money) = Money(minor + other.minor)

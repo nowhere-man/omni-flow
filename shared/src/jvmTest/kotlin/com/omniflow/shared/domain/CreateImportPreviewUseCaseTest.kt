@@ -14,8 +14,10 @@ class CreateImportPreviewUseCaseTest {
     @Test
     fun requiresMissingTypeAndCategoryBeforeCommit() {
         val state = CreateImportPreviewUseCase().fromRaw(
-            ImportFormat.ALIPAY,
-            listOf(
+            sessionId = "session-1",
+            ledgerId = "ledger-1",
+            format = ImportFormat.ALIPAY,
+            transactions = listOf(
                 RawTransaction(
                     format = ImportFormat.ALIPAY,
                     occurredAt = Instant.fromEpochMilliseconds(1),

@@ -7,10 +7,14 @@ import com.omniflow.shared.domain.facade.ManagementFacade
 import com.omniflow.shared.domain.model.Account
 import com.omniflow.shared.domain.model.AccountSummary
 import com.omniflow.shared.domain.model.AccountType
+import com.omniflow.shared.domain.model.AppPreferenceKey
 import com.omniflow.shared.domain.model.Category
 import com.omniflow.shared.domain.model.Ledger
 import com.omniflow.shared.domain.model.LedgerId
 import com.omniflow.shared.domain.model.Money
+import com.omniflow.shared.domain.model.Rule
+import com.omniflow.shared.domain.model.RuleActionType
+import com.omniflow.shared.domain.model.RuleConditionType
 import com.omniflow.shared.domain.model.Tag
 import com.omniflow.shared.domain.model.TransactionType
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +29,12 @@ class SqlDelightManagementFacade(
         .asFlow()
         .mapToList(Dispatchers.Default)
         .map { rows -> runCatching { rows.map { Ledger(it.id, it.name, it.cover_key) } } }
+
+    override fun observeDefaultLedgerId(): Flow<Result<LedgerId?>> = database.appPreferenceQueries
+        .preference(AppPreferenceKey.DefaultLedgerId)
+        .asFlow()
+        .mapToList(Dispatchers.Default)
+        .map { rows -> runCatching { rows.singleOrNull() } }
 
     override fun observeAccounts(): Flow<Result<List<Account>>> = database.accountQueries.activeAccounts()
         .asFlow()
@@ -81,6 +91,26 @@ class SqlDelightManagementFacade(
                     id = it.id,
                     ledgerId = it.ledger_id,
                     name = it.name,
+                    deletedAt = it.deleted_at?.let(Instant::fromEpochMilliseconds),
+                )
+            }
+        } }
+
+    override fun observeRules(ledgerId: LedgerId): Flow<Result<List<Rule>>> = database.ruleQueries
+        .activeRulesForLedger(ledgerId)
+        .asFlow()
+        .mapToList(Dispatchers.Default)
+        .map { rows -> runCatching {
+            rows.map {
+                Rule(
+                    id = it.id,
+                    ledgerId = it.ledger_id,
+                    name = it.name,
+                    conditionType = RuleConditionType.valueOf(it.condition_type),
+                    conditionValue = it.condition_value,
+                    actionType = RuleActionType.valueOf(it.action_type),
+                    actionValue = it.action_value,
+                    priority = it.priority.toInt(),
                     deletedAt = it.deleted_at?.let(Instant::fromEpochMilliseconds),
                 )
             }

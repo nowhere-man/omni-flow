@@ -7,6 +7,7 @@ import com.omniflow.shared.db.TransactionRowsInRange
 import com.omniflow.shared.domain.facade.AnalyticsFacade
 import com.omniflow.shared.domain.model.AnalyticsDashboardState
 import com.omniflow.shared.domain.model.AnalyticsQuery
+import com.omniflow.shared.domain.model.AccountAssetItem
 import com.omniflow.shared.domain.model.AccountSummary
 import com.omniflow.shared.domain.model.CategoryShareGranularity
 import com.omniflow.shared.domain.model.CategoryShareItem
@@ -43,9 +44,9 @@ class SqlDelightAnalyticsFacade(
     override fun observeDashboard(query: AnalyticsQuery): Flow<Result<AnalyticsDashboardState>> = combine(
         observeRows(query.scope, query.range),
         observeTags(query.scope, query.range),
-        observeAccountSummary(),
-    ) { rows, tags, accountSummary -> DashboardInputs(rows, tags, accountSummary) }.map { input ->
-        runCatching { dashboard(query, input.rows, input.tags, input.accountSummary) }
+        observeAccounts(),
+    ) { rows, tags, accounts -> DashboardInputs(rows, tags, accounts) }.map { input ->
+        runCatching { dashboard(query, input.rows, input.tags, input.accounts) }
     }
 
     override suspend fun statementTable(scope: LedgerScope, year: Int): Result<StatementTable> = runCatching {
@@ -79,24 +80,28 @@ class SqlDelightAnalyticsFacade(
         query: AnalyticsQuery,
         currentRows: List<TransactionRowsInRange>,
         tagsByTransaction: Map<String, List<TransactionTag>>,
-        accountSummary: AccountSummary,
+        accounts: AccountAnalytics,
     ): AnalyticsDashboardState {
         val currentSummary = summary(currentRows)
         val previousRange = previousRange(query.range)
         val previousSummary = summary(rows(query.scope, previousRange))
+        val previousYearSummary = summary(rows(query.scope, previousYearRange(query.range)))
         return AnalyticsDashboardState(
             query = query,
             summary = currentSummary,
             previousPeriod = PeriodCompareResult(currentSummary, previousSummary),
+            yearOverYear = PeriodCompareResult(currentSummary, previousYearSummary),
             trend = trend(currentRows, query.range, preferredGranularity(query.range)),
             ranking = ranking(currentRows, query.rankingType, tagsByTransaction),
             categoryShares = categoryShares(
                 currentRows,
                 query.categoryShareType,
                 query.categoryShareGranularity,
+                query.primaryCategoryId,
             ),
             tagSummary = tagSummary(currentRows, tagsByTransaction),
-            accountSummary = accountSummary,
+            accountSummary = accounts.summary,
+            accountAssets = accounts.assets,
         )
     }
 
@@ -121,13 +126,20 @@ class SqlDelightAnalyticsFacade(
             tags.map { TransactionTag(it.tag_id, it.tag_name) }
         } }
 
-    private fun observeAccountSummary(): Flow<AccountSummary> = database.accountQueries.accountSummary()
-        .asFlow()
-        .mapToList(Dispatchers.Default)
-        .map { rows ->
-            val result = rows.single()
-            AccountSummary(Money(result.assets_minor), Money(result.liabilities_minor))
-        }
+    private fun observeAccounts(): Flow<AccountAnalytics> = combine(
+        database.accountQueries.accountSummary().asFlow().mapToList(Dispatchers.Default),
+        database.accountQueries.activeAccounts().asFlow().mapToList(Dispatchers.Default),
+    ) { summaryRows, accounts ->
+        val summary = summaryRows.single()
+        AccountAnalytics(
+            summary = AccountSummary(Money(summary.assets_minor), Money(summary.liabilities_minor)),
+            assets = accounts.asSequence()
+                .filter { it.include_in_total_assets != 0L && it.balance_minor > 0 }
+                .map { AccountAssetItem(it.id, it.name, it.icon_key, Money(it.balance_minor)) }
+                .sortedByDescending(AccountAssetItem::balance)
+                .toList(),
+        )
+    }
 
     private fun rows(scope: LedgerScope, range: DateRange): List<TransactionRowsInRange> = database.transactionQueries
         .transactionRowsInRange(
@@ -179,9 +191,11 @@ class SqlDelightAnalyticsFacade(
         rows: List<TransactionRowsInRange>,
         type: TransactionType,
         granularity: CategoryShareGranularity,
+        primaryCategoryId: String?,
     ): List<CategoryShareItem> = rows.asSequence()
         .filterNot { it.is_excluded != 0L }
         .filter { TransactionType.valueOf(it.type) == type }
+        .filter { granularity != CategoryShareGranularity.SECONDARY || primaryCategoryId == null || it.primary_category_id == primaryCategoryId }
         .groupBy { row ->
             when (granularity) {
                 CategoryShareGranularity.PRIMARY -> CategoryKey(
@@ -235,6 +249,15 @@ class SqlDelightAnalyticsFacade(
             endExclusive = range.startInclusive,
         )
     }
+
+    private fun previousYearRange(range: DateRange): DateRange = DateRange(
+        startInclusive = range.startInclusive.toLocalDateTime(CHINA_TIME_ZONE).date
+            .minus(1, DateTimeUnit.YEAR)
+            .atStartOfDayIn(CHINA_TIME_ZONE),
+        endExclusive = range.endExclusive.toLocalDateTime(CHINA_TIME_ZONE).date
+            .minus(1, DateTimeUnit.YEAR)
+            .atStartOfDayIn(CHINA_TIME_ZONE),
+    )
 
     private fun preferredGranularity(range: DateRange): TimeGranularity {
         val days = (range.endExclusive.toEpochMilliseconds() - range.startInclusive.toEpochMilliseconds()) / DAY_MILLISECONDS
@@ -293,8 +316,9 @@ class SqlDelightAnalyticsFacade(
     private data class DashboardInputs(
         val rows: List<TransactionRowsInRange>,
         val tags: Map<String, List<TransactionTag>>,
-        val accountSummary: AccountSummary,
+        val accounts: AccountAnalytics,
     )
+    private data class AccountAnalytics(val summary: AccountSummary, val assets: List<AccountAssetItem>)
 
     private companion object {
         val CHINA_TIME_ZONE: TimeZone = TimeZone.of("Asia/Shanghai")

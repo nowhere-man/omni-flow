@@ -1,0 +1,136 @@
+allLedgersForBackup:
+SELECT * FROM ledger ORDER BY created_at, id;
+
+allAccountsForBackup:
+SELECT * FROM account ORDER BY created_at, id;
+
+allAccountBalanceRecordsForBackup:
+SELECT * FROM account_balance_record ORDER BY created_at, id;
+
+allCategoriesForBackup:
+SELECT * FROM category ORDER BY parent_id, created_at, id;
+
+allTagsForBackup:
+SELECT * FROM tag ORDER BY created_at, id;
+
+allTransactionTagsForBackup:
+SELECT * FROM transaction_tag ORDER BY transaction_id, tag_id;
+
+allTransactionsForBackup:
+SELECT * FROM transaction_record ORDER BY created_at, id;
+
+allRulesForBackup:
+SELECT * FROM rule ORDER BY created_at, id;
+
+allCategoryMemoriesForBackup:
+SELECT * FROM category_memory ORDER BY ledger_id, memory_key;
+
+allRemindersForBackup:
+SELECT * FROM reminder ORDER BY created_at, id;
+
+allAppPreferencesForBackup:
+SELECT * FROM app_preference ORDER BY key;
+
+clearTransactionTags:
+DELETE FROM transaction_tag;
+
+clearTransactions:
+DELETE FROM transaction_record;
+
+clearCategoryMemories:
+DELETE FROM category_memory;
+
+clearImportPreviewItems:
+DELETE FROM import_preview_item;
+
+clearImportSessions:
+DELETE FROM import_session;
+
+clearRules:
+DELETE FROM rule;
+
+clearTags:
+DELETE FROM tag;
+
+clearCategories:
+DELETE FROM category;
+
+clearAccountBalanceRecords:
+DELETE FROM account_balance_record;
+
+clearAccounts:
+DELETE FROM account;
+
+clearLedgers:
+DELETE FROM ledger;
+
+clearReminders:
+DELETE FROM reminder;
+
+clearAppPreferences:
+DELETE FROM app_preference;
+
+restoreLedger:
+INSERT INTO ledger(id, name, cover_key, created_at, updated_at, deleted_at)
+VALUES (:id, :name, :cover_key, :created_at, :updated_at, :deleted_at);
+
+restoreAccount:
+INSERT INTO account(
+    id, name, type, icon_key, card_number, note, balance_minor, include_in_total_assets,
+    created_at, updated_at, deleted_at
+) VALUES (
+    :id, :name, :type, :icon_key, :card_number, :note, :balance_minor, :include_in_total_assets,
+    :created_at, :updated_at, :deleted_at
+);
+
+restoreAccountBalanceRecord:
+INSERT INTO account_balance_record(id, account_id, date, balance_minor, delta_minor, created_at)
+VALUES (:id, :account_id, :date, :balance_minor, :delta_minor, :created_at);
+
+restoreCategory:
+INSERT INTO category(
+    id, ledger_id, parent_id, name, icon_key, type, created_at, updated_at, deleted_at
+) VALUES (
+    :id, :ledger_id, :parent_id, :name, :icon_key, :type, :created_at, :updated_at, :deleted_at
+);
+
+restoreTag:
+INSERT INTO tag(id, ledger_id, name, created_at, updated_at, deleted_at)
+VALUES (:id, :ledger_id, :name, :created_at, :updated_at, :deleted_at);
+
+restoreTransaction:
+INSERT INTO transaction_record(
+    id, ledger_id, account_id, category_id, amount_minor, type, occurred_at, note,
+    is_excluded, external_source, external_id, created_at, updated_at, deleted_at
+) VALUES (
+    :id, :ledger_id, :account_id, :category_id, :amount_minor, :type, :occurred_at, :note,
+    :is_excluded, :external_source, :external_id, :created_at, :updated_at, :deleted_at
+);
+
+restoreTransactionTag:
+INSERT INTO transaction_tag(transaction_id, tag_id) VALUES (:transaction_id, :tag_id);
+
+restoreRule:
+INSERT INTO rule(
+    id, ledger_id, name, condition_type, condition_value, action_type, action_value,
+    priority, created_at, updated_at, deleted_at
+) VALUES (
+    :id, :ledger_id, :name, :condition_type, :condition_value, :action_type, :action_value,
+    :priority, :created_at, :updated_at, :deleted_at
+);
+
+restoreCategoryMemory:
+INSERT INTO category_memory(ledger_id, memory_key, category_id, updated_at)
+VALUES (:ledger_id, :memory_key, :category_id, :updated_at);
+
+restoreReminder:
+INSERT INTO reminder(
+    id, type, name, amount_minor, schedule_kind, schedule_value, paused,
+    created_at, updated_at, deleted_at
+) VALUES (
+    :id, :type, :name, :amount_minor, :schedule_kind, :schedule_value, :paused,
+    :created_at, :updated_at, :deleted_at
+);
+
+restoreAppPreference:
+INSERT INTO app_preference(key, value, updated_at) VALUES (:key, :value, :updated_at);

@@ -52,6 +52,30 @@ class SqlDelightRuleRepository(
         )
     }
 
+    override suspend fun reorder(ledgerId: String, orderedIds: List<RuleId>) {
+        val active = activeRules(ledgerId).associateBy(Rule::id)
+        require(orderedIds.distinct().size == orderedIds.size && orderedIds.toSet() == active.keys) {
+            "规则排序列表不完整"
+        }
+        val timestamp = now().toEpochMilliseconds()
+        database.transaction {
+            orderedIds.forEachIndexed { priority, id ->
+                val rule = active.getValue(id)
+                database.ruleQueries.updateRule(
+                    name = rule.name,
+                    condition_type = rule.conditionType.name,
+                    condition_value = rule.conditionValue,
+                    action_type = rule.actionType.name,
+                    action_value = rule.actionValue,
+                    priority = priority.toLong(),
+                    updated_at = timestamp,
+                    id = id,
+                    ledger_id = ledgerId,
+                )
+            }
+        }
+    }
+
     override suspend fun archive(ruleId: RuleId) {
         require(database.ruleQueries.activeRule(ruleId).executeAsOneOrNull() != null) {
             "规则不存在或已删除"

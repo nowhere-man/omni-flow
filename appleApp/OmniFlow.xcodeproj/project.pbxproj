@@ -1,0 +1,106 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000001 /* OmniFlowApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* OmniFlowApp.swift */; };
+		A10000000000000000000002 /* UIModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000002 /* UIModels.swift */; };
+		A10000000000000000000003 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* AppStore.swift */; };
+		A10000000000000000000004 /* RootNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000004 /* RootNavigation.swift */; };
+		A10000000000000000000005 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000005 /* HomeView.swift */; };
+		A10000000000000000000006 /* AnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000006 /* AnalyticsView.swift */; };
+		A10000000000000000000007 /* TransactionEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000007 /* TransactionEditorView.swift */; };
+		A10000000000000000000008 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000008 /* SearchView.swift */; };
+		A10000000000000000000009 /* MoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000009 /* MoreView.swift */; };
+		A1000000000000000000000A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000A /* SettingsView.swift */; };
+		A1000000000000000000000B /* icons in Resources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000F /* icons */; };
+		A1000000000000000000000C /* SVGIconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000010 /* SVGIconView.swift */; };
+		A1000000000000000000000D /* AppleSpreadsheetParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000011 /* AppleSpreadsheetParser.swift */; };
+		A1000000000000000000000E /* PlatformSecurity.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000012 /* PlatformSecurity.swift */; };
+		A20000000000000000000001 /* OmniFlowApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* OmniFlowApp.swift */; };
+		A20000000000000000000002 /* UIModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000002 /* UIModels.swift */; };
+		A20000000000000000000003 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* AppStore.swift */; };
+		A20000000000000000000004 /* RootNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000004 /* RootNavigation.swift */; };
+		A20000000000000000000005 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000005 /* HomeView.swift */; };
+		A20000000000000000000006 /* AnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000006 /* AnalyticsView.swift */; };
+		A20000000000000000000007 /* TransactionEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000007 /* TransactionEditorView.swift */; };
+		A20000000000000000000008 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000008 /* SearchView.swift */; };
+		A20000000000000000000009 /* MoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000009 /* MoreView.swift */; };
+		A2000000000000000000000A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000A /* SettingsView.swift */; };
+		A2000000000000000000000B /* icons in Resources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000F /* icons */; };
+		A2000000000000000000000C /* SVGIconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000010 /* SVGIconView.swift */; };
+		A2000000000000000000000D /* AppleSpreadsheetParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000011 /* AppleSpreadsheetParser.swift */; };
+		A2000000000000000000000E /* PlatformSecurity.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000012 /* PlatformSecurity.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		B10000000000000000000001 /* OmniFlowApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/OmniFlowApp.swift; sourceTree = "<group>"; };
+		B10000000000000000000002 /* UIModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/UIModels.swift; sourceTree = "<group>"; };
+		B10000000000000000000003 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Stores/AppStore.swift; sourceTree = "<group>"; };
+		B10000000000000000000004 /* RootNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UI/RootNavigation.swift; sourceTree = "<group>"; };
+		B10000000000000000000005 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UI/HomeView.swift; sourceTree = "<group>"; };
+		B10000000000000000000006 /* AnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UI/AnalyticsView.swift; sourceTree = "<group>"; };
+		B10000000000000000000007 /* TransactionEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UI/TransactionEditorView.swift; sourceTree = "<group>"; };
+		B10000000000000000000008 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UI/SearchView.swift; sourceTree = "<group>"; };
+		B10000000000000000000009 /* MoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UI/MoreView.swift; sourceTree = "<group>"; };
+		B1000000000000000000000A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UI/SettingsView.swift; sourceTree = "<group>"; };
+		B1000000000000000000000B /* iOS Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = iOS/Info.plist; sourceTree = SOURCE_ROOT; };
+		B1000000000000000000000C /* macOS Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = macOS/Info.plist; sourceTree = SOURCE_ROOT; };
+		B1000000000000000000000D /* OmniFlow-iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OmniFlow-iOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B1000000000000000000000E /* OmniFlow-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OmniFlow-macOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B1000000000000000000000F /* icons */ = {isa = PBXFileReference; lastKnownFileType = folder; name = icons; path = ../assets/icons; sourceTree = SOURCE_ROOT; };
+		B10000000000000000000010 /* SVGIconView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UI/SVGIconView.swift; sourceTree = "<group>"; };
+		B10000000000000000000011 /* AppleSpreadsheetParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/AppleSpreadsheetParser.swift; sourceTree = "<group>"; };
+		B10000000000000000000012 /* PlatformSecurity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/PlatformSecurity.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C10000000000000000000001 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		C20000000000000000000001 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D10000000000000000000001 = {isa = PBXGroup; children = (D10000000000000000000002 /* Shared */, B1000000000000000000000F /* icons */, B1000000000000000000000B /* iOS Info.plist */, B1000000000000000000000C /* macOS Info.plist */, D10000000000000000000003 /* Products */); sourceTree = "<group>"; };
+		D10000000000000000000002 /* Shared */ = {isa = PBXGroup; path = Shared; sourceTree = "<group>"; children = (B10000000000000000000001, B10000000000000000000002, B10000000000000000000003, B10000000000000000000004, B10000000000000000000005, B10000000000000000000006, B10000000000000000000007, B10000000000000000000008, B10000000000000000000009, B1000000000000000000000A, B10000000000000000000010, B10000000000000000000011, B10000000000000000000012); };
+		D10000000000000000000003 /* Products */ = {isa = PBXGroup; children = (B1000000000000000000000D, B1000000000000000000000E); name = Products; sourceTree = "<group>"; };
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		E10000000000000000000001 /* OmniFlow-iOS */ = {isa = PBXNativeTarget; buildConfigurationList = F10000000000000000000001; buildPhases = (C11000000000000000000001, C10000000000000000000001, C12000000000000000000001); buildRules = (); dependencies = (); name = "OmniFlow-iOS"; productName = "OmniFlow-iOS"; productReference = B1000000000000000000000D; productType = "com.apple.product-type.application"; };
+		E20000000000000000000001 /* OmniFlow-macOS */ = {isa = PBXNativeTarget; buildConfigurationList = F20000000000000000000001; buildPhases = (C21000000000000000000001, C20000000000000000000001, C22000000000000000000001); buildRules = (); dependencies = (); name = "OmniFlow-macOS"; productName = "OmniFlow-macOS"; productReference = B1000000000000000000000E; productType = "com.apple.product-type.application"; };
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E00000000000000000000001 /* Project object */ = {isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = 1; LastSwiftUpdateCheck = 1500; LastUpgradeCheck = 1500; TargetAttributes = {E10000000000000000000001 = {CreatedOnToolsVersion = 15.0;}; E20000000000000000000001 = {CreatedOnToolsVersion = 15.0;};};}; buildConfigurationList = F00000000000000000000001; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base); mainGroup = D10000000000000000000001; productRefGroup = D10000000000000000000003; projectDirPath = ""; projectRoot = ""; targets = (E10000000000000000000001, E20000000000000000000001); };
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		C12000000000000000000001 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A1000000000000000000000B); runOnlyForDeploymentPostprocessing = 0; };
+		C22000000000000000000001 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A2000000000000000000000B); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		C11000000000000000000001 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001, A10000000000000000000002, A10000000000000000000003, A10000000000000000000004, A10000000000000000000005, A10000000000000000000006, A10000000000000000000007, A10000000000000000000008, A10000000000000000000009, A1000000000000000000000A, A1000000000000000000000C, A1000000000000000000000D, A1000000000000000000000E); runOnlyForDeploymentPostprocessing = 0; };
+		C21000000000000000000001 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A20000000000000000000001, A20000000000000000000002, A20000000000000000000003, A20000000000000000000004, A20000000000000000000005, A20000000000000000000006, A20000000000000000000007, A20000000000000000000008, A20000000000000000000009, A2000000000000000000000A, A2000000000000000000000C, A2000000000000000000000D, A2000000000000000000000E); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		F01000000000000000000001 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; SWIFT_VERSION = 5.0;}; name = Debug; };
+		F01000000000000000000002 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_VERSION = 5.0;}; name = Release; };
+		F11000000000000000000001 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_ENTITLEMENTS = iOS/OmniFlow.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = ""; FRAMEWORK_SEARCH_PATHS = "$(PROJECT_DIR)/../shared/build/bin/iosArm64/debugFramework"; "FRAMEWORK_SEARCH_PATHS[sdk=iphonesimulator*]" = "$(PROJECT_DIR)/../shared/build/bin/iosSimulatorArm64/debugFramework"; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = iOS/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 16.0; MARKETING_VERSION = 1.0; OTHER_LDFLAGS = ("$(inherited)", "-framework", OmniFlowShared); PRODUCT_BUNDLE_IDENTIFIER = com.omniflow.ios; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1;}; name = Debug; };
+		F11000000000000000000002 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_ENTITLEMENTS = iOS/OmniFlow.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = ""; FRAMEWORK_SEARCH_PATHS = "$(PROJECT_DIR)/../shared/build/bin/iosArm64/releaseFramework"; "FRAMEWORK_SEARCH_PATHS[sdk=iphonesimulator*]" = "$(PROJECT_DIR)/../shared/build/bin/iosSimulatorArm64/releaseFramework"; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = iOS/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 16.0; MARKETING_VERSION = 1.0; OTHER_LDFLAGS = ("$(inherited)", "-framework", OmniFlowShared); PRODUCT_BUNDLE_IDENTIFIER = com.omniflow.ios; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1;}; name = Release; };
+		F21000000000000000000001 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_ENTITLEMENTS = macOS/OmniFlow.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = ""; ENABLE_HARDENED_RUNTIME = YES; FRAMEWORK_SEARCH_PATHS = "$(PROJECT_DIR)/../shared/build/bin/macosX64/debugFramework"; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = macOS/Info.plist; MACOSX_DEPLOYMENT_TARGET = 13.0; MARKETING_VERSION = 1.0; OTHER_LDFLAGS = ("$(inherited)", "-framework", OmniFlowShared); PRODUCT_BUNDLE_IDENTIFIER = com.omniflow.macos; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = macosx; SWIFT_VERSION = 5.0;}; name = Debug; };
+		F21000000000000000000002 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_ENTITLEMENTS = macOS/OmniFlow.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = ""; ENABLE_HARDENED_RUNTIME = YES; FRAMEWORK_SEARCH_PATHS = "$(PROJECT_DIR)/../shared/build/bin/macosX64/releaseFramework"; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = macOS/Info.plist; MACOSX_DEPLOYMENT_TARGET = 13.0; MARKETING_VERSION = 1.0; OTHER_LDFLAGS = ("$(inherited)", "-framework", OmniFlowShared); PRODUCT_BUNDLE_IDENTIFIER = com.omniflow.macos; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = macosx; SWIFT_VERSION = 5.0;}; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F00000000000000000000001 = {isa = XCConfigurationList; buildConfigurations = (F01000000000000000000001, F01000000000000000000002); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		F10000000000000000000001 = {isa = XCConfigurationList; buildConfigurations = (F11000000000000000000001, F11000000000000000000002); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		F20000000000000000000001 = {isa = XCConfigurationList; buildConfigurations = (F21000000000000000000001, F21000000000000000000002); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+	};
+	rootObject = E00000000000000000000001 /* Project object */;
+}

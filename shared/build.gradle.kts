@@ -13,6 +13,19 @@ kotlin {
         }
     }
     jvm()
+    val appleTargets = listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64(),
+        macosX64(),
+        macosArm64(),
+    )
+    appleTargets.forEach { target ->
+        target.binaries.framework {
+            baseName = "OmniFlowShared"
+            isStatic = true
+        }
+    }
 
     sourceSets {
         commonMain.dependencies {
@@ -29,6 +42,9 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.sqldelight.android)
             implementation(libs.poi.ooxml)
+        }
+        appleMain.dependencies {
+            implementation(libs.sqldelight.native)
         }
         jvmTest.dependencies {
             implementation(libs.kotlin.test)

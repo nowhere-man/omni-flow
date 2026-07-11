@@ -16,6 +16,8 @@ android {
         versionName = "1.0"
     }
 
+    sourceSets["main"].assets.srcDir(rootProject.file("assets"))
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

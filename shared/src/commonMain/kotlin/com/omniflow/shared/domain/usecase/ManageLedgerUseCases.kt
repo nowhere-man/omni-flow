@@ -27,3 +27,11 @@ class DeleteLedgerUseCase(
         ledgers.archive(ledgerId)
     }
 }
+
+class SetDefaultLedgerUseCase(
+    private val ledgers: LedgerRepository,
+) {
+    suspend operator fun invoke(ledgerId: LedgerId?): Result<Unit> = runCatching {
+        ledgers.setDefaultLedgerId(ledgerId)
+    }
+}

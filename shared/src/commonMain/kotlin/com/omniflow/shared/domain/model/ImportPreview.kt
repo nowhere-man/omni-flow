@@ -10,6 +10,8 @@ enum class ImportDuplicateStatus { NONE, CONFIRMED, SUSPECTED }
 
 enum class ImportCategoryOrigin { NONE, RULE, MEMORY, USER }
 
+enum class ImportPreviewPhase { DETECTING, PARSING, ENRICHING, READY }
+
 data class ImportRequest(
     val ledgerId: LedgerId,
     val fileName: String,
@@ -37,8 +39,10 @@ data class ImportPreviewItem(
 data class ImportPreviewState(
     val sessionId: ImportSessionId,
     val ledgerId: LedgerId,
-    val format: ImportFormat,
+    val format: ImportFormat?,
     val items: List<ImportPreviewItem>,
+    val phase: ImportPreviewPhase = ImportPreviewPhase.READY,
+    val progress: Float = 1f,
 ) {
     val importableItems: List<ImportPreviewItem> get() = items.filterNot(ImportPreviewItem::isSkipped)
     val expenseTotal: Money get() = importableItems
@@ -47,7 +51,7 @@ data class ImportPreviewState(
     val incomeTotal: Money get() = importableItems
         .filter { it.type == TransactionType.INCOME }
         .fold(Money.Zero) { total, item -> total + item.raw.amount }
-    val isReadyToCommit: Boolean get() = importableItems.none {
+    val isReadyToCommit: Boolean get() = phase == ImportPreviewPhase.READY && importableItems.none {
         it.requiresTypeSelection || it.requiresCategorySelection || it.accountId == null
     }
 }

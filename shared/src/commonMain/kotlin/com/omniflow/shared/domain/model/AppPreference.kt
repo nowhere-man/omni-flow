@@ -6,6 +6,7 @@ object AppPreferenceKey {
     const val AnalyticsLedgerScope = "analytics_ledger_scope"
     const val TransactionDetailDisplayMode = "transaction_detail_display_mode"
     const val AppearanceMode = "appearance_mode"
+    const val AppLockEnabled = "app_lock_enabled"
     const val SyncTarget = "sync_target"
     const val BackupRetention = "backup_retention"
 
@@ -13,3 +14,23 @@ object AppPreferenceKey {
 }
 
 const val DEFAULT_BACKUP_RETENTION = 10L
+
+enum class TransactionDetailDisplayMode { LIST, CARD }
+
+enum class AppearanceMode { SYSTEM, LIGHT, DARK }
+
+enum class SyncTarget { ICLOUD, WEBDAV }
+
+data class AppPreferences(
+    val homeLedgerScope: LedgerScope = LedgerScope.All,
+    val analyticsLedgerScope: LedgerScope = LedgerScope.All,
+    val transactionDetailDisplayMode: TransactionDetailDisplayMode = TransactionDetailDisplayMode.LIST,
+    val appearanceMode: AppearanceMode = AppearanceMode.SYSTEM,
+    val appLockEnabled: Boolean = false,
+    val syncTarget: SyncTarget? = null,
+    val backupRetention: Int = DEFAULT_BACKUP_RETENTION.toInt(),
+) {
+    init {
+        require(backupRetention > 0) { "备份保留数必须大于零" }
+    }
+}

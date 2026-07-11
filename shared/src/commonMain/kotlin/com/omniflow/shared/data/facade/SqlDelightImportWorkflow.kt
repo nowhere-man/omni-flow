@@ -10,6 +10,7 @@ import com.omniflow.shared.domain.model.ImportExcludeBatchEdit
 import com.omniflow.shared.domain.model.ImportPreviewEdit
 import com.omniflow.shared.domain.model.ImportPreviewItem
 import com.omniflow.shared.domain.model.ImportPreviewState
+import com.omniflow.shared.domain.model.ImportPreviewPhase
 import com.omniflow.shared.domain.model.ImportRequest
 import com.omniflow.shared.domain.model.ImportSessionId
 import com.omniflow.shared.domain.model.LedgerId
@@ -38,6 +39,9 @@ import com.omniflow.shared.parser.qingzi.QingziBillParser
 import com.omniflow.shared.parser.spreadsheet.SpreadsheetBillParser
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.math.max
 
 class SqlDelightImportWorkflow(
@@ -55,54 +59,64 @@ class SqlDelightImportWorkflow(
     private val ids: UuidGenerator = UuidGenerator(),
 ) : ImportWorkflow {
     override fun preview(request: ImportRequest): Flow<Result<ImportPreviewState>> = flow {
+        emit(Result.success(progressState(request, ImportPreviewPhase.DETECTING, 0.1f)))
         emit(runCatching {
             val format = detectFormat(request)
+            emit(Result.success(progressState(request, ImportPreviewPhase.PARSING, 0.3f, format)))
             val rawItems = parse(format, request.bytes)
             val sessionId = ids.next()
+            emit(Result.success(progressState(request, ImportPreviewPhase.ENRICHING, 0.7f, format)))
             val state = enrichPreview(
                 previewFactory.fromRaw(sessionId, request.ledgerId, format, rawItems),
             )
             sessions.create(sessionId, request.ledgerId, format, state.items)
             state
         })
-    }
+    }.flowOn(Dispatchers.Default)
 
     override fun observe(sessionId: ImportSessionId): Flow<Result<ImportPreviewState>> = flow {
         emit(runCatching { toState(sessions.state(sessionId) ?: error("导入会话不存在或已结束")) })
     }
 
-    override suspend fun editItem(edit: ImportPreviewEdit): Result<ImportPreviewState> = runCatching {
-        sessions.updateItem(edit.sessionId, edit)
-        toState(sessions.state(edit.sessionId) ?: error("导入会话不存在或已结束"))
+    override suspend fun editItem(edit: ImportPreviewEdit): Result<ImportPreviewState> = withContext(Dispatchers.Default) {
+        runCatching {
+            sessions.updateItem(edit.sessionId, edit)
+            toState(sessions.state(edit.sessionId) ?: error("导入会话不存在或已结束"))
+        }
     }
 
     override suspend fun editCategories(
         sessionId: ImportSessionId,
         edit: ImportCategoryBatchEdit,
-    ): Result<ImportPreviewState> = runCatching {
-        val session = sessions.state(sessionId) ?: error("导入会话不存在或已结束")
-        session.items.filter { it.id in edit.itemIds }.forEach { item ->
-            sessions.updateCategory(sessionId, item.id, edit.categoryId)
+    ): Result<ImportPreviewState> = withContext(Dispatchers.Default) {
+        runCatching {
+            val session = sessions.state(sessionId) ?: error("导入会话不存在或已结束")
+            session.items.filter { it.id in edit.itemIds }.forEach { item ->
+                sessions.updateCategory(sessionId, item.id, edit.categoryId)
+            }
+            toState(sessions.state(sessionId) ?: error("导入会话不存在或已结束"))
         }
-        toState(sessions.state(sessionId) ?: error("导入会话不存在或已结束"))
     }
 
     override suspend fun editSkipped(
         sessionId: ImportSessionId,
         edit: ImportExcludeBatchEdit,
-    ): Result<ImportPreviewState> = runCatching {
-        val session = sessions.state(sessionId) ?: error("导入会话不存在或已结束")
-        session.items.filter { it.id in edit.itemIds }.forEach { item ->
-            sessions.updateSkipped(sessionId, item.id, edit.isSkipped)
+    ): Result<ImportPreviewState> = withContext(Dispatchers.Default) {
+        runCatching {
+            val session = sessions.state(sessionId) ?: error("导入会话不存在或已结束")
+            session.items.filter { it.id in edit.itemIds }.forEach { item ->
+                sessions.updateSkipped(sessionId, item.id, edit.isSkipped)
+            }
+            toState(sessions.state(sessionId) ?: error("导入会话不存在或已结束"))
         }
-        toState(sessions.state(sessionId) ?: error("导入会话不存在或已结束"))
     }
 
-    override suspend fun commit(sessionId: ImportSessionId): Result<ImportCommitResult> = runCatching {
-        val session = sessions.state(sessionId) ?: error("导入会话不存在或已结束")
-        val state = toState(session)
-        require(state.isReadyToCommit) { "仍有未完成的导入明细" }
-        val transactionsToCreate = state.importableItems.map { item ->
+    override suspend fun commit(sessionId: ImportSessionId): Result<ImportCommitResult> = withContext(Dispatchers.Default) {
+        runCatching {
+            val session = sessions.state(sessionId) ?: error("导入会话不存在或已结束")
+            val state = toState(session)
+            require(state.isReadyToCommit) { "仍有未完成的导入明细" }
+            val transactionsToCreate = state.importableItems.map { item ->
             ImportCommitTransaction(
                 transaction = Transaction(
                     id = ids.next(),
@@ -120,7 +134,7 @@ class SqlDelightImportWorkflow(
                 tagNames = item.tags,
             )
         }
-        val categoryMemories = state.importableItems
+            val categoryMemories = state.importableItems
             .filter { it.categoryOrigin == ImportCategoryOrigin.USER && it.categoryId != null }
             .map { item ->
                 CategoryMemoryEntry(
@@ -129,12 +143,27 @@ class SqlDelightImportWorkflow(
                     categoryId = item.categoryId!!,
                 )
             }
-        commits.commit(sessionId, transactionsToCreate, categoryMemories)
-        ImportCommitResult(
-            importedCount = transactionsToCreate.size,
-            excludedCount = session.items.count(ImportPreviewItem::isSkipped),
-        )
+            commits.commit(sessionId, transactionsToCreate, categoryMemories)
+            ImportCommitResult(
+                importedCount = transactionsToCreate.size,
+                excludedCount = session.items.count(ImportPreviewItem::isSkipped),
+            )
+        }
     }
+
+    private fun progressState(
+        request: ImportRequest,
+        phase: ImportPreviewPhase,
+        progress: Float,
+        format: ImportFormat? = request.selectedFormat,
+    ) = ImportPreviewState(
+        sessionId = "",
+        ledgerId = request.ledgerId,
+        format = format,
+        items = emptyList(),
+        phase = phase,
+        progress = progress,
+    )
 
     private suspend fun enrichPreview(initial: ImportPreviewState): ImportPreviewState {
         val activeAccounts = accounts.activeAccounts()

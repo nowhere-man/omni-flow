@@ -14,6 +14,8 @@ import com.omniflow.shared.domain.model.ImportSessionId
 import com.omniflow.shared.parser.ImportFormat
 import com.omniflow.shared.domain.model.Rule
 import com.omniflow.shared.domain.model.RuleId
+import com.omniflow.shared.domain.model.Reminder
+import com.omniflow.shared.domain.model.ReminderId
 import com.omniflow.shared.domain.model.Tag
 import com.omniflow.shared.domain.model.TagId
 import com.omniflow.shared.domain.model.Transaction
@@ -67,7 +69,19 @@ interface RuleRepository {
     suspend fun activeRules(ledgerId: LedgerId): List<Rule>
     suspend fun create(rule: Rule)
     suspend fun update(rule: Rule)
+    suspend fun reorder(ledgerId: LedgerId, orderedIds: List<RuleId>) {
+        val active = activeRules(ledgerId).associateBy(Rule::id)
+        require(orderedIds.distinct().size == orderedIds.size && orderedIds.toSet() == active.keys) { "规则排序列表不完整" }
+        orderedIds.forEachIndexed { priority, id -> update(active.getValue(id).copy(priority = priority)) }
+    }
     suspend fun archive(ruleId: RuleId)
+}
+
+interface ReminderRepository {
+    suspend fun activeReminders(): List<Reminder>
+    suspend fun create(reminder: Reminder)
+    suspend fun update(reminder: Reminder)
+    suspend fun archive(reminderId: ReminderId)
 }
 
 interface CategoryMemoryRepository {

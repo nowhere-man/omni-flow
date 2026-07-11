@@ -67,8 +67,19 @@ class CreateTransactionUseCaseTest {
     private class RecordingTransactionRepository : TransactionRepository {
         var transaction: Transaction? = null
 
+        override suspend fun activeTransaction(transactionId: String): Transaction? =
+            transaction?.takeIf { it.id == transactionId }
+
         override suspend fun create(transaction: Transaction) {
             this.transaction = transaction
+        }
+
+        override suspend fun update(transaction: Transaction) {
+            this.transaction = transaction
+        }
+
+        override suspend fun archive(transactionId: String) {
+            if (transaction?.id == transactionId) transaction = null
         }
     }
 }

@@ -1,3 +1,7 @@
+.claude/
+.codex/
+.planning/
+
 # Logs
 logs
 *.log
@@ -5,11 +9,10 @@ logs
 # Gradle
 .gradle/
 **/build/
+local.properties
 
 # Editor directories and files
 .vscode/*
 .DS_Store
 
 examples/
-
-.planning/

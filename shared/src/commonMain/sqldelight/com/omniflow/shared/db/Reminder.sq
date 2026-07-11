@@ -10,3 +10,33 @@ CREATE TABLE reminder (
     updated_at INTEGER NOT NULL,
     deleted_at INTEGER
 );
+
+CREATE INDEX reminder_active_schedule ON reminder(deleted_at, paused, schedule_kind);
+
+activeReminders:
+SELECT * FROM reminder WHERE deleted_at IS NULL ORDER BY paused, name;
+
+activeReminderId:
+SELECT id FROM reminder WHERE id = :id AND deleted_at IS NULL;
+
+insertReminder:
+INSERT INTO reminder(
+    id, type, name, amount_minor, schedule_kind, schedule_value, paused, created_at, updated_at
+) VALUES (
+    :id, :type, :name, :amount_minor, :schedule_kind, :schedule_value, :paused, :created_at, :updated_at
+);
+
+updateReminder:
+UPDATE reminder
+SET type = :type,
+    name = :name,
+    amount_minor = :amount_minor,
+    schedule_kind = :schedule_kind,
+    schedule_value = :schedule_value,
+    paused = :paused,
+    updated_at = :updated_at
+WHERE id = :id AND deleted_at IS NULL;
+
+archiveReminder:
+UPDATE reminder SET deleted_at = :deleted_at, updated_at = :deleted_at
+WHERE id = :id AND deleted_at IS NULL;

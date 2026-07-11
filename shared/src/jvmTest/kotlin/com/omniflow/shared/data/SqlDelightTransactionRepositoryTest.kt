@@ -41,6 +41,31 @@ class SqlDelightTransactionRepositoryTest {
         assertEquals(0L, database.accountQueries.activeAccounts().executeAsOne().balance_minor)
     }
 
+    @Test
+    fun updateAndDeleteReversePreviousBalanceEffects() = runBlocking {
+        val database = createJvmDatabase()
+        seed(database)
+        database.accountQueries.insertAccount(
+            "second-account", "银行卡", "DEBIT_CARD", "landmark", null, null, 0, 1, 1, 1,
+        )
+        val repository = SqlDelightTransactionRepository(database)
+        repository.create(transaction("transaction", TransactionType.EXPENSE, Money(100)))
+
+        repository.update(
+            transaction("transaction", TransactionType.INCOME, Money(300), "income-category")
+                .copy(accountId = "second-account"),
+        )
+
+        val balancesAfterUpdate = database.accountQueries.activeAccounts().executeAsList().associate { it.id to it.balance_minor }
+        assertEquals(0L, balancesAfterUpdate["account"])
+        assertEquals(300L, balancesAfterUpdate["second-account"])
+
+        repository.archive("transaction")
+
+        assertEquals(0L, database.accountQueries.activeAccountBalance("second-account").executeAsOne())
+        assertEquals(null, repository.activeTransaction("transaction"))
+    }
+
     private fun seed(database: com.omniflow.shared.db.OmniFlowDatabase) {
         database.ledgerQueries.insertLedger("ledger", "账本", null, 1, 1)
         database.ledgerQueries.insertLedger("other-ledger", "其他账本", null, 1, 1)
