@@ -32,7 +32,7 @@ jobs:
       - name: Decode Android keystore
         if: github.event_name != 'pull_request'
         env:
-          RELEASE_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE }}
+          RELEASE_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           printf '%s' "$RELEASE_KEYSTORE" | base64 --decode > "$RUNNER_TEMP/omniflow-release.keystore"
           test -s "$RUNNER_TEMP/omniflow-release.keystore"
@@ -40,9 +40,9 @@ jobs:
       - name: Build signed release APK and test
         if: github.event_name != 'pull_request'
         env:
-          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           ./gradlew :shared:jvmTest :androidApp:assembleRelease --stacktrace \
             -Pandroid.injected.signing.store.file="$RUNNER_TEMP/omniflow-release.keystore" \
