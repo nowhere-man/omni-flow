@@ -76,9 +76,6 @@ internal fun AnalyticsScreen(
             Spacer(Modifier.height(8.dp))
             LedgerScopeMenu(state.scope, state.ledgers, onScope)
         }
-        if (state.rangeMode == AnalyticsRangeMode.CUSTOM) {
-            item { CustomRangePicker(state.range, onCustomRange) }
-        }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AnalyticsRangeMode.entries.forEach { mode ->
@@ -92,19 +89,40 @@ internal fun AnalyticsScreen(
             }
         }
         item {
+            val customRange = state.rangeMode == AnalyticsRangeMode.CUSTOM
+            val context = LocalContext.current
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { onShiftRange(-1) }) {
-                    Icon(Icons.Default.ArrowBackIosNew, contentDescription = "上一个范围")
+                if (customRange) {
+                    Spacer(Modifier.width(48.dp))
+                } else {
+                    IconButton(onClick = { onShiftRange(-1) }) {
+                        Icon(Icons.Default.ArrowBackIosNew, contentDescription = "上一个范围")
+                    }
                 }
                 Text(
-                    state.range.displayLabel(),
-                    modifier = Modifier.weight(1f),
+                    state.range.displayLabel(state.rangeMode),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable(enabled = customRange) {
+                            showCustomRangePicker(context, state.range, onCustomRange)
+                        },
                     textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 1,
+                    softWrap = false,
+                    style = when (state.rangeMode) {
+                        AnalyticsRangeMode.WEEK -> MaterialTheme.typography.titleMedium
+                        AnalyticsRangeMode.MONTH,
+                        AnalyticsRangeMode.YEAR -> MaterialTheme.typography.titleLarge
+                        AnalyticsRangeMode.CUSTOM -> MaterialTheme.typography.bodySmall
+                    },
                     fontWeight = FontWeight.SemiBold,
                 )
-                IconButton(onClick = { onShiftRange(1) }) {
-                    Icon(Icons.Default.ArrowForwardIos, contentDescription = "下一个范围")
+                if (customRange) {
+                    Spacer(Modifier.width(48.dp))
+                } else {
+                    IconButton(onClick = { onShiftRange(1) }) {
+                        Icon(Icons.Default.ArrowForwardIos, contentDescription = "下一个范围")
+                    }
                 }
             }
         }
@@ -266,47 +284,41 @@ private fun AnalyticsEmptyState(onAddTransaction: () -> Unit) {
     }
 }
 
-@Composable
-private fun CustomRangePicker(range: DateRange, onRange: (DateRange) -> Unit) {
-    var start by remember(range) { mutableStateOf(range.startInclusive.toLocalDateTime(ChinaTimeZone).date) }
-    var end by remember(range) {
-        mutableStateOf(
-            kotlinx.datetime.Instant.fromEpochMilliseconds(range.endExclusive.toEpochMilliseconds() - 1)
-                .toLocalDateTime(ChinaTimeZone).date,
-        )
-    }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        AnalyticsDateButton("开始", start, Modifier.weight(1f)) { start = it }
-        AnalyticsDateButton("结束", end, Modifier.weight(1f)) { end = it }
-        TextButton(onClick = {
-            val orderedStart = minOf(start, end)
-            val orderedEnd = maxOf(start, end)
-            val next = java.time.LocalDate.of(orderedEnd.year, orderedEnd.monthNumber, orderedEnd.dayOfMonth).plusDays(1)
-            onRange(
-                DateRange(
-                    orderedStart.atStartOfDayIn(ChinaTimeZone),
-                    LocalDate(next.year, next.monthValue, next.dayOfMonth).atStartOfDayIn(ChinaTimeZone),
-                ),
-            )
-        }) { Text("应用") }
-    }
-}
-
-@Composable
-private fun AnalyticsDateButton(label: String, date: LocalDate, modifier: Modifier, onDate: (LocalDate) -> Unit) {
-    val context = LocalContext.current
-    TextButton(
-        onClick = {
+private fun showCustomRangePicker(
+    context: android.content.Context,
+    range: DateRange,
+    onRange: (DateRange) -> Unit,
+) {
+    val currentStart = range.startInclusive.toLocalDateTime(ChinaTimeZone).date
+    val currentEnd = kotlinx.datetime.Instant.fromEpochMilliseconds(range.endExclusive.toEpochMilliseconds() - 1)
+        .toLocalDateTime(ChinaTimeZone).date
+    DatePickerDialog(
+        context,
+        { _, startYear, startMonth, startDay ->
+            val selectedStart = LocalDate(startYear, startMonth + 1, startDay)
             DatePickerDialog(
                 context,
-                { _, year, month, day -> onDate(LocalDate(year, month + 1, day)) },
-                date.year,
-                date.monthNumber - 1,
-                date.dayOfMonth,
+                { _, endYear, endMonth, endDay ->
+                    val selectedEnd = LocalDate(endYear, endMonth + 1, endDay)
+                    val orderedStart = minOf(selectedStart, selectedEnd)
+                    val orderedEnd = maxOf(selectedStart, selectedEnd)
+                    val next = java.time.LocalDate.of(orderedEnd.year, orderedEnd.monthNumber, orderedEnd.dayOfMonth).plusDays(1)
+                    onRange(
+                        DateRange(
+                            orderedStart.atStartOfDayIn(ChinaTimeZone),
+                            LocalDate(next.year, next.monthValue, next.dayOfMonth).atStartOfDayIn(ChinaTimeZone),
+                        ),
+                    )
+                },
+                currentEnd.year,
+                currentEnd.monthNumber - 1,
+                currentEnd.dayOfMonth,
             ).show()
         },
-        modifier = modifier,
-    ) { Text("$label ${date.monthNumber}/${date.dayOfMonth}") }
+        currentStart.year,
+        currentStart.monthNumber - 1,
+        currentStart.dayOfMonth,
+    ).show()
 }
 
 @Composable

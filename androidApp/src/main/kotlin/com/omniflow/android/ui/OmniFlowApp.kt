@@ -4,6 +4,9 @@ import android.Manifest
 import android.app.Activity
 import android.app.KeyguardManager
 import android.os.Build
+import android.os.SystemClock
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +31,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBackIosNew
@@ -46,7 +51,6 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -121,6 +125,7 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
     val moreState by viewModel.moreUiState.collectAsState()
     var destination by rememberSaveable { mutableStateOf(MainDestination.HOME) }
     var moreStartPage by rememberSaveable { mutableStateOf(MorePage.HOME) }
+    var lastBackPressedAt by remember { mutableStateOf(0L) }
     val darkTheme = when (homeState.appearanceMode) {
         AppearanceMode.SYSTEM -> isSystemInDarkTheme()
         AppearanceMode.LIGHT -> false
@@ -140,6 +145,19 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
         if (transactionState.completed) {
             destination = MainDestination.HOME
             viewModel.consumeTransactionCompletion()
+        }
+    }
+    BackHandler {
+        if (destination == MainDestination.ADD) {
+            destination = MainDestination.HOME
+        } else {
+            val now = SystemClock.elapsedRealtime()
+            if (now - lastBackPressedAt <= 2_000L) {
+                (context as? Activity)?.finish()
+            } else {
+                lastBackPressedAt = now
+                Toast.makeText(context, "再返回一次退出应用", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -427,21 +445,20 @@ private fun HomeScreen(
             ) {
                 Spacer(Modifier.height(8.dp))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    LedgerSelector(
-                        scope = home.scope,
-                        ledgers = state.ledgers,
-                        expanded = state.isLedgerMenuExpanded,
-                        onToggle = onLedgerMenu,
-                        onSelected = onLedgerSelected,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Spacer(Modifier.width(8.dp))
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                        LedgerSelector(
+                            scope = home.scope,
+                            ledgers = state.ledgers,
+                            expanded = state.isLedgerMenuExpanded,
+                            onToggle = onLedgerMenu,
+                            onSelected = onLedgerSelected,
+                        )
+                    }
                     MonthSelector(home.month.startInclusive.toLocalDateTime(ChinaTimeZone).date, onPreviousMonth, onNextMonth, onMonthSelected)
+                    Spacer(Modifier.weight(1f))
                 }
                 MonthlySummary(home.summary.expenseTotal, home.summary.incomeTotal)
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text("本月日历", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.weight(1f))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     CalendarFilter(state.calendarFilter, onCalendarFilter)
                 }
                 CalendarMonth(
@@ -450,7 +467,7 @@ private fun HomeScreen(
                     onDateSelected = onDateSelected,
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("账单", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    Text("明细", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.weight(1f))
                     IconButton(onClick = onToggleDisplayMode) {
                         val icon = if (state.displayMode == TransactionDetailDisplayMode.LIST) {
@@ -509,17 +526,15 @@ private fun LedgerSelector(
     modifier: Modifier = Modifier,
 ) {
     Box(modifier) {
-        TextButton(onClick = onToggle, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Default.AccountBalance, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text(
-                when (scope) {
-                    LedgerScope.All -> "所有账本"
-                    is LedgerScope.Single -> ledgers.firstOrNull { it.id == scope.ledgerId }?.name ?: "账本"
-                },
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+        val currentLabel = when (scope) {
+            LedgerScope.All -> "所有账本"
+            is LedgerScope.Single -> ledgers.firstOrNull { it.id == scope.ledgerId }?.name ?: "账本"
+        }
+        IconButton(onClick = onToggle) {
+            Icon(
+                Icons.Default.AccountBalance,
+                contentDescription = currentLabel,
+                tint = MaterialTheme.colorScheme.primary,
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = onToggle) {
@@ -598,19 +613,32 @@ private fun CalendarFilter(
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         CalendarTransactionFilter.entries.forEach { filter ->
-            FilterChip(
-                selected = selectedFilter == filter,
+            val selected = selectedFilter == filter
+            val label = when (filter) {
+                CalendarTransactionFilter.ALL -> "全部"
+                CalendarTransactionFilter.INCOME -> "收入"
+                CalendarTransactionFilter.EXPENSE -> "支出"
+            }
+            val icon = when (filter) {
+                CalendarTransactionFilter.ALL -> Icons.AutoMirrored.Filled.List
+                CalendarTransactionFilter.INCOME -> Icons.AutoMirrored.Filled.TrendingUp
+                CalendarTransactionFilter.EXPENSE -> Icons.AutoMirrored.Filled.TrendingDown
+            }
+            IconButton(
                 onClick = { onSelected(filter) },
-                label = {
-                    Text(
-                        when (filter) {
-                            CalendarTransactionFilter.ALL -> "全部"
-                            CalendarTransactionFilter.INCOME -> "收入"
-                            CalendarTransactionFilter.EXPENSE -> "支出"
-                        },
-                    )
-                },
-            )
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(
+                        if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                        CircleShape,
+                    ),
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = label,
+                    tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

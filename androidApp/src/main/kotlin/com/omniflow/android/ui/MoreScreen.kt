@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -29,11 +30,15 @@ import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
@@ -44,7 +49,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -61,6 +65,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -174,99 +179,155 @@ private fun MoreSection(
     state: MoreUiState,
     onPage: (MorePage) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.surface,
-            shape = RoundedCornerShape(8.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-        ) {
-            Column {
-                pages.forEachIndexed { index, page ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onPage(page) }
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(page.icon, contentDescription = null, modifier = Modifier.size(20.dp))
-                        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                            Text(page.label, fontWeight = FontWeight.Medium)
-                            if (page == MorePage.DATA) {
-                                Text(syncLabel(state), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                        Icon(Icons.Default.ChevronRight, contentDescription = page.label)
-                    }
-                    if (index != pages.lastIndex) HorizontalDivider()
-                }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            title,
+            modifier = Modifier.padding(start = 8.dp),
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            pages.forEachIndexed { index, page ->
+                GroupedOptionRow(
+                    title = page.label,
+                    subtitle = page.description(state),
+                    icon = page.icon,
+                    shape = groupedOptionShape(index, pages.size),
+                    onClick = { onPage(page) },
+                    trailing = { Icon(Icons.Default.ChevronRight, contentDescription = page.label) },
+                )
             }
         }
     }
 }
 
 @Composable
+private fun GroupedOptionRow(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    shape: Shape,
+    onClick: (() -> Unit)? = null,
+    trailing: @Composable (() -> Unit)? = null,
+    content: @Composable (() -> Unit)? = null,
+) {
+    val modifier = if (onClick == null) {
+        Modifier.fillMaxWidth()
+    } else {
+        Modifier.fillMaxWidth().clickable(onClick = onClick)
+    }
+    Surface(modifier = modifier, color = MaterialTheme.colorScheme.surfaceVariant, shape = shape) {
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 84.dp).padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(28.dp))
+            Column(
+                Modifier.weight(1f).padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
+                Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                content?.invoke()
+            }
+            trailing?.invoke()
+        }
+    }
+}
+
+private fun groupedOptionShape(index: Int, size: Int): Shape = when {
+    size == 1 -> RoundedCornerShape(24.dp)
+    index == 0 -> RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 4.dp, bottomEnd = 4.dp)
+    index == size - 1 -> RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
+    else -> RoundedCornerShape(4.dp)
+}
+
+private fun MorePage.description(state: MoreUiState): String = when (this) {
+    MorePage.HOME -> ""
+    MorePage.DATA -> syncLabel(state)
+    MorePage.IMPORT -> "从账单文件批量导入交易"
+    MorePage.EXPORT -> "导出青子记账兼容数据"
+    MorePage.SETTINGS -> "应用锁、显示模式与主题色"
+    MorePage.LEDGERS -> "管理账本与默认账本"
+    MorePage.ACCOUNTS -> "管理账户、余额与卡片信息"
+    MorePage.ASSETS -> "查看净资产和账户分布"
+    MorePage.CATEGORIES -> "维护收支分类与图标"
+    MorePage.TAGS -> "维护账本标签"
+    MorePage.RULES -> "自动分类和排除规则"
+    MorePage.REMINDERS -> "还款与订阅提醒"
+}
+
+@Composable
 private fun SettingsPage(state: MoreUiState, viewModel: OmniFlowViewModel, onData: () -> Unit) {
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
-                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("应用锁", fontWeight = FontWeight.SemiBold)
-                        Text("启动或回到前台时验证设备凭据", style = MaterialTheme.typography.bodySmall)
-                    }
-                    Switch(state.preferences.appLockEnabled, viewModel::setAppLockEnabled)
-                }
-            }
-        }
-        item {
-            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("界面外观", fontWeight = FontWeight.SemiBold)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        AppearanceMode.entries.forEach { mode ->
-                            FilterChip(
-                                selected = state.preferences.appearanceMode == mode,
-                                onClick = { viewModel.setAppearanceMode(mode) },
-                                label = { Text(when (mode) { AppearanceMode.SYSTEM -> "跟随系统"; AppearanceMode.LIGHT -> "浅色"; AppearanceMode.DARK -> "深色" }) },
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        item {
-            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("主题色", fontWeight = FontWeight.SemiBold)
-                    ThemeColor.entries.chunked(3).forEach { colors ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            colors.forEach { color ->
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                GroupedOptionRow(
+                    title = "应用锁",
+                    subtitle = "启动或回到前台时验证设备凭据",
+                    icon = Icons.Default.Lock,
+                    shape = groupedOptionShape(0, 4),
+                    trailing = { Switch(state.preferences.appLockEnabled, viewModel::setAppLockEnabled) },
+                )
+                GroupedOptionRow(
+                    title = "界面外观",
+                    subtitle = "跟随系统、浅色或深色",
+                    icon = Icons.Default.DarkMode,
+                    shape = groupedOptionShape(1, 4),
+                    content = {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            AppearanceMode.entries.forEach { mode ->
                                 FilterChip(
-                                    selected = state.preferences.themeColor == color,
-                                    onClick = { viewModel.setThemeColor(color) },
+                                    selected = state.preferences.appearanceMode == mode,
+                                    onClick = { viewModel.setAppearanceMode(mode) },
                                     modifier = Modifier.weight(1f),
-                                    label = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Surface(
-                                                modifier = Modifier.size(12.dp),
-                                                shape = CircleShape,
-                                                color = themePrimaryColor(color, false),
-                                            ) {}
-                                            Spacer(Modifier.width(6.dp))
-                                            Text(themeColorLabel(color))
-                                        }
-                                    },
+                                    label = { Text(when (mode) { AppearanceMode.SYSTEM -> "系统"; AppearanceMode.LIGHT -> "浅色"; AppearanceMode.DARK -> "深色" }) },
                                 )
                             }
                         }
-                    }
-                }
+                    },
+                )
+                GroupedOptionRow(
+                    title = "主题色",
+                    subtitle = "选择按钮和导航的全局强调色",
+                    icon = Icons.Default.Palette,
+                    shape = groupedOptionShape(2, 4),
+                    content = {
+                        ThemeColor.entries.chunked(2).forEach { colors ->
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                colors.forEach { color ->
+                                    FilterChip(
+                                        selected = state.preferences.themeColor == color,
+                                        onClick = { viewModel.setThemeColor(color) },
+                                        modifier = Modifier.weight(1f),
+                                        label = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Surface(
+                                                    modifier = Modifier.size(12.dp),
+                                                    shape = CircleShape,
+                                                    color = themePrimaryColor(color, false),
+                                                ) {}
+                                                Spacer(Modifier.width(6.dp))
+                                                Text(themeColorLabel(color))
+                                            }
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    },
+                )
+                GroupedOptionRow(
+                    title = "数据管理",
+                    subtitle = "备份、恢复、导入与导出",
+                    icon = Icons.Default.Storage,
+                    shape = groupedOptionShape(3, 4),
+                    onClick = onData,
+                    trailing = { Icon(Icons.Default.ChevronRight, contentDescription = "数据管理") },
+                )
             }
         }
-        item { Button(onClick = onData, modifier = Modifier.fillMaxWidth()) { Text("数据管理") } }
     }
 }
 
@@ -329,9 +390,23 @@ private fun DataManagementPage(
             }
         }
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { onPage(MorePage.IMPORT) }, modifier = Modifier.weight(1f)) { Text("导入") }
-                OutlinedButton(onClick = { onPage(MorePage.EXPORT) }, modifier = Modifier.weight(1f)) { Text("导出") }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                GroupedOptionRow(
+                    title = "导入账单",
+                    subtitle = "从支付宝、微信等账单文件导入",
+                    icon = Icons.Default.FileUpload,
+                    shape = groupedOptionShape(0, 2),
+                    onClick = { onPage(MorePage.IMPORT) },
+                    trailing = { Icon(Icons.Default.ChevronRight, contentDescription = "导入账单") },
+                )
+                GroupedOptionRow(
+                    title = "导出数据",
+                    subtitle = "生成兼容青子记账的数据文件",
+                    icon = Icons.Default.FileDownload,
+                    shape = groupedOptionShape(1, 2),
+                    onClick = { onPage(MorePage.EXPORT) },
+                    trailing = { Icon(Icons.Default.ChevronRight, contentDescription = "导出数据") },
+                )
             }
         }
         state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }

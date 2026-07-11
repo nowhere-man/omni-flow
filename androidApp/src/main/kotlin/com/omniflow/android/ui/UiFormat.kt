@@ -24,12 +24,20 @@ internal fun LocalDate.displayName(): String {
 
 internal fun Instant.displayTime(): String = toLocalDateTime(ChinaTimeZone).time.toString().take(5)
 
-internal fun DateRange.displayLabel(): String {
+internal fun DateRange.displayLabel(mode: AnalyticsRangeMode): String {
     val start = startInclusive.toLocalDateTime(ChinaTimeZone).date
-    val end = endExclusive.toLocalDateTime(ChinaTimeZone).date
-    return if (start.year == end.year && start.monthNumber == end.monthNumber) {
-        "${start.year}年${start.monthNumber}月"
-    } else {
-        "$start — $end"
+    val end = Instant.fromEpochMilliseconds(endExclusive.toEpochMilliseconds() - 1)
+        .toLocalDateTime(ChinaTimeZone).date
+    return when (mode) {
+        AnalyticsRangeMode.WEEK -> "${start.monthDay()} 至 ${end.monthDay()}"
+        AnalyticsRangeMode.MONTH -> "${start.year}-${start.monthNumber.twoDigits()}"
+        AnalyticsRangeMode.YEAR -> start.year.toString()
+        AnalyticsRangeMode.CUSTOM -> "${start.fullDate()} 至 ${end.fullDate()}"
     }
 }
+
+private fun LocalDate.monthDay(): String = "${monthNumber.twoDigits()}-${dayOfMonth.twoDigits()}"
+
+private fun LocalDate.fullDate(): String = "$year-${monthNumber.twoDigits()}-${dayOfMonth.twoDigits()}"
+
+private fun Int.twoDigits(): String = toString().padStart(2, '0')
