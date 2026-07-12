@@ -933,7 +933,7 @@ final class AppStore: ObservableObject {
                 let filterName = self?.calendarFilter ?? "ALL"
                 self?.calendarDays = value?.calendar.map { summary in
                     let display = self?.bridge.calendarDisplayAmount(summary: summary, filterName: filterName)
-                    CalendarDayUI(
+                    return CalendarDayUI(
                         id: "\(summary.date.year)-\(summary.date.monthNumber)-\(summary.date.dayOfMonth)",
                         date: Self.date(year: Int(summary.date.year), month: Int(summary.date.monthNumber), day: Int(summary.date.dayOfMonth)),
                         expenseMinor: summary.expenseTotal,
