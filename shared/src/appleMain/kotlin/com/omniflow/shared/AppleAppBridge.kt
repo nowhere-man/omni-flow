@@ -10,7 +10,6 @@ import com.omniflow.shared.domain.model.Category
 import com.omniflow.shared.domain.model.CalendarDaySummary
 import com.omniflow.shared.domain.model.CalendarDisplayAmount
 import com.omniflow.shared.domain.model.CalendarTransactionFilter
-import com.omniflow.shared.domain.model.CategoryShareGranularity
 import com.omniflow.shared.domain.model.ImportCommitResult
 import com.omniflow.shared.domain.model.ImportCategoryBatchEdit
 import com.omniflow.shared.domain.model.ImportExcludeBatchEdit
@@ -154,8 +153,6 @@ class AppleAppBridge(val app: SharedApp) {
         endMillis: Long,
         rankingTypeName: String = TransactionType.EXPENSE.name,
         categoryTypeName: String = TransactionType.EXPENSE.name,
-        categoryGranularityName: String = CategoryShareGranularity.PRIMARY.name,
-        primaryCategoryId: String? = null,
         callback: (AnalyticsDashboardState?, String?) -> Unit,
     ) = watchAnalytics(
         AnalyticsQuery(
@@ -163,8 +160,6 @@ class AppleAppBridge(val app: SharedApp) {
             range = DateRange(Instant.fromEpochMilliseconds(startMillis), Instant.fromEpochMilliseconds(endMillis)),
             rankingType = TransactionType.valueOf(rankingTypeName),
             categoryShareType = TransactionType.valueOf(categoryTypeName),
-            categoryShareGranularity = CategoryShareGranularity.valueOf(categoryGranularityName),
-            primaryCategoryId = primaryCategoryId,
         ),
         callback,
     )

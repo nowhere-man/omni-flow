@@ -119,10 +119,22 @@ struct CalendarDayUI: Identifiable, Hashable {
     var displayAmountMinor: Int64?
     var displayIsIncome: Bool
 }
-struct AnalyticsPointUI: Identifiable, Hashable { let id = UUID(); var label: String; var expense: Int64; var income: Int64 }
+struct AnalyticsRankingUI: Identifiable, Hashable {
+    let id: String
+    var primaryName: String
+    var secondaryName: String?
+    var iconKey: String?
+    var amount: Int64
+    var displayName: String { secondaryName.map { "\(primaryName)-\($0)" } ?? primaryName }
+}
 struct CategoryShareUI: Identifiable, Hashable { let id: String; var name: String; var iconKey: String?; var amount: Int64 }
-struct TagSummaryUI: Identifiable, Hashable { let id: String; var name: String; var expense: Int64; var income: Int64 }
-struct AccountAssetUI: Identifiable, Hashable { let id: String; var name: String; var balance: Int64 }
+struct CategoryBreakdownUI: Identifiable, Hashable {
+    let id: String
+    var name: String
+    var iconKey: String?
+    var amount: Int64
+    var secondary: [CategoryShareUI]
+}
 struct BackupUI: Identifiable, Hashable { let id: String; var createdAt: String }
 struct StatementMonthUI: Identifiable, Hashable {
     var month: Int
@@ -197,13 +209,6 @@ enum AppleImportFormat: String, CaseIterable, Identifiable {
         case .qingzi: return "青子记账"
         }
     }
-}
-
-enum AppleCategoryGranularity: String, CaseIterable, Identifiable {
-    case primary = "PRIMARY"
-    case secondary = "SECONDARY"
-    var id: String { rawValue }
-    var label: String { self == .primary ? "一级分类" : "二级分类" }
 }
 
 enum EntryType: String, CaseIterable, Identifiable {

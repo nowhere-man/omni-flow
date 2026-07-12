@@ -4,7 +4,6 @@ import com.omniflow.shared.data.facade.SqlDelightAnalyticsFacade
 import com.omniflow.shared.data.local.createJvmDatabase
 import com.omniflow.shared.data.usecase.SqlDelightSearchTransactionsUseCase
 import com.omniflow.shared.domain.model.AnalyticsQuery
-import com.omniflow.shared.domain.model.CategoryShareGranularity
 import com.omniflow.shared.domain.model.DateRange
 import com.omniflow.shared.domain.model.LedgerScope
 import com.omniflow.shared.domain.model.Money
@@ -26,6 +25,7 @@ class SqlDelightSearchAnalyticsTest {
         database.categoryQueries.insertCategory("salary", "ledger", null, "工资", "banknote", "INCOME", 1, 1)
         database.tagQueries.insertTag("work", "ledger", "工作", 1, 1)
         insert(database, "expense", "restaurant", 500, "EXPENSE", 1_000, "团队午餐", excluded = false)
+        insert(database, "expense-2", "restaurant", 300, "EXPENSE", 1_500, "晚餐", excluded = false)
         insert(database, "excluded", "food", 200, "EXPENSE", 2_000, "报销", excluded = true)
         insert(database, "income", "salary", 1_000, "INCOME", 3_000, "七月工资", excluded = false)
         database.tagQueries.insertTransactionTag("expense", "work")
@@ -41,19 +41,15 @@ class SqlDelightSearchAnalyticsTest {
                 range = DateRange(Instant.fromEpochMilliseconds(0), Instant.fromEpochMilliseconds(10_000)),
             ),
         ).first().getOrThrow()
-        assertEquals(Money(500), dashboard.summary.expenseTotal)
+        assertEquals(Money(800), dashboard.summary.expenseTotal)
         assertEquals(Money(1_000), dashboard.summary.incomeTotal)
-        assertEquals(listOf("expense"), dashboard.ranking.map { it.transaction.id })
-        assertEquals("utensils", dashboard.ranking.single().transaction.categoryIconKey)
-        assertEquals(listOf("account"), dashboard.accountAssets.map { it.accountId })
-
-        val drillDown = SqlDelightAnalyticsFacade(database).observeDashboard(
-            dashboard.query.copy(
-                categoryShareGranularity = CategoryShareGranularity.SECONDARY,
-                primaryCategoryId = "food",
-            ),
-        ).first().getOrThrow()
-        assertEquals(listOf("restaurant"), drillDown.categoryShares.map { it.categoryId })
+        assertEquals(listOf("餐饮-餐厅"), dashboard.ranking.map { it.categoryDisplayName })
+        assertEquals(Money(800), dashboard.ranking.single().amount)
+        assertEquals("utensils", dashboard.ranking.single().iconKey)
+        assertEquals(listOf("food"), dashboard.categoryBreakdowns.map { it.primaryCategoryId })
+        assertEquals(listOf("restaurant"), dashboard.categoryBreakdowns.single().secondaryCategories.map { it.categoryId })
+        assertEquals(Money(800), dashboard.yearStatement.months.first().expense)
+        assertEquals(Money(1_000), dashboard.yearStatement.months.first().income)
     }
 
     private fun insert(

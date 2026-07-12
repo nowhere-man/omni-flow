@@ -59,21 +59,12 @@ final class AppStore: ObservableObject {
     @Published var themeColor = "LAVENDER"
     @Published var analyticsExpenseMinor: Int64 = 0
     @Published var analyticsIncomeMinor: Int64 = 0
-    @Published var analyticsPreviousExpenseMinor: Int64 = 0
-    @Published var analyticsPreviousIncomeMinor: Int64 = 0
-    @Published var analyticsYearPreviousExpenseMinor: Int64 = 0
-    @Published var analyticsYearPreviousIncomeMinor: Int64 = 0
-    @Published var analyticsPoints: [AnalyticsPointUI] = []
-    @Published var analyticsRanking: [TransactionUI] = []
-    @Published var analyticsCategories: [CategoryShareUI] = []
-    @Published var analyticsTags: [TagSummaryUI] = []
-    @Published var analyticsAccountAssets: [AccountAssetUI] = []
-    @Published var analyticsAccountSummary = (assets: Int64(0), liabilities: Int64(0))
+    @Published var analyticsRanking: [AnalyticsRankingUI] = []
+    @Published var analyticsCategories: [CategoryBreakdownUI] = []
+    @Published var analyticsYearStatement: StatementTableUI?
     @Published var analyticsLedgerID: String?
     @Published var analyticsRankingType: EntryType = .expense
     @Published var analyticsCategoryType: EntryType = .expense
-    @Published var analyticsCategoryGranularity: AppleCategoryGranularity = .primary
-    @Published var analyticsPrimaryCategoryID: String?
     @Published var analyticsStatement: StatementTableUI?
     @Published var backups: [BackupUI] = []
     @Published var syncPhase = "IDLE"
@@ -133,24 +124,42 @@ final class AppStore: ObservableObject {
             startMillis: Int64(start.timeIntervalSince1970 * 1000),
             endMillis: Int64(end.timeIntervalSince1970 * 1000),
             rankingTypeName: analyticsRankingType.rawValue,
-            categoryTypeName: analyticsCategoryType.rawValue,
-            categoryGranularityName: analyticsCategoryGranularity.rawValue,
-            primaryCategoryId: analyticsPrimaryCategoryID
+            categoryTypeName: analyticsCategoryType.rawValue
         ) { [weak self] value, message in
             Task { @MainActor in
                 if let message { self?.error = message }
                 self?.analyticsExpenseMinor = value?.summary.expenseTotal ?? 0
                 self?.analyticsIncomeMinor = value?.summary.incomeTotal ?? 0
-                self?.analyticsPreviousExpenseMinor = value?.previousPeriod.previous.expenseTotal ?? 0
-                self?.analyticsPreviousIncomeMinor = value?.previousPeriod.previous.incomeTotal ?? 0
-                self?.analyticsYearPreviousExpenseMinor = value?.yearOverYear.previous.expenseTotal ?? 0
-                self?.analyticsYearPreviousIncomeMinor = value?.yearOverYear.previous.incomeTotal ?? 0
-                self?.analyticsPoints = value?.trend.points.map { AnalyticsPointUI(label: $0.label, expense: $0.expense, income: $0.income) } ?? []
-                self?.analyticsRanking = value?.ranking.map { Self.transaction($0.transaction, tagNames: $0.tags.map { $0.name }) } ?? []
-                self?.analyticsCategories = value?.categoryShares.map { CategoryShareUI(id: $0.categoryId, name: $0.categoryName, iconKey: $0.iconKey, amount: $0.amount) } ?? []
-                self?.analyticsTags = value?.tagSummary.map { TagSummaryUI(id: $0.tag.id, name: $0.tag.name, expense: $0.expense, income: $0.income) } ?? []
-                self?.analyticsAccountAssets = value?.accountAssets.map { AccountAssetUI(id: $0.accountId, name: $0.accountName, balance: $0.balance) } ?? []
-                self?.analyticsAccountSummary = (value?.accountSummary.assets ?? 0, value?.accountSummary.liabilities ?? 0)
+                self?.analyticsRanking = value?.ranking.map {
+                    AnalyticsRankingUI(
+                        id: "\($0.categoryId)-\($0.primaryCategoryName)-\($0.secondaryCategoryName ?? "")",
+                        primaryName: $0.primaryCategoryName,
+                        secondaryName: $0.secondaryCategoryName,
+                        iconKey: $0.iconKey,
+                        amount: $0.amount
+                    )
+                } ?? []
+                self?.analyticsCategories = value?.categoryBreakdowns.map {
+                    CategoryBreakdownUI(
+                        id: $0.primaryCategoryId,
+                        name: $0.primaryCategoryName,
+                        iconKey: $0.iconKey,
+                        amount: $0.amount,
+                        secondary: $0.secondaryCategories.map {
+                            CategoryShareUI(id: $0.categoryId, name: $0.categoryName, iconKey: $0.iconKey, amount: $0.amount)
+                        }
+                    )
+                } ?? []
+                if let statement = value?.yearStatement {
+                    self?.analyticsYearStatement = StatementTableUI(
+                        year: Int(statement.year),
+                        months: statement.months.map { StatementMonthUI(month: Int($0.month), expenseMinor: $0.expense, incomeMinor: $0.income) },
+                        expenseMinor: statement.total.expenseTotal,
+                        incomeMinor: statement.total.incomeTotal
+                    )
+                } else {
+                    self?.analyticsYearStatement = nil
+                }
             }
         }
         #endif

@@ -4,15 +4,11 @@ import kotlinx.datetime.Instant
 
 enum class TimeGranularity { DAY, WEEK, MONTH }
 
-enum class CategoryShareGranularity { PRIMARY, SECONDARY }
-
 data class AnalyticsQuery(
     val scope: LedgerScope,
     val range: DateRange,
     val rankingType: TransactionType = TransactionType.EXPENSE,
     val categoryShareType: TransactionType = TransactionType.EXPENSE,
-    val categoryShareGranularity: CategoryShareGranularity = CategoryShareGranularity.PRIMARY,
-    val primaryCategoryId: CategoryId? = null,
 )
 
 data class ChartPoint(
@@ -28,19 +24,16 @@ data class ChartData(
     val points: List<ChartPoint>,
 )
 
-data class PeriodCompareResult(
-    val current: TransactionSummary,
-    val previous: TransactionSummary,
+data class CategoryRankingItem(
+    val categoryId: CategoryId,
+    val primaryCategoryName: String,
+    val secondaryCategoryName: String?,
+    val iconKey: String?,
+    val amount: Money,
 ) {
-    val expenseChange: Money get() = current.expenseTotal - previous.expenseTotal
-    val incomeChange: Money get() = current.incomeTotal - previous.incomeTotal
-    val netIncomeChange: Money get() = current.netIncome - previous.netIncome
+    val categoryDisplayName: String
+        get() = secondaryCategoryName?.let { "$primaryCategoryName-$it" } ?: primaryCategoryName
 }
-
-data class TransactionRankingItem(
-    val transaction: TransactionListItem,
-    val tags: List<TransactionTag>,
-)
 
 data class CategoryShareItem(
     val categoryId: CategoryId,
@@ -49,17 +42,12 @@ data class CategoryShareItem(
     val amount: Money,
 )
 
-data class TagSummaryItem(
-    val tag: TransactionTag,
-    val expense: Money,
-    val income: Money,
-)
-
-data class AccountAssetItem(
-    val accountId: AccountId,
-    val accountName: String,
-    val iconKey: String,
-    val balance: Money,
+data class CategoryBreakdownItem(
+    val primaryCategoryId: CategoryId,
+    val primaryCategoryName: String,
+    val iconKey: String?,
+    val amount: Money,
+    val secondaryCategories: List<CategoryShareItem>,
 )
 
 data class StatementMonth(
@@ -79,12 +67,7 @@ data class StatementTable(
 data class AnalyticsDashboardState(
     val query: AnalyticsQuery,
     val summary: TransactionSummary,
-    val previousPeriod: PeriodCompareResult,
-    val yearOverYear: PeriodCompareResult,
-    val trend: ChartData,
-    val ranking: List<TransactionRankingItem>,
-    val categoryShares: List<CategoryShareItem>,
-    val tagSummary: List<TagSummaryItem>,
-    val accountSummary: AccountSummary,
-    val accountAssets: List<AccountAssetItem>,
+    val ranking: List<CategoryRankingItem>,
+    val categoryBreakdowns: List<CategoryBreakdownItem>,
+    val yearStatement: StatementTable,
 )

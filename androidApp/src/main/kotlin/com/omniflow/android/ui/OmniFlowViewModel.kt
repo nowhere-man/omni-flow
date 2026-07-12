@@ -13,7 +13,6 @@ import com.omniflow.shared.domain.model.AppPreferences
 import com.omniflow.shared.domain.model.AppearanceMode
 import com.omniflow.shared.domain.model.CalendarTransactionFilter
 import com.omniflow.shared.domain.model.Category
-import com.omniflow.shared.domain.model.CategoryShareGranularity
 import com.omniflow.shared.domain.model.DateRange
 import com.omniflow.shared.domain.model.HomeQuery
 import com.omniflow.shared.domain.model.HomeState
@@ -95,12 +94,13 @@ data class AnalyticsUiState(
     val statementTable: StatementTable? = null,
     val ledgers: List<Ledger> = emptyList(),
     val scope: LedgerScope = LedgerScope.All,
-    val rangeMode: AnalyticsRangeMode = AnalyticsRangeMode.MONTH,
-    val range: DateRange = monthRange(Clock.System.now()),
+    val rangeMode: AnalyticsRangeMode = AnalyticsRangeMode.WEEK,
+    val range: DateRange = analyticsRange(
+        AnalyticsRangeMode.WEEK,
+        Clock.System.now().toLocalDateTime(ChinaTimeZone).date,
+    ),
     val rankingType: TransactionType = TransactionType.EXPENSE,
     val categoryType: TransactionType = TransactionType.EXPENSE,
-    val categoryGranularity: CategoryShareGranularity = CategoryShareGranularity.PRIMARY,
-    val primaryCategoryId: String? = null,
     val isLoading: Boolean = true,
     val error: String? = null,
 )
@@ -410,18 +410,17 @@ class OmniFlowViewModel(
         _analyticsUiState.value = _analyticsUiState.value.copy(rankingType = type)
         observeAnalytics()
     }
-    fun setCategoryAnalysis(type: TransactionType, granularity: CategoryShareGranularity) {
-        _analyticsUiState.value = _analyticsUiState.value.copy(
-            categoryType = type,
-            categoryGranularity = granularity,
-            primaryCategoryId = null,
-        )
+    fun setCategoryType(type: TransactionType) {
+        _analyticsUiState.value = _analyticsUiState.value.copy(categoryType = type)
         observeAnalytics()
     }
-    fun setCategoryDrillDown(primaryCategoryId: String?) {
+    fun selectAnalyticsMonth(month: Int) {
+        val year = _analyticsUiState.value.dashboard?.yearStatement?.year
+            ?: _analyticsUiState.value.range.startInclusive.toLocalDateTime(ChinaTimeZone).year
+        analyticsAnchor = LocalDate(year, month, 1)
         _analyticsUiState.value = _analyticsUiState.value.copy(
-            categoryGranularity = if (primaryCategoryId == null) CategoryShareGranularity.PRIMARY else CategoryShareGranularity.SECONDARY,
-            primaryCategoryId = primaryCategoryId,
+            rangeMode = AnalyticsRangeMode.MONTH,
+            range = monthRange(analyticsAnchor),
         )
         observeAnalytics()
     }
@@ -449,8 +448,6 @@ class OmniFlowViewModel(
                     range = current.range,
                     rankingType = current.rankingType,
                     categoryShareType = current.categoryType,
-                    categoryShareGranularity = current.categoryGranularity,
-                    primaryCategoryId = current.primaryCategoryId,
                 ),
             ).collect { result ->
                 _analyticsUiState.value = _analyticsUiState.value.copy(

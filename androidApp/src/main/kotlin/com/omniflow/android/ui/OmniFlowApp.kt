@@ -254,14 +254,10 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
                     onCustomRange = viewModel::setAnalyticsCustomRange,
                     onSummary = viewModel::showAnalyticsSummary,
                     onRankingType = viewModel::setRankingType,
-                    onCategoryAnalysis = viewModel::setCategoryAnalysis,
-                    onCategoryDrillDown = viewModel::setCategoryDrillDown,
+                    onCategoryType = viewModel::setCategoryType,
+                    onMonthSelected = viewModel::selectAnalyticsMonth,
                     onStatementTable = viewModel::loadStatementTable,
                     onDismissStatementTable = viewModel::dismissStatementTable,
-                    onEditTransaction = { transactionId ->
-                        viewModel.editTransaction(transactionId)
-                        destination = MainDestination.ADD
-                    },
                     onAddTransaction = {
                         viewModel.startNewTransaction()
                         destination = MainDestination.ADD

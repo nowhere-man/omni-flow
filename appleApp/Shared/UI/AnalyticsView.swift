@@ -1,16 +1,13 @@
 import Charts
+import Foundation
 import SwiftUI
 
 struct AnalyticsView: View {
     @EnvironmentObject private var store: AppStore
-    @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.appThemeColor) private var themeColor
     @State private var mode = RangeMode.week
     @State private var anchor = Date()
     @State private var customStart = Date()
     @State private var customEnd = Date()
-    @State private var showIncome = true
-    @State private var showExpense = true
 
     var body: some View {
         ScrollView {
@@ -20,152 +17,43 @@ struct AnalyticsView: View {
                         Button("所有账本") { store.selectAnalyticsLedger(nil) }
                         ForEach(store.ledgers) { ledger in Button(ledger.name) { store.selectAnalyticsLedger(ledger.id) } }
                     } label: {
-                        Image(systemName: "books.vertical")
-                            .iOSLiquidGlassIconControl()
+                        Image(systemName: "books.vertical").iOSLiquidGlassIconControl()
                     }
                     .iOSPlainButtonStyle()
                     .accessibilityLabel("选择统计账本")
                     ThemeSegmentedControl(selection: $mode, options: RangeMode.allCases, title: \.label)
                 }
-                if mode == .custom {
-                    HStack(spacing: 8) {
-                        compactDatePicker("开始", selection: $customStart)
-                        compactDatePicker("结束", selection: $customEnd)
-                    }
-                } else {
-                    HStack {
-                        Button { shift(-1) } label: {
-                            Image(systemName: "chevron.left")
-                                .iOSLiquidGlassIconControl(size: 34)
-                        }
-                        .iOSPlainButtonStyle()
-                        Spacer()
-                        Text(rangeLabel)
-                            .font(.headline)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                        Spacer()
-                        Button { shift(1) } label: {
-                            Image(systemName: "chevron.right")
-                                .iOSLiquidGlassIconControl(size: 34)
-                        }
-                        .iOSPlainButtonStyle()
-                    }
-                    if !range.contains(Date()) {
-                        currentRangeButton
+                rangeControls
+
+                if let statement = store.analyticsYearStatement {
+                    YearBarsCard(statement: statement, selectedMonth: selectedMonth, onMonth: selectMonth) {
+                        store.analyticsStatement = statement
                     }
                 }
+
                 if store.analyticsExpenseMinor == 0 && store.analyticsIncomeMinor == 0 {
-                    EmptyStateView(title: "当前范围还没有收支", systemImage: "chart.bar", detail: "新增交易后即可查看趋势、分类和资产分析", actionTitle: "新增交易") {
-                        store.startNewTransaction()
-                    }
+                    EmptyStateView(
+                        title: "当前范围还没有收支",
+                        systemImage: "chart.bar",
+                        detail: "新增交易后即可查看排行和分类分析",
+                        actionTitle: "新增交易",
+                        action: { store.startNewTransaction() }
+                    )
                 } else {
-                    LiquidGlassContainer(spacing: 12) {
-                        HStack(spacing: 12) {
-                            summaryButton("总支出", store.analyticsExpenseMinor, .expense)
-                            summaryButton("总收入", store.analyticsIncomeMinor, .income)
-                            summaryButton("总结余", store.analyticsIncomeMinor - store.analyticsExpenseMinor, nil)
-                        }
+                    HStack(spacing: 12) {
+                        summaryButton("总支出", store.analyticsExpenseMinor, .expense)
+                        summaryButton("总收入", store.analyticsIncomeMinor, .income)
+                        summaryButton("总结余", store.analyticsIncomeMinor - store.analyticsExpenseMinor, nil)
                     }
-                    Button("查看年度账单") { store.loadAnalyticsStatement(year: Calendar.current.component(.year, from: anchor)) }
-                        .buttonStyle(.bordered)
-                    VStack(alignment: .leading, spacing: 10) {
-                    ThemeSegmentedControl(selection: $store.analyticsRankingType, options: EntryType.allCases, title: \.label)
-                    HStack(spacing: 10) {
-                        ThemeSegmentedControl(selection: $store.analyticsCategoryType, options: EntryType.allCases, title: \.label)
-                        ThemeSegmentedControl(
-                            selection: $store.analyticsCategoryGranularity,
-                            options: AppleCategoryGranularity.allCases,
-                            title: \.label
-                        )
+                    #if os(macOS)
+                    HStack(alignment: .top, spacing: 18) {
+                        RankingCard().frame(maxWidth: .infinity, alignment: .top)
+                        CategoryCard().frame(maxWidth: .infinity, alignment: .top)
                     }
-                }
-                    Group {
-                    AnalyticsCard(title: "收支趋势") {
-                        HStack(spacing: 8) {
-                            Button("收入") { showIncome.toggle() }
-                                .buttonStyle(SelectablePillButtonStyle(selected: showIncome))
-                            Button("支出") { showExpense.toggle() }
-                                .buttonStyle(SelectablePillButtonStyle(selected: showExpense))
-                        }
-                        TrendChart(points: store.analyticsPoints, showIncome: showIncome, showExpense: showExpense)
-                    }
-                    AnalyticsCard(title: "同环比") {
-                        ComparisonPanel(
-                            title: "上一周期",
-                            currentExpense: store.analyticsExpenseMinor,
-                            currentIncome: store.analyticsIncomeMinor,
-                            previousExpense: store.analyticsPreviousExpenseMinor,
-                            previousIncome: store.analyticsPreviousIncomeMinor
-                        )
-                        ComparisonPanel(
-                            title: "去年同期",
-                            currentExpense: store.analyticsExpenseMinor,
-                            currentIncome: store.analyticsIncomeMinor,
-                            previousExpense: store.analyticsYearPreviousExpenseMinor,
-                            previousIncome: store.analyticsYearPreviousIncomeMinor
-                        )
-                    }
-                    AnalyticsCard(title: "收支排行榜") {
-                        ForEach(store.analyticsRanking) { item in
-                            Button { store.showTransactionDetail(item) } label: {
-                                HStack(spacing: 10) {
-                                    SVGIconView(
-                                        key: categoryIconAssetKey(item.categoryIconKey ?? "category"),
-                                        size: 24,
-                                        tint: (AppThemeColor(rawValue: store.themeColor) ?? .lavender).cssColor(for: colorScheme)
-                                    )
-                                    Text(item.categoryDisplayName)
-                                    Spacer()
-                                    Text(item.amountMinor.rmb).fontWeight(.semibold)
-                                }
-                            }
-                            .buttonStyle(.plain)
-                            Divider()
-                        }
-                    }
-                    AnalyticsCard(title: "分类占比") {
-                        if store.analyticsPrimaryCategoryID != nil {
-                            Button("返回一级分类") {
-                                store.analyticsPrimaryCategoryID = nil
-                                store.analyticsCategoryGranularity = .primary
-                            }
-                            .buttonStyle(.bordered)
-                        }
-                        let total = max(store.analyticsCategories.map(\.amount).reduce(0, +), 1)
-                        DonutChart(items: store.analyticsCategories)
-                            .frame(height: 190)
-                        ForEach(store.analyticsCategories.indices, id: \.self) { index in
-                            let item = store.analyticsCategories[index]
-                            if store.analyticsCategoryGranularity == .primary {
-                                Button {
-                                    store.analyticsPrimaryCategoryID = item.id
-                                    store.analyticsCategoryGranularity = .secondary
-                                } label: {
-                                    CategoryShareRow(item: item, maximum: total, color: analyticsPalette[index % analyticsPalette.count])
-                                }
-                                .buttonStyle(.plain)
-                            } else {
-                                CategoryShareRow(item: item, maximum: total, color: analyticsPalette[index % analyticsPalette.count])
-                            }
-                        }
-                    }
-                }
-                    Group {
-                    AnalyticsCard(title: "标签分析") {
-                        ForEach(store.analyticsTags) { tag in
-                            HStack { Text(tag.name); Spacer(); Text("支出 \(tag.expense.rmb) · 收入 \(tag.income.rmb)") }
-                        }
-                    }
-                    AnalyticsCard(title: "全局实时资产") {
-                        let summary = store.analyticsAccountSummary
-                        Text("不随当前账本和统计时间范围变化").font(.caption).foregroundStyle(.secondary)
-                        Text("净资产 \((summary.assets - summary.liabilities).rmb) · 资产 \(summary.assets.rmb) · 负债 \(summary.liabilities.rmb)")
-                        ForEach(store.analyticsAccountAssets) { account in
-                            HStack { Text(account.name); Spacer(); Text(account.balance.rmb) }
-                        }
-                    }
-                    }
+                    #else
+                    RankingCard()
+                    CategoryCard()
+                    #endif
                 }
             }
             .padding()
@@ -177,11 +65,7 @@ struct AnalyticsView: View {
         .onChange(of: customEnd) { _ in if mode == .custom { refresh() } }
         .onChange(of: store.analyticsLedgerID) { _ in refresh() }
         .onChange(of: store.analyticsRankingType) { _ in refresh() }
-        .onChange(of: store.analyticsCategoryType) { _ in store.analyticsPrimaryCategoryID = nil; refresh() }
-        .onChange(of: store.analyticsCategoryGranularity) { value in
-            if value == .primary { store.analyticsPrimaryCategoryID = nil }
-            refresh()
-        }
+        .onChange(of: store.analyticsCategoryType) { _ in refresh() }
         .sheet(item: $store.analyticsStatement) { StatementTableView(table: $0) }
         .sheet(
             isPresented: Binding(
@@ -190,13 +74,35 @@ struct AnalyticsView: View {
             )
         ) {
             #if os(macOS)
-            DateTransactionDetailView()
-                .environmentObject(store)
-                .frame(minWidth: 420, minHeight: 520)
+            DateTransactionDetailView().environmentObject(store).frame(minWidth: 420, minHeight: 520)
             #else
-            DateTransactionDetailView()
-                .environmentObject(store)
+            DateTransactionDetailView().environmentObject(store)
             #endif
+        }
+    }
+
+    @ViewBuilder
+    private var rangeControls: some View {
+        if mode == .custom {
+            HStack(spacing: 8) {
+                compactDatePicker("开始", selection: $customStart)
+                compactDatePicker("结束", selection: $customEnd)
+            }
+        } else {
+            HStack {
+                Button { shift(-1) } label: { Image(systemName: "chevron.left").iOSLiquidGlassIconControl(size: 34) }
+                    .iOSPlainButtonStyle()
+                Spacer()
+                Text(rangeLabel).font(.headline).lineLimit(1).minimumScaleFactor(0.8)
+                Spacer()
+                Button { shift(1) } label: { Image(systemName: "chevron.right").iOSLiquidGlassIconControl(size: 34) }
+                    .iOSPlainButtonStyle()
+            }
+            if !range.contains(Date()) {
+                Button(currentRangeTitle) { anchor = Date(); refresh() }
+                    .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity)
+            }
         }
     }
 
@@ -209,6 +115,20 @@ struct AnalyticsView: View {
         .buttonStyle(.plain)
     }
 
+    private func RankingCard() -> some View {
+        AnalyticsRankingCard(
+            items: store.analyticsRanking,
+            selectedType: $store.analyticsRankingType
+        )
+    }
+
+    private func CategoryCard() -> some View {
+        AnalyticsCategoryCard(
+            items: store.analyticsCategories,
+            selectedType: $store.analyticsCategoryType
+        )
+    }
+
     private var range: DateInterval {
         let calendar = Calendar.current
         switch mode {
@@ -216,9 +136,21 @@ struct AnalyticsView: View {
         case .month: return calendar.dateInterval(of: .month, for: anchor) ?? DateInterval(start: anchor, duration: 30 * 86_400)
         case .year: return calendar.dateInterval(of: .year, for: anchor) ?? DateInterval(start: anchor, duration: 365 * 86_400)
         case .custom:
-            let start = min(customStart, customEnd)
-            return DateInterval(start: start, end: Calendar.current.date(byAdding: .day, value: 1, to: max(customStart, customEnd)) ?? max(customStart, customEnd))
+            let start = Calendar.current.startOfDay(for: min(customStart, customEnd))
+            let last = Calendar.current.startOfDay(for: max(customStart, customEnd))
+            return DateInterval(start: start, end: Calendar.current.date(byAdding: .day, value: 1, to: last) ?? last.addingTimeInterval(86_400))
         }
+    }
+
+    private var selectedMonth: Int? {
+        mode == .month ? Calendar.current.component(.month, from: range.start) : nil
+    }
+
+    private func selectMonth(_ month: Int) {
+        let year = store.analyticsYearStatement?.year ?? Calendar.current.component(.year, from: anchor)
+        anchor = Calendar.current.date(from: DateComponents(year: year, month: month, day: 1)) ?? anchor
+        mode = .month
+        refresh()
     }
 
     private func shift(_ value: Int) {
@@ -227,7 +159,9 @@ struct AnalyticsView: View {
         refresh()
     }
 
-    private func refresh() { store.observeAnalytics(start: range.start, end: range.end, ledgerID: store.analyticsLedgerID) }
+    private func refresh() {
+        store.observeAnalytics(start: range.start, end: range.end, ledgerID: store.analyticsLedgerID)
+    }
 
     private var rangeLabel: String {
         let end = Calendar.current.date(byAdding: .day, value: -1, to: range.end) ?? range.end
@@ -243,33 +177,11 @@ struct AnalyticsView: View {
         switch mode { case .week: return "回到本周"; case .month: return "回到本月"; case .year: return "回到今年"; case .custom: return "" }
     }
 
-    @ViewBuilder
-    private var currentRangeButton: some View {
-        #if os(iOS)
-        Button { anchor = Date(); refresh() } label: {
-            Text(currentRangeTitle)
-                .font(.subheadline.weight(.semibold))
-                .padding(.horizontal, 12)
-                .frame(minHeight: 34)
-                .iOSLiquidGlassControl(cornerRadius: 17)
-        }
-        .buttonStyle(.plain)
-        .frame(maxWidth: .infinity, alignment: .center)
-        #else
-        Button(currentRangeTitle) { anchor = Date(); refresh() }
-            .buttonStyle(.bordered)
-            .frame(maxWidth: .infinity, alignment: .center)
-        #endif
-    }
-
-    private func compactDatePicker(_ label: String, selection: Binding<Date>) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(label).font(.caption).foregroundStyle(.secondary)
-            DatePicker(label, selection: selection, displayedComponents: .date).labelsHidden()
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .liquidGlassSurface(cornerRadius: 12, interactive: true)
+    private func compactDatePicker(_ title: String, selection: Binding<Date>) -> some View {
+        DatePicker(title, selection: selection, displayedComponents: .date)
+            .labelsHidden()
+            .datePickerStyle(.compact)
+            .frame(maxWidth: .infinity)
     }
 
     private func format(_ date: Date, _ pattern: String) -> String {
@@ -281,15 +193,152 @@ struct AnalyticsView: View {
     }
 }
 
+private struct YearBarsCard: View {
+    let statement: StatementTableUI
+    let selectedMonth: Int?
+    let onMonth: (Int) -> Void
+    let onStatement: () -> Void
+    @State private var layout = BarLayout.diverging
+
+    var body: some View {
+        AnalyticsCard(title: "\(statement.year) 年收支") {
+            Picker("柱状图布局", selection: $layout) {
+                Text("上下").tag(BarLayout.diverging)
+                Text("并排").tag(BarLayout.sideBySide)
+            }
+            .pickerStyle(.segmented)
+            .frame(maxWidth: 220)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            Chart {
+                ForEach(statement.months) { month in
+                    if layout == .diverging {
+                        BarMark(x: .value("月份", month.month), y: .value("收入", Double(month.incomeMinor) / 100)).foregroundStyle(Color.income)
+                        BarMark(x: .value("月份", month.month), y: .value("支出", -Double(month.expenseMinor) / 100)).foregroundStyle(Color.expense)
+                    } else {
+                        BarMark(x: .value("月份", month.month), y: .value("金额", Double(month.incomeMinor) / 100))
+                            .position(by: .value("类型", "收入")).foregroundStyle(Color.income)
+                        BarMark(x: .value("月份", month.month), y: .value("金额", Double(month.expenseMinor) / 100))
+                            .position(by: .value("类型", "支出")).foregroundStyle(Color.expense)
+                    }
+                }
+                RuleMark(y: .value("零", 0)).foregroundStyle(.secondary.opacity(0.4))
+            }
+            .chartXAxis(.hidden)
+            .chartLegend(.hidden)
+            .frame(height: 210)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(statement.months) { month in
+                        Button("\(String(format: "%02d", month.month))月") { onMonth(month.month) }
+                            .buttonStyle(.bordered)
+                            .tint(selectedMonth == month.month ? Color.accentColor : Color.secondary)
+                    }
+                }
+            }
+            Button("查看账单表格", action: onStatement).buttonStyle(.bordered).frame(maxWidth: .infinity)
+        }
+    }
+}
+
+private struct AnalyticsRankingCard: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject private var store: AppStore
+    let items: [AnalyticsRankingUI]
+    @Binding var selectedType: EntryType
+    @State private var expanded = false
+
+    var body: some View {
+        AnalyticsCard(title: selectedType == .expense ? "支出排行榜" : "收入排行榜") {
+            ThemeSegmentedControl(selection: $selectedType, options: EntryType.allCases, title: \.label)
+            ForEach(Array(items.prefix(expanded ? 10 : 3).enumerated()), id: \.element.id) { index, item in
+                HStack(spacing: 12) {
+                    Text("\(index + 1).").font(.headline).frame(width: 28)
+                    SVGIconView(
+                        key: categoryIconAssetKey(item.iconKey),
+                        size: 28,
+                        tint: (AppThemeColor(rawValue: store.themeColor) ?? .lavender).cssColor(for: colorScheme)
+                    )
+                    Text(item.displayName).fontWeight(.semibold).lineLimit(1)
+                    Spacer()
+                    Text(item.amount.rmb).fontWeight(.bold).foregroundStyle(selectedType == .expense ? Color.expense : Color.income)
+                }
+                .padding(.vertical, 6)
+            }
+            if items.count > 3 {
+                Button(expanded ? "收起" : "展示更多") { expanded.toggle() }
+                    .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+    }
+}
+
+private struct AnalyticsCategoryCard: View {
+    let items: [CategoryBreakdownUI]
+    @Binding var selectedType: EntryType
+    @State private var showSecondary = false
+
+    var body: some View {
+        AnalyticsCard(title: selectedType == .expense ? "支出分类" : "收入分类") {
+            ThemeSegmentedControl(selection: $selectedType, options: EntryType.allCases, title: \.label)
+            CategoryDonut(items: items)
+            Toggle("显示二级分类", isOn: $showSecondary)
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                categoryRow(item.name, amount: item.amount, total: total, color: analyticsPalette[index % analyticsPalette.count])
+                if showSecondary {
+                    ForEach(item.secondary) { secondary in
+                        categoryRow("  \(secondary.name)", amount: secondary.amount, total: item.amount, color: analyticsPalette[index % analyticsPalette.count].opacity(0.75))
+                    }
+                }
+            }
+        }
+    }
+
+    private var total: Int64 { max(items.map(\.amount).reduce(0, +), 1) }
+
+    private func categoryRow(_ name: String, amount: Int64, total: Int64, color: Color) -> some View {
+        let ratio = Double(amount) / Double(max(total, 1))
+        return VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                Text(name).fontWeight(.medium)
+                Spacer()
+                Text(amount.rmb).fontWeight(.semibold)
+                Text(ratio.formatted(.percent.precision(.fractionLength(0)))).foregroundStyle(.secondary)
+            }
+            ProgressView(value: ratio).tint(color)
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+private struct CategoryDonut: View {
+    let items: [CategoryBreakdownUI]
+
+    var body: some View {
+        let total = max(items.map(\.amount).reduce(0, +), 1)
+        Canvas { context, size in
+            let center = CGPoint(x: size.width / 2, y: size.height / 2)
+            let radius = min(size.width, size.height) * 0.32
+            var start = Angle.degrees(-90)
+            for (index, item) in items.enumerated() {
+                let sweep = Angle.degrees(360 * Double(item.amount) / Double(total))
+                var path = Path()
+                path.addArc(center: center, radius: radius, startAngle: start, endAngle: start + sweep, clockwise: false)
+                context.stroke(path, with: .color(analyticsPalette[index % analyticsPalette.count]), lineWidth: 34)
+                start = start + sweep
+            }
+        }
+        .frame(height: 220)
+    }
+}
+
 private struct StatementTableView: View {
     let table: StatementTableUI
 
     var body: some View {
         NavigationStack {
             List {
-                Section("全年") {
-                    statementRow("合计", income: table.incomeMinor, expense: table.expenseMinor)
-                }
+                Section("全年") { statementRow("合计", income: table.incomeMinor, expense: table.expenseMinor) }
                 Section("月份") {
                     ForEach(table.months) { month in
                         statementRow("\(month.month) 月", income: month.incomeMinor, expense: month.expenseMinor)
@@ -305,8 +354,8 @@ private struct StatementTableView: View {
         HStack {
             Text(label)
             Spacer()
-            Text(income.rmb).foregroundStyle(.secondary)
-            Text(expense.rmb).foregroundStyle(.secondary)
+            Text(income.rmb).foregroundStyle(Color.income)
+            Text(expense.rmb).foregroundStyle(Color.expense)
             Text((income - expense).rmb)
         }
     }
@@ -317,6 +366,8 @@ private enum RangeMode: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var label: String { switch self { case .week: return "周"; case .month: return "月"; case .year: return "年"; case .custom: return "范围" } }
 }
+
+private enum BarLayout { case diverging, sideBySide }
 
 private struct AnalyticsCard<Content: View>: View {
     let title: String
@@ -335,189 +386,6 @@ private struct AnalyticsCard<Content: View>: View {
 
 private let analyticsPalette: [Color] = [.purple, .orange, .teal, .pink, .green, .indigo, .brown]
 
-private struct TrendChart: View {
-    @Environment(\.appThemeColor) private var themeColor
-    let points: [AnalyticsPointUI]
-    let showIncome: Bool
-    let showExpense: Bool
-
-    var body: some View {
-        Chart {
-            ForEach(points) { point in
-                if showIncome {
-                    BarMark(
-                        x: .value("日期", point.label),
-                        y: .value("收入", Double(point.income) / 100)
-                    )
-                    .foregroundStyle(themeColor)
-                }
-                if showExpense {
-                    BarMark(
-                        x: .value("日期", point.label),
-                        y: .value("支出", -Double(point.expense) / 100)
-                    )
-                    .foregroundStyle(Color.expense)
-                }
-            }
-            RuleMark(y: .value("零", 0.0)).foregroundStyle(Color.secondary.opacity(0.5))
-        }
-        .chartLegend(.hidden)
-        .frame(height: 220)
-        HStack(spacing: 16) {
-            chartLegend("收入", color: themeColor)
-            chartLegend("支出", color: .expense)
-        }
-    }
-
-    private func chartLegend(_ label: String, color: Color) -> some View {
-        HStack(spacing: 5) {
-            Circle().fill(color).frame(width: 8, height: 8)
-            Text(label).font(.caption).foregroundStyle(.secondary)
-        }
-    }
-}
-
-private struct ComparisonMetric: Identifiable {
-    let label: String
-    let current: Int64
-    let previous: Int64
-    let expense: Bool
-    var id: String { label }
-}
-
-private struct ComparisonPanel: View {
-    let title: String
-    let currentExpense: Int64
-    let currentIncome: Int64
-    let previousExpense: Int64
-    let previousIncome: Int64
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(title).font(.headline)
-                Spacer()
-                chartLegend("当前", color: .primary)
-                chartLegend(title, color: .secondary)
-            }
-            ForEach(metrics) { metric in ComparisonMetricRow(metric: metric) }
-        }
-        .padding(12)
-        .liquidGlassSurface(cornerRadius: 16)
-    }
-
-    private var metrics: [ComparisonMetric] {
-        [
-            ComparisonMetric(label: "支出", current: currentExpense, previous: previousExpense, expense: true),
-            ComparisonMetric(label: "收入", current: currentIncome, previous: previousIncome, expense: false),
-            ComparisonMetric(
-                label: "结余",
-                current: currentIncome - currentExpense,
-                previous: previousIncome - previousExpense,
-                expense: false
-            ),
-        ]
-    }
-
-    private func chartLegend(_ label: String, color: Color) -> some View {
-        HStack(spacing: 4) {
-            Capsule().fill(color).frame(width: 12, height: 5)
-            Text(label).font(.caption2).foregroundStyle(.secondary)
-        }
-    }
-}
-
-private struct ComparisonMetricRow: View {
-    @Environment(\.appThemeColor) private var themeColor
-    let metric: ComparisonMetric
-
-    var body: some View {
-        let maximum = max(max(abs(metric.current), abs(metric.previous)), 1)
-        let change = metric.current - metric.previous
-        VStack(alignment: .leading, spacing: 5) {
-            HStack {
-                Text(metric.label).font(.subheadline.weight(.semibold))
-                Spacer()
-                Text("\(change >= 0 ? "+" : "")\(change.rmb)")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(favorable(change) ? themeColor : Color.expense)
-            }
-            comparisonBar(value: metric.current, maximum: maximum, color: .primary)
-            comparisonBar(value: metric.previous, maximum: maximum, color: .secondary)
-        }
-    }
-
-    private func comparisonBar(value: Int64, maximum: Int64, color: Color) -> some View {
-        HStack(spacing: 8) {
-            GeometryReader { proxy in
-                Capsule().fill(.quaternary)
-                    .overlay(alignment: .leading) {
-                        Capsule().fill(color).frame(width: proxy.size.width * CGFloat(abs(value)) / CGFloat(maximum))
-                    }
-            }
-            .frame(height: 7)
-            Text(value.rmb).font(.caption2).frame(width: 78, alignment: .trailing)
-        }
-    }
-
-    private func favorable(_ change: Int64) -> Bool { metric.expense ? change <= 0 : change >= 0 }
-}
-
-private struct DonutChart: View {
-    let items: [CategoryShareUI]
-
-    var body: some View {
-        let total = max(items.map(\.amount).reduce(0, +), 1)
-        Canvas { context, size in
-            let center = CGPoint(x: size.width / 2, y: size.height / 2)
-            let radius = min(size.width, size.height) * 0.34
-            var start = Angle.degrees(-90)
-            for (index, item) in items.enumerated() {
-                let sweep = Angle.degrees(360 * Double(item.amount) / Double(total))
-                let end = start + sweep
-                var path = Path()
-                path.addArc(center: center, radius: radius, startAngle: start, endAngle: end, clockwise: false)
-                context.stroke(
-                    path,
-                    with: .color(analyticsPalette[index % analyticsPalette.count]),
-                    style: StrokeStyle(lineWidth: 28, lineCap: .butt)
-                )
-                start = end
-            }
-        }
-        .overlay {
-            VStack(spacing: 2) {
-                Text("合计").font(.caption).foregroundStyle(.secondary)
-                Text(total.rmb).font(.headline.bold())
-            }
-        }
-    }
-}
-
-private struct CategoryShareRow: View {
-    @EnvironmentObject private var store: AppStore
-    @Environment(\.colorScheme) private var colorScheme
-    let item: CategoryShareUI
-    let maximum: Int64
-    let color: Color
-
-    var body: some View {
-        HStack(spacing: 10) {
-            SVGIconView(
-                key: categoryIconAssetKey(item.iconKey ?? "category"),
-                size: 24,
-                tint: (AppThemeColor(rawValue: store.themeColor) ?? .lavender).cssColor(for: colorScheme)
-            )
-            VStack(alignment: .leading, spacing: 5) {
-                HStack { Text(item.name); Spacer(); Text(item.amount.rmb).font(.caption) }
-                GeometryReader { proxy in
-                    Capsule().fill(.quaternary)
-                        .overlay(alignment: .leading) {
-                            Capsule().fill(color).frame(width: proxy.size.width * CGFloat(item.amount) / CGFloat(maximum))
-                        }
-                }
-                .frame(height: 8)
-            }
-        }
-    }
+private extension Color {
+    static let income = Color(red: 85 / 255, green: 182 / 255, blue: 167 / 255)
 }
