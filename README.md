@@ -1,8 +1,6 @@
 <div align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/branding/omniflow-icon-dark.png" />
-    <img src="assets/branding/omniflow-icon.png" alt="OmniFlow App 图标" width="112" />
-  </picture>
+  <img src="assets/branding/omniflow-icon.png#gh-light-mode-only" alt="OmniFlow App 图标（浅色模式）" width="112" />
+  <img src="assets/branding/omniflow-icon-dark.png#gh-dark-mode-only" alt="OmniFlow App 图标（深色模式）" width="112" />
   <h1>OmniFlow</h1>
   <p>一款原生多端记账 App，让账单自动流入账本 📥</p>
   <p>
