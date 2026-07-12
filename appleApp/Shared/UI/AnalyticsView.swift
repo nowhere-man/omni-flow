@@ -31,7 +31,6 @@ struct AnalyticsView: View {
                     HStack(spacing: 8) {
                         compactDatePicker("开始", selection: $customStart)
                         compactDatePicker("结束", selection: $customEnd)
-                        Button("应用", action: refresh).buttonStyle(.borderedProminent)
                     }
                 } else {
                     HStack {
@@ -174,6 +173,8 @@ struct AnalyticsView: View {
         .navigationTitle("统计")
         .onAppear(perform: refresh)
         .onChange(of: mode) { _ in refresh() }
+        .onChange(of: customStart) { _ in if mode == .custom { refresh() } }
+        .onChange(of: customEnd) { _ in if mode == .custom { refresh() } }
         .onChange(of: store.analyticsLedgerID) { _ in refresh() }
         .onChange(of: store.analyticsRankingType) { _ in refresh() }
         .onChange(of: store.analyticsCategoryType) { _ in store.analyticsPrimaryCategoryID = nil; refresh() }
