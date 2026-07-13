@@ -295,10 +295,10 @@ final class AppStore: ObservableObject {
             secondaryCategoryId: searchSecondaryCategoryID,
             tagId: searchTagID,
             exactMinor: nil,
-            minimumMinor: minimum,
-            maximumMinor: maximum,
-            startMillis: searchDateEnabled ? Int64(Calendar.current.startOfDay(for: min(searchStartDate, searchEndDate)).timeIntervalSince1970 * 1000) : nil,
-            endMillis: searchDateEnabled ? Int64((Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: max(searchStartDate, searchEndDate))) ?? max(searchStartDate, searchEndDate)).timeIntervalSince1970 * 1000) : nil
+            minimumMinor: Self.boxedLong(minimum),
+            maximumMinor: Self.boxedLong(maximum),
+            startMillis: Self.boxedLong(searchDateEnabled ? Int64(Calendar.current.startOfDay(for: min(searchStartDate, searchEndDate)).timeIntervalSince1970 * 1000) : nil),
+            endMillis: Self.boxedLong(searchDateEnabled ? Int64((Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: max(searchStartDate, searchEndDate))) ?? max(searchStartDate, searchEndDate)).timeIntervalSince1970 * 1000) : nil)
         ) { [weak self] result, message in
             Task { @MainActor in
                 if let message { self?.error = message }
