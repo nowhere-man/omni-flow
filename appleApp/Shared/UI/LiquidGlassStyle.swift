@@ -203,56 +203,26 @@ struct SelectablePillButtonStyle: ButtonStyle {
 }
 
 struct ThemeSegmentedControl<Option: Hashable>: View {
-    @Environment(\.appThemeColor) private var themeColor
-    @Environment(\.appThemeSelectionForeground) private var selectedForeground
     @Binding var selection: Option
     let options: [Option]
     let title: (Option) -> String
 
     @ViewBuilder
     var body: some View {
-        #if os(macOS)
-        Picker("", selection: $selection) {
-            ForEach(options, id: \.self) { option in Text(title(option)).tag(option) }
-        }
-        .pickerStyle(.segmented)
-        .labelsHidden()
+        #if os(iOS)
+        picker.frame(minHeight: 44)
         #else
-        if #available(iOS 26.0, *) {
-            LiquidGlassContainer(spacing: 4) {
-                HStack(spacing: 4) {
-                    ForEach(options, id: \.self) { segmentButton($0, glass: true) }
-                }
-            }
-        } else {
-            HStack(spacing: 4) {
-                ForEach(options, id: \.self) { segmentButton($0, glass: false) }
-            }
-            .padding(3)
-            .background(Color.secondary.opacity(0.09), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        }
+        picker
         #endif
     }
 
-    @ViewBuilder
-    private func segmentButton(_ option: Option, glass: Bool) -> some View {
-        let selected = selection == option
-        let button = Button {
-            withAnimation(.easeInOut(duration: 0.16)) { selection = option }
-        } label: {
-            Text(title(option))
-                .font(.subheadline.weight(selected ? .bold : .medium))
-                .foregroundStyle(selected ? selectedForeground : Color.secondary)
-                .frame(maxWidth: .infinity, minHeight: 36)
-                .contentShape(Rectangle())
+    private var picker: some View {
+        Picker("", selection: $selection) {
+            ForEach(options, id: \.self) { option in
+                Text(title(option)).tag(option)
+            }
         }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(selected ? .isSelected : [])
-
-        if glass {
-            button.liquidGlassSurface(cornerRadius: 13, interactive: true, tint: selected ? themeColor : nil)
-        } else {
-            button.background(selected ? themeColor : Color.clear, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
-        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
     }
 }
