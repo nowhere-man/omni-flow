@@ -125,6 +125,10 @@ jobs:
             runner: macos-15
             kotlin_target: MacosArm64
             framework_target: macosArm64
+          - arch: x86_64
+            runner: macos-15-intel
+            kotlin_target: MacosX64
+            framework_target: macosX64
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v5
