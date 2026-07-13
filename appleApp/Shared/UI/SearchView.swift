@@ -4,6 +4,7 @@ struct SearchView: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.appThemeColor) private var themeColor
+    @State private var showingAdvancedFilters = false
 
     var body: some View {
         ScrollView {
@@ -24,51 +25,42 @@ struct SearchView: View {
                 .frame(minHeight: 44)
                 .liquidGlassSurface(cornerRadius: 18, interactive: true)
 
-                VStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 10) {
                     HStack {
                         Text("筛选").font(.subheadline.bold())
                         Spacer()
-                        if hasFilters { Button("清除", action: clear).buttonStyle(.plain).foregroundStyle(themeColor) }
+                        if hasFilters {
+                            Text("已筛选 \(activeFilterCount) 项").font(.caption).foregroundStyle(.secondary)
+                            Button("清除全部", action: clear)
+                                .buttonStyle(.plain)
+                                .foregroundStyle(themeColor)
+                                .accessibilityLabel("清除全部筛选条件")
+                        }
                     }
                     ThemeSegmentedControl(
                         selection: Binding(get: { store.searchType }, set: setType),
                         options: [EntryType?.none, .some(.expense), .some(.income)]
                     ) { $0?.label ?? "全部" }
 
-                    HStack(spacing: 8) {
-                        filterMenu(
-                            title: store.searchLedgerID.flatMap { id in store.ledgers.first { $0.id == id }?.name } ?? "所有账本",
-                            allTitle: "所有账本",
-                            values: store.ledgers.map { ($0.id, $0.name) },
-                            onAll: { store.setSearchLedger(nil) },
-                            onSelected: { store.setSearchLedger($0) }
-                        )
-                        filterMenu(
-                            title: store.searchAccountID.flatMap { id in store.accounts.first { $0.id == id }?.name } ?? "所有账户",
-                            allTitle: "所有账户",
-                            values: store.accounts.map { ($0.id, $0.name) },
-                            onAll: { setAccount(nil) },
-                            onSelected: { setAccount($0) }
-                        )
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 12) { filterMenus }
+                        VStack(spacing: 8) { filterMenus }
                     }
-                    filterTextField("一级分类", text: $store.searchPrimaryCategoryText)
-                    filterTextField("二级分类", text: $store.searchSecondaryCategoryText)
-                    filterTextField("标签", text: $store.searchTagText)
-                    filterTextField("备注", text: $store.searchNoteText)
-                    HStack(spacing: 8) {
-                        filterTextField("最低金额", text: $store.searchMinimumAmount)
-                        filterTextField("最高金额", text: $store.searchMaximumAmount)
+                    filterTextField("一级分类", prompt: "名称包含", text: $store.searchPrimaryCategoryText)
+                    filterTextField("二级分类", prompt: "名称包含", text: $store.searchSecondaryCategoryText)
+                    filterTextField("标签", prompt: "名称包含", text: $store.searchTagText)
+
+                    #if os(iOS)
+                    DisclosureGroup(isExpanded: $showingAdvancedFilters) {
+                        advancedFilters.padding(.top, 8)
+                    } label: {
+                        Label("更多条件", systemImage: "slider.horizontal.3")
+                            .font(.subheadline.weight(.semibold))
                     }
-                    HStack(spacing: 8) {
-                        Toggle("日期", isOn: Binding(
-                            get: { store.searchDateEnabled },
-                            set: { store.searchDateEnabled = $0; search() }
-                        ))
-                        if store.searchDateEnabled {
-                            DatePicker("开始", selection: $store.searchStartDate, displayedComponents: .date).labelsHidden()
-                            DatePicker("结束", selection: $store.searchEndDate, displayedComponents: .date).labelsHidden()
-                        }
-                    }
+                    #else
+                    Divider()
+                    advancedFilters
+                    #endif
                 }
                 .padding(12)
                 .liquidGlassSurface(cornerRadius: 18)
@@ -88,12 +80,7 @@ struct SearchView: View {
                 } else if store.searchStatus == .loaded && store.searchResults.isEmpty {
                     EmptyStateView(title: "没有符合当前条件的交易", systemImage: "magnifyingglass", detail: "调整筛选条件后再试")
                 } else if !store.searchResults.isEmpty {
-                    LiquidGlassContainer(spacing: 12) {
-                        HStack(spacing: 12) {
-                            SummaryCard(title: "收入", value: store.searchIncomeMinor.rmb)
-                            SummaryCard(title: "支出", value: store.searchExpenseMinor.rmb)
-                        }
-                    }
+                    resultSummary
                     ForEach(store.searchResults) { item in
                         searchResult(item)
                     }
@@ -101,11 +88,8 @@ struct SearchView: View {
             }
             .padding()
         }
-        #if os(macOS)
+        .searchScrollDismissesKeyboard()
         .navigationTitle("搜索")
-        #else
-        .navigationTitle("")
-        #endif
         .onAppear {
             store.prepareSearch()
         }
@@ -115,18 +99,97 @@ struct SearchView: View {
 
     private var hasFilters: Bool { store.hasSearchFilters }
 
-    private func filterTextField(_ title: String, text: Binding<String>) -> some View {
-        TextField(title, text: text)
-            .textFieldStyle(.plain)
-            .padding(.horizontal, 12)
-            .frame(maxWidth: .infinity, minHeight: 38)
-            .iOSLiquidGlassControl(cornerRadius: 12)
-            .onSubmit(search)
-            .onChange(of: text.wrappedValue) { _ in store.scheduleSearch() }
+    private var activeFilterCount: Int {
+        [
+            !store.searchText.isEmpty,
+            store.searchType != nil,
+            store.searchLedgerID != nil,
+            store.searchAccountID != nil,
+            !store.searchPrimaryCategoryText.isEmpty,
+            !store.searchSecondaryCategoryText.isEmpty,
+            !store.searchTagText.isEmpty,
+            !store.searchNoteText.isEmpty,
+            !store.searchMinimumAmount.isEmpty,
+            !store.searchMaximumAmount.isEmpty,
+            store.searchDateEnabled,
+        ].filter { $0 }.count
+    }
+
+    @ViewBuilder
+    private var filterMenus: some View {
+        filterMenu(
+            label: "账本",
+            title: store.searchLedgerID.flatMap { id in store.ledgers.first { $0.id == id }?.name } ?? "所有账本",
+            allTitle: "所有账本",
+            values: store.ledgers.map { ($0.id, $0.name) },
+            onAll: { store.setSearchLedger(nil) },
+            onSelected: { store.setSearchLedger($0) }
+        )
+        filterMenu(
+            label: "账户",
+            title: store.searchAccountID.flatMap { id in store.accounts.first { $0.id == id }?.name } ?? "所有账户",
+            allTitle: "所有账户",
+            values: store.accounts.map { ($0.id, $0.name) },
+            onAll: { setAccount(nil) },
+            onSelected: { setAccount($0) }
+        )
+    }
+
+    private var advancedFilters: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            filterTextField("备注", prompt: "备注包含", text: $store.searchNoteText)
+            Text("金额范围").font(.caption).foregroundStyle(.secondary)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) { amountFields }
+                VStack(spacing: 8) { amountFields }
+            }
+            Toggle("限制日期范围", isOn: Binding(
+                get: { store.searchDateEnabled },
+                set: { store.searchDateEnabled = $0; search() }
+            ))
+            if store.searchDateEnabled {
+                DatePicker("开始日期", selection: $store.searchStartDate, displayedComponents: .date)
+                DatePicker("结束日期", selection: $store.searchEndDate, displayedComponents: .date)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var amountFields: some View {
+        amountField("最低", text: $store.searchMinimumAmount)
+        amountField("最高", text: $store.searchMaximumAmount)
+    }
+
+    private func filterTextField(_ title: String, prompt: String, text: Binding<String>) -> some View {
+        LabeledContent(title) {
+            TextField(prompt, text: text)
+                .textFieldStyle(.plain)
+                .multilineTextAlignment(.trailing)
+                .onSubmit(search)
+                .onChange(of: text.wrappedValue) { _ in store.scheduleSearch() }
+        }
+        .frame(minHeight: 44)
+    }
+
+    private func amountField(_ title: String, text: Binding<String>) -> some View {
+        HStack(spacing: 6) {
+            Text(title).font(.caption).foregroundStyle(.secondary)
+            Text("¥").foregroundStyle(.secondary)
+            TextField("0.00", text: text)
+                .textFieldStyle(.plain)
+                .multilineTextAlignment(.trailing)
+                .decimalInputKeyboard()
+                .onSubmit(search)
+                .onChange(of: text.wrappedValue) { _ in store.scheduleSearch() }
+        }
+        .padding(.horizontal, 10)
+        .frame(maxWidth: .infinity, minHeight: 44)
+        .background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     @ViewBuilder
     private func filterMenu(
+        label: String,
         title: String,
         allTitle: String,
         values: [(String, String)],
@@ -139,13 +202,18 @@ struct SearchView: View {
                 Button(values[index].1) { onSelected(values[index].0) }
             }
         } label: {
-            HStack(spacing: 3) {
-                Text(title).lineLimit(1).minimumScaleFactor(0.72)
-                Image(systemName: "chevron.down").font(.caption2)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(label).font(.caption).foregroundStyle(.secondary)
+                HStack(spacing: 4) {
+                    Text(title).lineLimit(1).truncationMode(.tail)
+                    Spacer(minLength: 4)
+                    Image(systemName: "chevron.down").font(.caption2)
+                }
+                .font(.subheadline.weight(.medium))
             }
-            .font(.caption.weight(.medium))
-            .frame(maxWidth: .infinity, minHeight: 34)
-            .iOSLiquidGlassControl(cornerRadius: 12)
+            .padding(.horizontal, 10)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
 
         #if os(iOS)
@@ -165,18 +233,22 @@ struct SearchView: View {
                     tint: (AppThemeColor(rawValue: store.themeColor) ?? .lavender).cssColor(for: colorScheme)
                 )
                     .frame(width: 44, height: 44)
-                    .liquidGlassSurface(cornerRadius: 13)
+                    .background(themeColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
                 VStack(alignment: .leading, spacing: 3) {
                     Text(item.categoryDisplayName).fontWeight(.semibold)
                     Text("\(item.ledgerName) · \(item.accountName)").font(.caption).foregroundStyle(.secondary)
+                    Text(store.transactionDateTimeText(item.date)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     if !item.note.isEmpty { Text(item.note).font(.caption).lineLimit(1) }
                     if !item.tagNames.isEmpty {
                         Text(item.tagNames.joined(separator: " · ")).font(.caption2).foregroundStyle(themeColor).lineLimit(1)
                     }
+                    if item.excluded {
+                        Text("未计入收支").font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
+                    }
                 }
                 Spacer()
                 Text(item.amountMinor.rmb)
-                    .fontWeight(.bold)
+                    .fontWeight(.bold).monospacedDigit()
                     .foregroundStyle(item.type == .expense ? Color.expense : themeColor)
             }
             .padding(12)
@@ -184,10 +256,52 @@ struct SearchView: View {
         }
         .buttonStyle(.plain)
         .liquidGlassSurface(cornerRadius: 18, interactive: true)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(store.transactionDateTimeText(item.date))，\(item.categoryDisplayName)，\(item.type.label)，\(item.amountMinor.rmb)，\(item.accountName)\(item.excluded ? "，未计入收支" : "")")
+    }
+
+    private var resultSummary: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("共 \(store.searchResults.count) 笔匹配交易").font(.headline)
+            HStack {
+                Text("收入 \(store.searchIncomeMinor.rmb)").foregroundStyle(themeColor)
+                Spacer()
+                Text("支出 \(store.searchExpenseMinor.rmb)").foregroundStyle(Color.expense)
+            }
+            .font(.subheadline.weight(.semibold))
+            if store.searchResults.contains(where: \.excluded) {
+                Text("未计入收支的交易显示在列表中，但不参与上方汇总。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .liquidGlassSurface(cornerRadius: 16)
     }
 
     private func search() { store.search() }
     private func setType(_ value: EntryType?) { store.searchType = value; search() }
     private func setAccount(_ value: String?) { store.searchAccountID = value; search() }
     private func clear() { store.clearSearch() }
+}
+
+private extension View {
+    @ViewBuilder
+    func decimalInputKeyboard() -> some View {
+        #if os(iOS)
+        keyboardType(.decimalPad)
+        #else
+        self
+        #endif
+    }
+
+    @ViewBuilder
+    func searchScrollDismissesKeyboard() -> some View {
+        #if os(iOS)
+        scrollDismissesKeyboard(.interactively)
+        #else
+        self
+        #endif
+    }
 }

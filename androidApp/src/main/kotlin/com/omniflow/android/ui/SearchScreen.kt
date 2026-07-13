@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
@@ -38,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,6 +49,7 @@ import com.omniflow.shared.domain.model.DateRange
 import com.omniflow.shared.domain.model.Ledger
 import com.omniflow.shared.domain.model.LedgerScope
 import com.omniflow.shared.domain.model.TransactionType
+import com.omniflow.shared.domain.model.transactionDateTimeText
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
@@ -146,9 +149,19 @@ internal fun SearchScreen(
                     shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 ) {
-                    Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("收入 ${result.summary.incomeTotal.asRmb()}", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
-                        Text("支出 ${result.summary.expenseTotal.asRmb()}", color = ExpenseColor, fontWeight = FontWeight.SemiBold)
+                    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("共 ${result.items.size} 笔匹配交易", fontWeight = FontWeight.SemiBold)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("收入 ${result.summary.incomeTotal.asRmb()}", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                            Text("支出 ${result.summary.expenseTotal.asRmb()}", color = ExpenseColor, fontWeight = FontWeight.SemiBold)
+                        }
+                        if (result.items.any { it.transaction.isExcluded }) {
+                            Text(
+                                "未计入收支的交易显示在列表中，但不参与上方汇总。",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }
@@ -189,6 +202,11 @@ internal fun SearchScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                            Text(
+                                item.transaction.occurredAt.transactionDateTimeText(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                             item.transaction.note?.takeIf(String::isNotBlank)?.let {
                                 Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
@@ -199,6 +217,14 @@ internal fun SearchScreen(
                                     color = MaterialTheme.colorScheme.primary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            if (item.transaction.isExcluded) {
+                                Text(
+                                    "未计入收支",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = FontWeight.SemiBold,
                                 )
                             }
                         }
@@ -238,6 +264,7 @@ private fun AmountFilterRow(minimumText: String, maximumText: String, onAmount: 
             label = { Text("最低金额") },
             modifier = Modifier.weight(1f),
             singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         )
         OutlinedTextField(
             value = maximumText,
@@ -245,6 +272,7 @@ private fun AmountFilterRow(minimumText: String, maximumText: String, onAmount: 
             label = { Text("最高金额") },
             modifier = Modifier.weight(1f),
             singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         )
     }
 }
@@ -301,7 +329,7 @@ private fun SearchEmptyState(
         horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(if (hasFilters) "没有符合条件的交易" else "还没有可搜索的交易", fontWeight = FontWeight.SemiBold)
+        Text(if (hasFilters) "没有符合条件的交易" else "输入关键词或选择筛选条件开始搜索", fontWeight = FontWeight.SemiBold)
         if (hasFilters) TextButton(onClick = onClear) { Text("清除筛选") }
     }
 }
@@ -323,7 +351,7 @@ private fun SearchTypeSelector(selected: TransactionType?, onSelected: (Transact
                 }
                 Surface(
                     onClick = { onSelected(type) },
-                    modifier = Modifier.weight(1f).height(42.dp),
+                    modifier = Modifier.weight(1f).height(44.dp),
                     shape = RoundedCornerShape(12.dp),
                     color = if (active) MaterialTheme.colorScheme.surface else androidx.compose.ui.graphics.Color.Transparent,
                 ) {
