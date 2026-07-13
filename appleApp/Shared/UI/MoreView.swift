@@ -793,6 +793,7 @@ private struct RuleEditor: View {
     @State private var actionType: String
     @State private var actionValue: String
     @State private var priority: Int
+    @State private var validationError: String?
     let save: (String, String, String, String, String, Int) -> Void
     init(rule: RuleUI?, save: @escaping (String, String, String, String, String, Int) -> Void) {
         _name = State(initialValue: rule?.name ?? "")
@@ -801,6 +802,7 @@ private struct RuleEditor: View {
         _actionType = State(initialValue: rule?.actionType ?? "SET_CATEGORY")
         _actionValue = State(initialValue: rule?.actionValue ?? "")
         _priority = State(initialValue: rule?.priority ?? 0)
+        _validationError = State(initialValue: nil)
         self.save = save
     }
     var body: some View {
@@ -822,11 +824,49 @@ private struct RuleEditor: View {
                 Text("排除不入账").tag("EXCLUDE")
             }
             if actionType == "SET_CATEGORY" {
-                Picker("分类", selection: $actionValue) { ForEach(store.categories) { Text($0.name).tag($0.id) } }
+                Picker("分类", selection: $actionValue) {
+                    Text("请选择").tag("")
+                    ForEach(store.categories) { Text($0.name).tag($0.id) }
+                }
             }
             Stepper("优先级 \(priority)", value: $priority, in: 0...999)
-            Button("保存") { save(name, conditionType, conditionValue, actionType, actionValue, priority) }
-        }.padding().frame(minWidth: 360)
+            if let validationError {
+                Text(validationError).foregroundStyle(Color.expense)
+            }
+            Button("保存", action: saveIfValid)
+        }
+        .onAppear {
+            if actionType == "SET_CATEGORY", !store.categories.contains(where: { $0.id == actionValue }) {
+                actionValue = ""
+            }
+        }
+        .onChange(of: conditionType) {
+            conditionValue = $0 == "TRANSACTION_TYPE" ? "EXPENSE" : ""
+            validationError = nil
+        }
+        .onChange(of: actionType) { _ in
+            actionValue = ""
+            validationError = nil
+        }
+        .padding()
+        .frame(minWidth: 360)
+    }
+
+    private func saveIfValid() {
+        guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            validationError = "请输入规则名称"
+            return
+        }
+        guard !conditionValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            validationError = "请输入匹配值"
+            return
+        }
+        guard actionType != "SET_CATEGORY" || store.categories.contains(where: { $0.id == actionValue }) else {
+            validationError = "请选择有效分类"
+            return
+        }
+        validationError = nil
+        save(name, conditionType, conditionValue, actionType, actionValue, priority)
     }
 }
 

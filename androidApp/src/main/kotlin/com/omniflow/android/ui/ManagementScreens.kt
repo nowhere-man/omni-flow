@@ -403,11 +403,24 @@ private fun RuleDialog(
     var action by remember(rule) { mutableStateOf(rule?.actionType ?: RuleActionType.SET_CATEGORY) }
     var actionValue by remember(rule) { mutableStateOf(rule?.actionValue.orEmpty()) }
     var priority by remember(rule) { mutableStateOf((rule?.priority ?: state.rules.size).toString()) }
+    var validationError by remember(rule) { mutableStateOf<String?>(null) }
     FormDialog(if (rule == null) "新建规则" else "编辑规则", onDismiss, {
-        onSave(name, condition, conditionValue, action, actionValue, priority.toIntOrNull() ?: 0)
+        validationError = when {
+            name.isBlank() -> "请输入规则名称"
+            conditionValue.isBlank() -> "请输入匹配值"
+            action == RuleActionType.SET_CATEGORY && state.categories.none { it.id == actionValue } -> "请选择有效分类"
+            else -> null
+        }
+        if (validationError == null) {
+            onSave(name, condition, conditionValue, action, actionValue, priority.toIntOrNull() ?: 0)
+        }
     }) {
         OutlinedTextField(name, { name = it }, label = { Text("名称") }, modifier = Modifier.fillMaxWidth())
-        ValueMenu(condition.label, RuleConditionType.entries, { it.label }) { condition = it }
+        ValueMenu(condition.label, RuleConditionType.entries, { it.label }) { selected ->
+            condition = selected
+            conditionValue = if (selected == RuleConditionType.TRANSACTION_TYPE) TransactionType.EXPENSE.name else ""
+            validationError = null
+        }
         if (condition == RuleConditionType.TRANSACTION_TYPE) {
             ValueMenu(
                 TransactionType.entries.firstOrNull { it.name == conditionValue }?.label ?: "选择收支类型",
@@ -417,7 +430,11 @@ private fun RuleDialog(
         } else {
             OutlinedTextField(conditionValue, { conditionValue = it }, label = { Text("匹配值") }, modifier = Modifier.fillMaxWidth())
         }
-        ValueMenu(action.label, RuleActionType.entries, { it.label }) { selected -> action = selected; actionValue = "" }
+        ValueMenu(action.label, RuleActionType.entries, { it.label }) { selected ->
+            action = selected
+            actionValue = ""
+            validationError = null
+        }
         if (action == RuleActionType.SET_CATEGORY) {
             ValueMenu(
                 state.categories.firstOrNull { it.id == actionValue }?.name ?: "选择分类",
@@ -426,6 +443,7 @@ private fun RuleDialog(
             ) { actionValue = it.id }
         }
         OutlinedTextField(priority, { priority = it.filter(Char::isDigit) }, label = { Text("优先级") }, modifier = Modifier.fillMaxWidth())
+        validationError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
     }
 }
 
