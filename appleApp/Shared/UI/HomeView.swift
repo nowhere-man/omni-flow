@@ -66,7 +66,8 @@ struct HomeView: View {
             isPresented: Binding(
                 get: { store.selectedDetailRange != nil },
                 set: { if !$0 { store.dismissDateDetail() } }
-            )
+            ),
+            onDismiss: store.presentPendingTransactionDetail
         ) {
             #if os(macOS)
             DateTransactionDetailView()
@@ -209,8 +210,7 @@ struct DateTransactionDetailView: View {
                         EmptyStateView(title: "当前范围暂无明细", systemImage: "calendar", detail: "所选日期范围没有记录")
                     } else {
                         TransactionCollectionView(items: store.dateDetailTransactions, displayMode: displayMode) { item in
-                            store.dismissDateDetail()
-                            DispatchQueue.main.async { store.showTransactionDetail(item) }
+                            store.transitionFromDateDetail(to: item)
                         }
                         .transactionCollectionContainer()
                     }

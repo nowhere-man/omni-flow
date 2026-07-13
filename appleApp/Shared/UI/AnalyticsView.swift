@@ -59,7 +59,8 @@ struct AnalyticsView: View {
             isPresented: Binding(
                 get: { store.selectedDetailRange != nil },
                 set: { if !$0 { store.dismissDateDetail() } }
-            )
+            ),
+            onDismiss: store.presentPendingTransactionDetail
         ) {
             #if os(macOS)
             DateTransactionDetailView().environmentObject(store).frame(minWidth: 420, minHeight: 520)

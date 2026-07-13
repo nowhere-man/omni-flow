@@ -81,6 +81,7 @@ final class AppStore: ObservableObject {
     @Published var syncLastBackupAt: String?
     @Published var syncError: String?
     private var analyticsObservation: (start: Date, end: Date, ledgerID: String?)?
+    private var pendingTransactionDetail: TransactionUI?
     #if canImport(OmniFlowShared)
     private var analyticsSubscription: AppleFlowSubscription?
     private var homeSubscription: AppleFlowSubscription?
@@ -304,6 +305,17 @@ final class AppStore: ObservableObject {
         dateDetailTransactions = []
         dateDetailExpenseMinor = 0
         dateDetailIncomeMinor = 0
+    }
+
+    func transitionFromDateDetail(to transaction: TransactionUI) {
+        pendingTransactionDetail = transaction
+        dismissDateDetail()
+    }
+
+    func presentPendingTransactionDetail() {
+        guard let pendingTransactionDetail else { return }
+        self.pendingTransactionDetail = nil
+        showTransactionDetail(pendingTransactionDetail)
     }
 
     func search() {
