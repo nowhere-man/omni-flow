@@ -1,96 +1,80 @@
 # OmniFlow Agent Rules
 
-These rules apply to the entire repository.
+以下规则适用于整个仓库。
 
-## 1. Cross-platform changes
+## 1. 跨平台变更
 
-- When changing UI or interaction on Android, iOS, or macOS, first decide whether the behavior is product-wide or platform-specific.
-- Product-wide behavior must be updated on every affected client in the same change.
-- Do not copy a mobile UI to desktop merely for visual consistency. Platform-specific navigation, gestures, windowing, menus, toolbars, density, and input behavior may differ.
-- State explicitly when a change is intentionally platform-specific and why the other clients are unaffected.
+- 修改 Android、iOS 或 macOS 的 UI 或交互时，先判断该行为是全产品通用还是平台专属。
+- 全产品通用的行为必须在同一次变更中更新所有受影响的客户端。
+- 不要仅为视觉一致性把移动端 UI 照搬到桌面端。各平台的导航、手势、窗口、菜单、工具栏、信息密度和输入行为可以不同。
+- 若变更有意仅针对某个平台，必须明确说明原因，以及其他客户端为何不受影响。
 
-## 2. Platform design standards
+## 2. 平台设计标准
 
-- Android UI must follow Material Design 3 and Android navigation/back conventions.
-- iOS UI must follow Apple HIG, native navigation, sheets, controls, accessibility, safe areas, and current iOS visual conventions.
-- macOS UI must follow desktop patterns: `NavigationSplitView`, stable selection, native sidebars, toolbars, menus, keyboard shortcuts, settings scenes, pointer interaction, resizable windows, and appropriate information density.
-- Prefer native platform controls and semantic colors/materials before custom chrome.
-- Liquid Glass must complement system structure. Do not paint over native sidebars, toolbars, sheets, or scroll-edge effects with opaque custom backgrounds.
+- Android UI 必须遵循 Material Design 3 约定。
+- iOS UI 必须遵循 Apple HIG、原生导航、sheet、控件、无障碍、安全区域和当前 iOS 视觉规范。
+- iOS 设计应尽可能采用 iOS 26 的 Liquid Glass 语言和 SwiftUI 原生控件；原生控件可满足需求时，不得自行实现等价控件。Liquid Glass 必须与系统结构相辅相成，不要用不透明的自定义背景覆盖原生侧边栏、工具栏、sheet 或滚动边缘效果。
+- macOS UI 必须遵循桌面端模式：稳定选择状态、原生侧边栏、工具栏、菜单、键盘快捷键、设置场景、指针交互、可调整大小的窗口和恰当的信息密度。
+- 优先使用原生平台控件和语义化颜色/材质，再考虑自定义 UI 外观。
 
-## 3. Shared implementation
+## 3. 共享实现
 
-- Business rules, persistence, formatting rules, validation, import/export, synchronization, and other platform-neutral behavior belong in `shared`.
-- Reuse common models and services across clients. Do not independently reimplement the same rule in Android and Apple code.
-- Apple UI shared by iOS and macOS should reuse shared views or focused components where the interaction is genuinely common.
-- Shared behavior does not require identical presentation. Keep platform-native containers and interaction patterns.
-- Before adding a helper or dependency, search for an existing implementation. Prefer the standard library, platform APIs, and installed dependencies.
+- 业务规则、持久化、格式化规则、校验、导入/导出、同步及其他平台无关的行为应放在 `shared` 中。
+- 在客户端之间复用通用模型和服务。不要在 Android 与 Apple 代码中分别重新实现同一规则。
+- iOS 与 macOS 共用的 Apple UI 应在交互确实相同时复用共享视图或专用组件。
+- 共享行为不要求呈现完全相同。保留各平台原生的容器和交互模式。
+- 添加 helper 或依赖前，先搜索现有实现。优先使用标准库、平台 API 和已安装的依赖。
 
-## 4. UI quality and consistency
+## 4. UI 质量与一致性
 
-- Inspect the current implementation and any supplied screenshot before editing. Do not infer the intended layout from a single symptom.
-- Maintain a clear hierarchy through typography, size, weight, spacing, color, and placement. Do not give every label or button equal emphasis.
-- Selected controls must remain legible: selected foreground/icon color must contrast with the selected background in both light and dark mode.
-- All custom accent colors must come from the active theme. Avoid accidental system blue and decorative hard-coded tints.
-- Use semantic colors for income, expense, errors, destructive actions, and secondary text. Theme color is not a substitute for semantic meaning.
-- Keep related controls compact, aligned, and visually grouped. Avoid oversized filters, excessive empty space, clipped text, unnecessary cards, and repeated headings.
-- Use one consistent component for the same action within a client, including add buttons, list/card switches, filter controls, and detail rows.
-- Icons must match the action or domain, use the current icon catalog, and follow the active theme where appropriate.
-- Category display names must use `一级分类-二级分类`; omit the separator when no secondary category exists.
-- Date text must use the product-specified format, stay on one line, and represent the actual selected range.
+- 编辑前先检查当前实现和任何提供的截图。不要根据单一症状推断目标布局。
+- 通过字体、尺寸、字重、间距、颜色和位置建立清晰层级。不要让每个标签或按钮都具有同等强调程度。
+- 选中控件必须清晰易读：浅色和深色模式下，选中的前景色/图标色都必须与选中背景形成对比。
+- 所有自定义强调色都必须来自当前主题。避免意外使用系统蓝色和仅作装饰的硬编码色调。
+- 对收入、支出、错误、破坏性操作和次要文本使用语义化颜色。主题色不能替代语义含义。
+- 保持相关控件紧凑、对齐且具备清晰分组。避免过大的筛选器、过多空白、文本裁切、不必要的卡片和重复标题。
+- 同一客户端中，同一操作必须使用一致组件，包括新增按钮、列表/卡片切换、筛选控件和详情行。
+- 图标必须与操作或领域匹配，使用当前图标目录，并在适用时遵循当前主题。
+- 分类显示名必须使用 `一级分类 - 二级分类`；没有二级分类时省略分隔符。
+- 日期文本必须使用产品指定格式、保持单行，并准确表示实际选中的范围。
 
-## 5. Interaction rules learned from prior corrections
+## 5. 范围与实现纪律
 
-- Back navigation returns to the previous level. “Press again to exit” is only valid at the Android root, never inside a child page.
-- Do not make swipe-back or back gestures immediately exit the app from a nested screen.
-- Tapping a transaction opens a detail screen first. Edit must prefill the transaction editor; delete must require confirmation.
-- Calendar day selection shows that day’s transactions and summary only. Do not add unrelated monthly cards, add buttons, or ledger controls to the day detail.
-- Calendar “全部” shows the day’s net income or net expense, not expense only. Requested whole-number summaries must not introduce decimals.
-- List/card display switching must remain available wherever specified and must preserve the requested default.
-- Search filters must remain compact and results must include category icons.
-- Statistics range labels and current-period actions must update correctly for week, month, year, and custom day ranges without wrapping.
-- Transaction entry must be completable without unnecessary scrolling: compact note, minute-precision default time, clear amount hierarchy, usable keypad, primary/secondary category selection, and reorder feedback.
-- Do not remove user-created icon resources when changing defaults. Default category icons and selectable custom icons are separate requirements.
-- Empty or placeholder pages are not acceptable for exposed features such as data management, iCloud, or WebDAV.
+- 编辑前将每项请求转化为可观察的验收标准。
+- 修复根因并检查同级调用点。当共享状态、样式、格式化器或服务负责该问题时，避免逐页修补。
+- 进行外科手术式的变更。不要重新格式化、重命名或重构无关代码。
+- 不要添加推测性的功能或抽象。新增代码前优先删除或复用。
+- 不要在每次小改动后都编译。先完成请求的一批修改；仅在用户要求、发布前或需要验证时编译。
 
-## 6. Scope and implementation discipline
+## 6. 验证
 
-- Convert every request into observable acceptance criteria before editing.
-- Fix root causes and inspect sibling call sites. Avoid page-by-page patches when a shared state, style, formatter, or service is responsible.
-- Make surgical changes. Do not reformat, rename, or refactor unrelated code.
-- Do not add speculative features or abstractions. Delete or reuse before adding code.
-- Preserve existing user changes and unrelated dirty-worktree files.
-- Use `apply_patch` for manual file edits.
-- Do not compile after every small edit. Finish the requested batch first; compile when the user asks, before release, or when verification is required.
+- 验证每一个受影响的平台，而不只是在请求来源的平台验证。
+- 修改共享逻辑时，运行相关共享测试和迁移检查。
+- 进行 Android 发布工作时，运行共享 JVM 测试、SQLDelight 迁移验证、Android release lint 和要求的构建。
+- 进行 Apple 开发时，同时验证 iOS 和 macOS target。仅验证 macOS 不能证明 iOS 专属 API 可以编译。
+- 在相关情况下检查浅色/深色模式、每种主题色、选中/未选中状态、空/有数据/错误状态、导航、文本截断和小屏幕/窗口布局。
+- 当需求涉及视觉或交互时，不得仅凭源码检查就宣称完成。
+- 绝不能提交私有账单样本、凭据、签名材料或其他个人数据。使用本地私有 fixture 的测试必须在 CI 中明确处理 fixture 缺失的情况。
 
-## 7. Verification
+## 7. GitHub Issue、Git、标签、发布与 CI
 
-- Verify every affected platform, not only the platform where the request originated.
-- For shared logic changes, run the relevant shared tests and migration checks.
-- For Android release work, run shared JVM tests, SQLDelight migration verification, Android release lint, and the requested build.
-- For Apple work, verify both iOS and macOS targets. A macOS-only check is not evidence that iOS-specific APIs compile.
-- Check light/dark mode, every theme color, selected/unselected states, empty/data/error states, navigation, text truncation, and small-screen/window layouts when relevant.
-- Do not claim completion from source inspection alone when the requirement is visual or interactive.
-- Never commit private bill samples, credentials, signing material, or other personal data. Tests that use local private fixtures must handle their absence explicitly in CI.
+- 解决 GitHub Issue 时，修改代码前先获取完整的当前开放 Issue 列表，并阅读每个 Issue 正文、评论、编辑记录及相关附件。
+- 优先使用结构化 GitHub 连接器或已认证的 CLI/API。若未认证 API 对私有仓库返回 `404`，不要据此认定仓库或 Issue 不存在；应使用用户已登录的 Chrome 会话只读获取 Issue。
+- 最终完成审计前刷新完整的开放 Issue 列表，因为工作过程中可能新建 Issue。
 
-## 8. GitHub issues, Git, tags, releases, and CI
+- 除非用户要求，否则不得提交、推送、打标签或发布。
+- 创建或移动标签前，检查从上一个发布标签到目标提交的 commit diff。
+- 准备发布说明时，必须使用以下恰好两个面向产品的 section，并展示给用户用于 GitHub Release 页面，使用简体中文：
 
-- When resolving GitHub issues, first obtain the complete current open-issue list and read each issue body, comments, edits, and relevant attachments before changing code.
-- Prefer a structured GitHub connector or authenticated CLI/API. If an unauthenticated API returns `404` for a private repository, do not conclude that the repository or issues are missing; use the user's already signed-in Chrome session for read-only issue retrieval.
-- Refresh the complete open-issue list before the final completion audit because new issues may be created while work is in progress.
+  - `## What's Changed` — 新增的用户可见能力和行为。
+  - `## What's Updated` — 修复、优化、兼容性、UI 打磨和值得说明的内部改进。
 
-- Do not commit, push, tag, or publish unless the user requests it.
-- Before creating or moving a tag, inspect the commit diff from the previous release tag to the target commit.
-- Prepare release notes with exactly these product-facing sections and show them to the user for the GitHub Release page:
+- 发布说明必须描述实际标签 diff，而非依赖对话记忆，并且不得包含对用户无帮助的私有/内部细节。
+- 移动或创建标签前先推送 commit。确认远端分支和解引用后的标签均指向预期提交。
+- 全程观察所有 GitHub Actions job 直至完成。若任一 job 失败，检查其准确日志，修复根因，再次推送，在需要时更新标签，并重复直到所有必需的构建和发布 job 成功。
+- 确认最终 Release 包含预期的 Android APK、未签名 iOS IPA、macOS arm64 DMG 和 macOS x86_64 DMG。
 
-  - `## What's Changed` — new user-visible capabilities and behavior.
-  - `## What's Updated` — fixes, refinements, compatibility, UI polish, and internal improvements worth noting.
+## 8. 完成标准
 
-- Release notes must describe the actual tag diff, not conversation memory, and must omit private/internal details that do not help users.
-- Push the commit before moving or creating the tag. Confirm the remote branch and dereferenced tag point to the intended commit.
-- Observe all GitHub Actions jobs through completion. If any job fails, inspect its exact logs, fix the root cause, push again, update the tag when required, and repeat until every required build and release job succeeds.
-- Confirm the final Release contains the expected Android APK, unsigned iOS IPA, macOS arm64 DMG, and macOS x86_64 DMG.
-
-## 9. Completion standard
-
-- “Implemented” means the requested behavior exists in source; “completed” additionally requires the relevant builds, tests, runtime/UI checks, remote tag, Actions jobs, and release assets to be verified.
-- Before handoff, audit each explicit requirement against authoritative evidence. Missing or indirect evidence means the work is not complete.
+- “已实现”表示请求的行为已存在于源码中；“已完成”还要求相关构建、测试、运行时/UI 检查、远端标签、Actions job 和发布资产均已验证。
+- 交接前，针对权威证据审计每项明确要求。证据缺失或间接意味着工作尚未完成。
