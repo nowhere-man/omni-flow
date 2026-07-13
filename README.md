@@ -2,22 +2,20 @@
   <img src="assets/branding/omniflow-icon.png#gh-light-mode-only" alt="OmniFlow App 图标（浅色模式）" width="112" />
   <img src="assets/branding/omniflow-icon-dark.png#gh-dark-mode-only" alt="OmniFlow App 图标（深色模式）" width="112" />
   <h1>OmniFlow</h1>
-  <p>一款原生多端记账 App，让账单自动流入账本 📥</p>
+  <p>一款原生多端记账 App，让账单自动流入账本 </p>
   <p>
     <img src="https://img.shields.io/badge/Platform-Android%20%C2%B7%20iOS%20%C2%B7%20macOS-brightgreen.svg" alt="Platform" />
     <a href="https://github.com/nowhere-man/OmniFlow/releases/latest"><img src="https://img.shields.io/github/v/release/nowhere-man/OmniFlow?label=release&color=orange" alt="Latest release" /></a>
     <a href="https://github.com/nowhere-man/OmniFlow/releases"><img src="https://img.shields.io/github/downloads/nowhere-man/OmniFlow/total?label=downloads" alt="Total release downloads" /></a>
     <a href="https://github.com/nowhere-man/OmniFlow/commits/master"><img src="https://img.shields.io/github/last-commit/nowhere-man/OmniFlow/master" alt="Last commit" /></a>
   </p>
-
-SideStore 更新源：`https://raw.githubusercontent.com/nowhere-man/OmniFlow/master/sidestore-source.json`
 </div>
 
 ## ✨ 核心特性
 
-### 📥 告别逐笔记账
+### 👋 告别逐笔记账
 
-支持导入支付宝、微信、京东、美团和建设银行账单，自动完成解析、分类与重复检测。
+支持导入支付宝、微信、京东、美团和银行账单，自动完成解析、分类与重复检测。
 
 ### ☁️ 多端数据同步
 
