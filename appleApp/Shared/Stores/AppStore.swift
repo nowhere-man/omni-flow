@@ -972,7 +972,7 @@ final class AppStore: ObservableObject {
                         id: $0.id,
                         name: $0.name,
                         balanceMinor: $0.balance,
-                        type: String(describing: $0.type),
+                        type: String(describing: $0.type).components(separatedBy: ".").last ?? "CASH",
                         iconKey: $0.iconKey,
                         cardNumber: $0.cardNumber,
                         note: $0.note,

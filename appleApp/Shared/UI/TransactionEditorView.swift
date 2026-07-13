@@ -136,7 +136,7 @@ struct TransactionEditorView: View {
             return
         }
         ledgerID = store.draftTransactionLedgerID ?? store.defaultLedgerID ?? ""
-        accountID = store.accounts.first(where: { $0.name == "现金" })?.id ?? store.accounts.first?.id ?? ""
+        accountID = store.accounts.first(where: { $0.type == "CASH" })?.id ?? store.accounts.first?.id ?? ""
         categoryID = ""
         amount = ""
         note = ""

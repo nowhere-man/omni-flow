@@ -600,7 +600,7 @@ class OmniFlowViewModel(
             ledgers = _transactionUiState.value.ledgers,
             accounts = accounts,
             ledgerId = selectedLedger,
-            accountId = accounts.firstOrNull { it.name == "现金" }?.id ?: accounts.firstOrNull()?.id,
+            accountId = accounts.firstOrNull { it.type == AccountType.CASH }?.id ?: accounts.firstOrNull()?.id,
             occurredAt = LocalDateTime(
                 date ?: now.date,
                 LocalTime(now.hour, now.minute),

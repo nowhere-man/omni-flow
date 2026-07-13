@@ -2,6 +2,7 @@ package com.omniflow.shared.data.facade
 
 import com.omniflow.shared.domain.facade.ImportWorkflow
 import com.omniflow.shared.domain.model.Account
+import com.omniflow.shared.domain.model.AccountType
 import com.omniflow.shared.domain.model.ImportCategoryBatchEdit
 import com.omniflow.shared.domain.model.ImportCategoryOrigin
 import com.omniflow.shared.domain.model.ImportCommitResult
@@ -230,9 +231,9 @@ class SqlDelightImportWorkflow(
     }
 
     private fun resolveAccount(raw: RawTransaction, activeAccounts: List<Account>): String? = when {
-        raw.format == ImportFormat.QINGZI -> activeAccounts.firstOrNull { it.name == "现金" }?.id
+        raw.format == ImportFormat.QINGZI -> activeAccounts.firstOrNull { it.type == AccountType.CASH }?.id
         else -> activeAccounts.firstOrNull { it.name == raw.accountName?.trim() }?.id
-            ?: activeAccounts.firstOrNull { it.name == "现金" }?.id
+            ?: activeAccounts.firstOrNull { it.type == AccountType.CASH }?.id
     }
 
     private fun detectFormat(request: ImportRequest): ImportFormat {
