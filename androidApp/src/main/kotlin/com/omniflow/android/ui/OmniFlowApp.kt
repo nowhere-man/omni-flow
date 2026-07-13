@@ -84,7 +84,9 @@ import androidx.compose.ui.unit.dp
 import com.omniflow.shared.domain.model.CalendarDaySummary
 import com.omniflow.shared.domain.model.AppearanceMode
 import com.omniflow.shared.domain.model.CalendarTransactionFilter
+import com.omniflow.shared.domain.model.calendarAmountText
 import com.omniflow.shared.domain.model.displayAmount
+import com.omniflow.shared.domain.model.hourMinuteText
 import com.omniflow.shared.domain.model.DayTransactionGroup
 import com.omniflow.shared.domain.model.LedgerScope
 import com.omniflow.shared.domain.model.Money
@@ -93,6 +95,7 @@ import com.omniflow.shared.domain.model.TransactionDetailState
 import com.omniflow.shared.domain.model.TransactionDetailDisplayMode
 import com.omniflow.shared.domain.model.TransactionListItem
 import com.omniflow.shared.domain.model.TransactionType
+import com.omniflow.shared.domain.model.yearMonthText
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toLocalDateTime
@@ -574,28 +577,20 @@ private fun LedgerSelector(
 
 @Composable
 private fun MonthSelector(month: LocalDate, onPrevious: () -> Unit, onNext: () -> Unit, onSelected: (LocalDate) -> Unit) {
-    val context = androidx.compose.ui.platform.LocalContext.current
     Row(
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onPrevious) {
             Icon(Icons.Default.ArrowBackIosNew, contentDescription = "上个月")
         }
-        Text(
-            "${month.year}年${month.monthNumber}月",
-            modifier = Modifier.clickable {
-                android.app.DatePickerDialog(
-                    context,
-                    { _, year, selectedMonth, _ -> onSelected(LocalDate(year, selectedMonth + 1, 1)) },
-                    month.year,
-                    month.monthNumber - 1,
-                    month.dayOfMonth,
-                ).show()
-            },
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-        )
+        TextButton(onClick = { onSelected(Clock.System.now().toLocalDateTime(ChinaTimeZone).date) }) {
+            Text(
+                month.yearMonthText(),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
         IconButton(onClick = onNext) {
             Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = "下个月")
         }
@@ -790,7 +785,7 @@ private fun CalendarCell(
         }
         summary?.displayAmount(filter)?.let { display ->
             Text(
-                display.amount.asCompactRmb(),
+                "${if (display.isIncome) "+" else "−"}${display.amount.calendarAmountText()}",
                 color = if (display.isIncome) IncomeColor else ExpenseColor,
                 maxLines = 1,
                 style = MaterialTheme.typography.labelSmall,
@@ -872,11 +867,13 @@ private fun TransactionListRow(item: TransactionListItem, onEdit: (String) -> Un
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(item.categoryDisplayName, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
-            Text(item.accountName, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+            item.note?.takeIf(String::isNotBlank)?.let {
+                Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall, maxLines = 2)
+            }
         }
         Column(horizontalAlignment = Alignment.End) {
             AmountText(item)
-            Text(item.occurredAt.toLocalDateTime(ChinaTimeZone).time.toString().take(5), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+            Text(item.occurredAt.hourMinuteText(), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -895,7 +892,26 @@ private fun TransactionCard(item: TransactionListItem, modifier: Modifier = Modi
                 AmountText(item)
             }
             Text(item.categoryDisplayName, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
-            Text(item.accountName, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                val note = item.note?.takeIf(String::isNotBlank)
+                if (note != null) {
+                    Text(
+                        note,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                } else {
+                    Spacer(Modifier.weight(1f))
+                }
+                Text(
+                    item.occurredAt.hourMinuteText(),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
     }
 }
@@ -942,8 +958,13 @@ private fun DateDetailSheet(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(state.date.detailLabel(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.weight(1f))
+                    Text(
+                        state.date.detailLabel(),
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                    )
                     IconButton(onClick = {
                         displayMode = when (displayMode) {
                             TransactionDetailDisplayMode.CARD -> TransactionDetailDisplayMode.LIST

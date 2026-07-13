@@ -33,6 +33,9 @@ import com.omniflow.shared.domain.facade.QingziInteropFacade
 import com.omniflow.shared.domain.facade.ReminderFacade
 import com.omniflow.shared.domain.facade.SyncFacade
 import com.omniflow.shared.domain.model.SyncTarget
+import com.omniflow.shared.domain.model.TransactionId
+import com.omniflow.shared.domain.model.TransactionRecordDetail
+import com.omniflow.shared.domain.model.toRecordDetail
 import com.omniflow.shared.domain.usecase.CreateTransactionUseCase
 import com.omniflow.shared.domain.usecase.CalibrateAccountUseCase
 import com.omniflow.shared.domain.usecase.CreateAccountUseCase
@@ -127,4 +130,15 @@ class SharedApp(
     val getTransaction = GetTransactionUseCase(transactions)
     val updateTransaction = UpdateTransactionUseCase(transactions)
     val deleteTransaction = DeleteTransactionUseCase(transactions)
+
+    suspend fun getTransactionRecordDetail(transactionId: TransactionId): Result<TransactionRecordDetail?> = runCatching {
+        transactions.activeTransaction(transactionId)?.let { transaction ->
+            transaction.toRecordDetail(
+                ledgers = ledgers.activeLedgers(),
+                accounts = accounts.activeAccounts(),
+                categories = categories.activeCategories(transaction.ledgerId),
+                tags = tags.activeTags(transaction.ledgerId),
+            )
+        }
+    }
 }

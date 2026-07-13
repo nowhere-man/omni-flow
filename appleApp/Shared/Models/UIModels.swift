@@ -182,6 +182,12 @@ struct TransactionUI: Identifiable, Hashable {
     }
 }
 
+struct TransactionRecordDetailUI {
+    var primaryCategoryName: String
+    var secondaryCategoryName: String?
+    var tagNames: [String]
+}
+
 enum TransactionDisplayMode: String, CaseIterable, Identifiable {
     case list = "LIST"
     case card = "CARD"

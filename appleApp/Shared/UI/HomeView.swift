@@ -2,7 +2,6 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject private var store: AppStore
-    @State private var showingMonthPicker = false
 
     var body: some View {
         ScrollView {
@@ -58,7 +57,11 @@ struct HomeView: View {
             }
             .padding()
         }
+        #if os(iOS)
+        .toolbar(.hidden, for: .navigationBar)
+        #else
         .navigationTitle("首页")
+        #endif
         .sheet(
             isPresented: Binding(
                 get: { store.selectedDetailRange != nil },
@@ -104,30 +107,21 @@ struct HomeView: View {
     }
 
     private var monthHeader: some View {
-        LiquidGlassContainer(spacing: 4) {
-            HStack(spacing: 4) {
+        LiquidGlassContainer(spacing: 14) {
+            HStack(spacing: 14) {
                 Button { store.shiftMonth(-1) } label: {
                     Image(systemName: "chevron.left")
                         .iOSLiquidGlassIconControl(size: 34)
                 }
                 .iOSPlainButtonStyle()
-                Button { showingMonthPicker.toggle() } label: {
-                    Text(store.selectedMonth.formatted(.dateTime.year().month()))
+                Button { store.selectMonth(Date()) } label: {
+                    Text(store.yearMonthText(store.selectedMonth))
                         .font(.headline)
-                        .frame(minWidth: 92, minHeight: 34)
-                        .iOSLiquidGlassControl(cornerRadius: 13)
+                        .frame(minWidth: 96, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
-                .iOSPlainButtonStyle()
-                .popover(isPresented: $showingMonthPicker) {
-                    DatePicker(
-                        "月份",
-                        selection: Binding(get: { store.selectedMonth }, set: store.selectMonth),
-                        displayedComponents: [.date]
-                    )
-                    .datePickerStyle(.graphical)
-                    .padding()
-                    .platformPopoverAdaptation()
-                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(store.yearMonthText(store.selectedMonth))，回到本月")
                 Button { store.shiftMonth(1) } label: {
                     Image(systemName: "chevron.right")
                         .iOSLiquidGlassIconControl(size: 34)
@@ -136,6 +130,7 @@ struct HomeView: View {
             }
         }
     }
+
 }
 
 private struct HomeCalendarView: View {
@@ -161,14 +156,18 @@ private struct HomeCalendarView: View {
                                 .frame(width: 28, height: 28)
                                 .background(isToday ? themeColor : .clear, in: Circle())
                             if let displayAmount = summary?.displayAmountMinor {
-                                Text("\(summary?.displayIsIncome == true ? "+" : "-")\(compact(displayAmount))")
+                                Text("\(summary?.displayIsIncome == true ? "+" : "−")\(store.calendarAmountText(displayAmount))")
                                     .foregroundStyle(summary?.displayIsIncome == true ? themeColor : Color.expense)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.7)
+                                    .frame(height: 14)
+                            } else {
+                                Color.clear.frame(height: 14)
                             }
                         }
                         .font(.caption2)
-                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .padding(.top, 4)
+                        .frame(maxWidth: .infinity, minHeight: 56, alignment: .top)
                     }
                     .buttonStyle(.plain)
                 }
@@ -184,7 +183,6 @@ private struct HomeCalendarView: View {
     }
     private var summaries: [Date: CalendarDayUI] { Dictionary(uniqueKeysWithValues: store.calendarDays.map { (Calendar.current.startOfDay(for: $0.date), $0) }) }
     private func date(_ day: Int) -> Date { Calendar.current.date(byAdding: .day, value: day - 1, to: interval.start) ?? interval.start }
-    private func compact(_ minor: Int64) -> String { "\(minor / 100)" }
 }
 
 struct DateTransactionDetailView: View {
@@ -219,10 +217,25 @@ struct DateTransactionDetailView: View {
                 }
                 .padding()
             }
+            #if os(iOS)
+            .navigationTitle("")
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text(detailTitle)
+                        .font(.headline)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("关闭", action: store.dismissDateDetail)
+                }
+            }
+            #else
             .navigationTitle(detailTitle)
             .toolbar {
                 Button("关闭", action: store.dismissDateDetail)
             }
+            #endif
         }
     }
 
@@ -341,17 +354,19 @@ private struct TransactionRow: View {
                 )
                 VStack(alignment: .leading) {
                     Text(item.categoryDisplayName).fontWeight(.medium)
-                    Text(item.note.isEmpty ? item.accountName : "\(item.accountName) · \(item.note)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                    if !item.note.isEmpty {
+                        Text(item.note)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
                 }
                 Spacer()
                 VStack(alignment: .trailing) {
                     Text("\(item.type == .expense ? "−" : "+")\(item.amountMinor.rmb)")
                         .foregroundStyle(item.type == .expense ? Color.expense : themeColor)
                         .fontWeight(.semibold)
-                    Text(item.date.formatted(date: .omitted, time: .shortened)).font(.caption).foregroundStyle(.secondary)
+                    Text(store.hourMinuteText(item.date)).font(.caption).foregroundStyle(.secondary)
                 }
             }
             .padding(12)
@@ -384,7 +399,15 @@ private struct TransactionCard: View {
                         .foregroundStyle(item.type == .expense ? Color.expense : themeColor)
                 }
                 Text(item.categoryDisplayName).fontWeight(.semibold).lineLimit(1)
-                Text(item.accountName).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                HStack(alignment: .firstTextBaseline) {
+                    if !item.note.isEmpty {
+                        Text(item.note).lineLimit(1)
+                    }
+                    Spacer()
+                    Text(store.hourMinuteText(item.date))
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(12)

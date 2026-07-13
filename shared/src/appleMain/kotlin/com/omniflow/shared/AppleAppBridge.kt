@@ -41,8 +41,13 @@ import com.omniflow.shared.domain.model.TransactionDetailQuery
 import com.omniflow.shared.domain.model.TransactionDetailState
 import com.omniflow.shared.domain.model.TransactionSearchQuery
 import com.omniflow.shared.domain.model.Transaction
+import com.omniflow.shared.domain.model.TransactionRecordDetail
 import com.omniflow.shared.domain.model.TransactionType
+import com.omniflow.shared.domain.model.calendarAmountText
 import com.omniflow.shared.domain.model.displayAmount
+import com.omniflow.shared.domain.model.hourMinuteText
+import com.omniflow.shared.domain.model.transactionDateTimeText
+import com.omniflow.shared.domain.model.yearMonthText
 import com.omniflow.shared.domain.usecase.CreateTransactionCommand
 import com.omniflow.shared.domain.util.UuidGenerator
 import kotlinx.coroutines.CoroutineScope
@@ -54,6 +59,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import com.omniflow.shared.parser.ImportFormat
 import com.omniflow.shared.data.sync.AppleWebDavCredentials
 
@@ -125,6 +132,16 @@ class AppleAppBridge(val app: SharedApp) {
 
     fun calendarDisplayAmount(summary: CalendarDaySummary, filterName: String): CalendarDisplayAmount? =
         summary.displayAmount(CalendarTransactionFilter.valueOf(filterName))
+
+    fun calendarAmountText(amountMinor: Long): String = Money(amountMinor).calendarAmountText()
+
+    fun yearMonthText(epochMillis: Long): String = Instant.fromEpochMilliseconds(epochMillis)
+        .toLocalDateTime(TimeZone.currentSystemDefault()).date.yearMonthText()
+
+    fun hourMinuteText(epochMillis: Long): String = Instant.fromEpochMilliseconds(epochMillis).hourMinuteText()
+
+    fun transactionDateTimeText(epochMillis: Long): String =
+        Instant.fromEpochMilliseconds(epochMillis).transactionDateTimeText()
 
     fun watchTransactionDetails(query: TransactionDetailQuery, callback: (TransactionDetailState?, String?) -> Unit) =
         watch(app.home.observeTransactionDetails(query), callback)
@@ -310,6 +327,15 @@ class AppleAppBridge(val app: SharedApp) {
     fun loadTransaction(id: String, callback: (Transaction?, String?) -> Unit) {
         scope.launch {
             app.getTransaction(id).fold(
+                onSuccess = { callback(it, null) },
+                onFailure = { callback(null, it.message) },
+            )
+        }
+    }
+
+    fun loadTransactionRecordDetail(id: String, callback: (TransactionRecordDetail?, String?) -> Unit) {
+        scope.launch {
+            app.getTransactionRecordDetail(id).fold(
                 onSuccess = { callback(it, null) },
                 onFailure = { callback(null, it.message) },
             )

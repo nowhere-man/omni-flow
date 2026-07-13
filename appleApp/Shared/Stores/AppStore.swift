@@ -198,6 +198,38 @@ final class AppStore: ObservableObject {
         observeHome()
     }
 
+    func calendarAmountText(_ minor: Int64) -> String {
+        #if canImport(OmniFlowShared)
+        bridge.calendarAmountText(amountMinor: minor)
+        #else
+        "--"
+        #endif
+    }
+
+    func yearMonthText(_ date: Date) -> String {
+        #if canImport(OmniFlowShared)
+        bridge.yearMonthText(epochMillis: Int64(date.timeIntervalSince1970 * 1000))
+        #else
+        "--"
+        #endif
+    }
+
+    func hourMinuteText(_ date: Date) -> String {
+        #if canImport(OmniFlowShared)
+        bridge.hourMinuteText(epochMillis: Int64(date.timeIntervalSince1970 * 1000))
+        #else
+        "--:--"
+        #endif
+    }
+
+    func transactionDateTimeText(_ date: Date) -> String {
+        #if canImport(OmniFlowShared)
+        bridge.transactionDateTimeText(epochMillis: Int64(date.timeIntervalSince1970 * 1000))
+        #else
+        "---- -- -- --:--"
+        #endif
+    }
+
     func setCalendarFilter(_ filter: String) {
         calendarFilter = filter
         observeHome()
@@ -386,6 +418,23 @@ final class AppStore: ObservableObject {
         DispatchQueue.main.async { [weak self] in self?.editTransaction(transaction) }
     }
 
+    func loadTransactionRecordDetail(_ id: String, completion: @escaping (TransactionRecordDetailUI?, String?) -> Void) {
+        #if canImport(OmniFlowShared)
+        bridge.loadTransactionRecordDetail(id: id) { detail, message in
+            let value = detail.map {
+                TransactionRecordDetailUI(
+                    primaryCategoryName: $0.primaryCategoryName,
+                    secondaryCategoryName: $0.secondaryCategoryName,
+                    tagNames: $0.tagNames
+                )
+            }
+            Task { @MainActor in completion(value, message) }
+        }
+        #else
+        completion(nil, "共享 Framework 尚未构建")
+        #endif
+    }
+
     func deleteSelectedTransaction(completion: @escaping (String?) -> Void) {
         guard let id = selectedTransactionDetail?.id else { return }
         deleteTransaction(id) { [weak self] message in
@@ -440,7 +489,7 @@ final class AppStore: ObservableObject {
         destination = .transaction
     }
 
-    func editTransaction(_ transaction: TransactionUI) {
+    func prepareTransactionEdit(_ transaction: TransactionUI) {
         editingTransaction = transaction
         editingTagIDs = []
         draftTransactionDate = nil
@@ -455,6 +504,10 @@ final class AppStore: ObservableObject {
             }
         }
         #endif
+    }
+
+    func editTransaction(_ transaction: TransactionUI) {
+        prepareTransactionEdit(transaction)
         destination = .transaction
     }
 

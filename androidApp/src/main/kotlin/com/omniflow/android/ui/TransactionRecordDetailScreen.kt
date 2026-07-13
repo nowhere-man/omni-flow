@@ -52,7 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.omniflow.shared.domain.model.TransactionSource
 import com.omniflow.shared.domain.model.TransactionType
-import kotlinx.datetime.toLocalDateTime
+import com.omniflow.shared.domain.model.transactionDateTimeText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -131,31 +131,20 @@ internal fun TransactionRecordDetailSheet(
                         DetailSection {
                             DetailRow(Icons.Default.Payments, "金额", transaction.amount.asRmb())
                             DetailRow(Icons.Default.SwapHoriz, "类型", if (transaction.type == TransactionType.EXPENSE) "支出" else "收入")
+                            DetailRow(Icons.AutoMirrored.Filled.Label, "一级分类", state.primaryCategoryName)
+                            DetailRow(Icons.AutoMirrored.Filled.Label, "二级分类", state.secondaryCategoryName ?: "未设置")
                             DetailRow(
                                 Icons.Default.CalendarMonth,
                                 "日期",
-                                transaction.occurredAt.toLocalDateTime(ChinaTimeZone).let { dateTime ->
-                                    "${dateTime.date} ${dateTime.hour.toString().padStart(2, '0')}:${dateTime.minute.toString().padStart(2, '0')}"
-                                },
+                                transaction.occurredAt.transactionDateTimeText(),
+                                maxLines = 1,
                             )
                             DetailRow(Icons.Default.AccountBalanceWallet, "账户", state.accountName)
                             DetailRow(Icons.AutoMirrored.Filled.MenuBook, "账本", state.ledgerName)
+                            DetailRow(Icons.AutoMirrored.Filled.Label, "标签", state.tagNames.takeIf { it.isNotEmpty() }?.joinToString(" · ") ?: "未设置")
+                            DetailRow(Icons.AutoMirrored.Filled.Notes, "备注", transaction.note?.takeIf(String::isNotBlank) ?: "未设置")
                             transaction.source?.let { DetailRow(Icons.Default.SyncAlt, "来源", it.displayName()) }
                             DetailRow(Icons.Default.Block, "统计", if (transaction.isExcluded) "不计入统计" else "计入统计")
-                        }
-                    }
-                    transaction.note?.takeIf(String::isNotBlank)?.let { note ->
-                        item {
-                            DetailSection {
-                                DetailRow(Icons.AutoMirrored.Filled.Notes, "备注", note)
-                            }
-                        }
-                    }
-                    if (state.tagNames.isNotEmpty()) {
-                        item {
-                            DetailSection {
-                                DetailRow(Icons.AutoMirrored.Filled.Label, "标签", state.tagNames.joinToString(" · "))
-                            }
                         }
                     }
                     state.error?.let { error -> item { Text(error, color = MaterialTheme.colorScheme.error) } }
@@ -220,20 +209,20 @@ private fun DetailSection(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun DetailRow(icon: ImageVector, label: String, value: String) {
+private fun DetailRow(icon: ImageVector, label: String, value: String, maxLines: Int = 2) {
     Row(
         Modifier.fillMaxWidth().padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(22.dp), tint = MaterialTheme.colorScheme.primary)
-        Text(label, modifier = Modifier.width(54.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, modifier = Modifier.width(72.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(
             value,
             modifier = Modifier.weight(1f),
             textAlign = TextAlign.End,
             fontWeight = FontWeight.Medium,
-            maxLines = 2,
+            maxLines = maxLines,
             overflow = TextOverflow.Ellipsis,
         )
     }

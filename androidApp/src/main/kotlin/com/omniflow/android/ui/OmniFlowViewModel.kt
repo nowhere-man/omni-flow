@@ -557,27 +557,22 @@ class OmniFlowViewModel(
     fun showTransactionRecordDetail(transactionId: String) {
         _transactionRecordDetailUiState.value = TransactionRecordDetailUiState(isLoading = true)
         viewModelScope.launch {
-            val result = sharedApp.getTransaction(transactionId)
-            val transaction = result.getOrNull()
-            if (transaction == null) {
+            val result = sharedApp.getTransactionRecordDetail(transactionId)
+            val detail = result.getOrNull()
+            if (detail == null) {
                 _transactionRecordDetailUiState.value = TransactionRecordDetailUiState(
                     error = result.exceptionOrNull()?.message ?: "交易不存在或已删除",
                 )
                 return@launch
             }
-            val categories = sharedApp.management.observeCategories(transaction.ledgerId).first().getOrDefault(emptyList())
-            val tags = sharedApp.management.observeTags(transaction.ledgerId).first().getOrDefault(emptyList())
-            val selectedCategory = categories.firstOrNull { it.id == transaction.categoryId }
-            val primaryCategory = selectedCategory?.parentId?.let { parentId -> categories.firstOrNull { it.id == parentId } }
-                ?: selectedCategory
             _transactionRecordDetailUiState.value = TransactionRecordDetailUiState(
-                transaction = transaction,
-                ledgerName = _searchUiState.value.ledgers.firstOrNull { it.id == transaction.ledgerId }?.name ?: "未知账本",
-                accountName = _searchUiState.value.accounts.firstOrNull { it.id == transaction.accountId }?.name ?: "未知账户",
-                primaryCategoryName = primaryCategory?.name ?: "未分类",
-                secondaryCategoryName = selectedCategory?.takeIf { it.parentId != null }?.name,
-                categoryIconKey = primaryCategory?.iconKey ?: selectedCategory?.iconKey,
-                tagNames = tags.filter { it.id in transaction.tagIds }.map { it.name },
+                transaction = detail.transaction,
+                ledgerName = detail.ledgerName,
+                accountName = detail.accountName,
+                primaryCategoryName = detail.primaryCategoryName,
+                secondaryCategoryName = detail.secondaryCategoryName,
+                categoryIconKey = detail.categoryIconKey,
+                tagNames = detail.tagNames,
             )
         }
     }
