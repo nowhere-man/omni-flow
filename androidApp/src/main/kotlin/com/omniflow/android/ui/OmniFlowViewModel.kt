@@ -51,6 +51,7 @@ import com.omniflow.shared.parser.ImportFormat
 import java.time.LocalDate as JavaLocalDate
 import java.util.UUID
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -110,8 +111,8 @@ data class SearchUiState(
     val result: SearchResult? = null,
     val ledgers: List<Ledger> = emptyList(),
     val accounts: List<Account> = emptyList(),
-    val categories: List<Category> = emptyList(),
-    val tags: List<Tag> = emptyList(),
+    val minimumAmountText: String = "",
+    val maximumAmountText: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,
 )
@@ -208,8 +209,6 @@ class OmniFlowViewModel(
     private var searchJob: Job? = null
     private var editorCategoriesJob: Job? = null
     private var editorTagsJob: Job? = null
-    private var searchCategoriesJob: Job? = null
-    private var searchTagsJob: Job? = null
     private var moreCategoriesJob: Job? = null
     private var moreTagsJob: Job? = null
     private var moreRulesJob: Job? = null
@@ -231,7 +230,6 @@ class OmniFlowViewModel(
                 _homeUiState.value = _homeUiState.value.copy(ledgers = ledgers)
                 _analyticsUiState.value = _analyticsUiState.value.copy(ledgers = ledgers)
                 _searchUiState.value = _searchUiState.value.copy(ledgers = ledgers)
-                if (_searchUiState.value.query.scope == LedgerScope.All) observeSearchFilters(LedgerScope.All)
                 _transactionUiState.value = _transactionUiState.value.copy(ledgers = ledgers)
                 val previousSelection = _moreUiState.value.selectedLedgerId
                 val selected = previousSelection?.takeIf { id -> ledgers.any { it.id == id } }
@@ -454,97 +452,82 @@ class OmniFlowViewModel(
         }
     }
 
-    fun setSearchKeyword(keyword: String) = updateSearch(_searchUiState.value.query.copy(keyword = keyword))
-    fun setSearchScope(scope: LedgerScope) {
-        updateSearch(_searchUiState.value.query.copy(
+    fun setSearchKeyword(keyword: String) = updateSearch(_searchUiState.value.query.copy(keyword = keyword), debounceMillis = 300)
+    fun setSearchScope(scope: LedgerScope) = updateSearch(
+        _searchUiState.value.query.copy(
             scope = scope,
             primaryCategoryId = null,
             secondaryCategoryId = null,
             tagId = null,
-        ))
-        observeSearchFilters(scope)
-    }
+        ),
+    )
     fun setSearchType(type: TransactionType?) = updateSearch(_searchUiState.value.query.copy(type = type))
-    fun setSearchPrimaryCategoryText(value: String) = updateSearch(_searchUiState.value.query.copy(primaryCategoryText = value))
-    fun setSearchSecondaryCategoryText(value: String) = updateSearch(_searchUiState.value.query.copy(secondaryCategoryText = value))
-    fun setSearchTagText(value: String) = updateSearch(_searchUiState.value.query.copy(tagText = value))
-    fun setSearchNoteText(value: String) = updateSearch(_searchUiState.value.query.copy(noteText = value))
-    fun setSearchAmount(minimum: Money?, maximum: Money?) {
-        if (minimum != null && maximum != null && minimum > maximum) return
+    fun setSearchPrimaryCategoryText(value: String) = updateSearch(
+        _searchUiState.value.query.copy(primaryCategoryText = value),
+        debounceMillis = 300,
+    )
+    fun setSearchSecondaryCategoryText(value: String) = updateSearch(
+        _searchUiState.value.query.copy(secondaryCategoryText = value),
+        debounceMillis = 300,
+    )
+    fun setSearchTagText(value: String) = updateSearch(
+        _searchUiState.value.query.copy(tagText = value),
+        debounceMillis = 300,
+    )
+    fun setSearchNoteText(value: String) = updateSearch(
+        _searchUiState.value.query.copy(noteText = value),
+        debounceMillis = 300,
+    )
+    fun setSearchAmount(minimumText: String, maximumText: String) {
+        val minimum = minimumText.toSearchMoneyOrNull()
+        val maximum = maximumText.toSearchMoneyOrNull()
+        _searchUiState.value = _searchUiState.value.copy(
+            minimumAmountText = minimumText,
+            maximumAmountText = maximumText,
+        )
+        val invalid = (minimumText.isNotBlank() && minimum == null) || (maximumText.isNotBlank() && maximum == null)
+        if (invalid || (minimum != null && maximum != null && minimum > maximum)) {
+            searchJob?.cancel()
+            _searchUiState.value = _searchUiState.value.copy(
+                result = null,
+                isLoading = false,
+                error = if (invalid) "金额格式有误，最多输入两位小数" else "最低金额不能大于最高金额",
+            )
+            return
+        }
         updateSearch(
             _searchUiState.value.query.copy(amount = com.omniflow.shared.domain.model.AmountFilter(minimum = minimum, maximum = maximum)),
+            debounceMillis = 300,
         )
     }
     fun setSearchDateRange(range: DateRange?) = updateSearch(_searchUiState.value.query.copy(dateRange = range))
-    fun setSearchPrimaryCategory(categoryId: String?) = updateSearch(
-        _searchUiState.value.query.copy(primaryCategoryId = categoryId, secondaryCategoryId = null),
-    )
-    fun setSearchSecondaryCategory(categoryId: String?) = updateSearch(
-        _searchUiState.value.query.copy(secondaryCategoryId = categoryId),
-    )
-    fun setSearchTag(tagId: String?) = updateSearch(_searchUiState.value.query.copy(tagId = tagId))
     fun setSearchAccount(accountId: String?) = updateSearch(_searchUiState.value.query.copy(accountId = accountId))
     fun clearSearch() {
-        searchCategoriesJob?.cancel()
-        searchTagsJob?.cancel()
+        searchJob?.cancel()
         _searchUiState.value = _searchUiState.value.copy(
             query = TransactionSearchQuery(),
             result = null,
-            categories = emptyList(),
-            tags = emptyList(),
+            minimumAmountText = "",
+            maximumAmountText = "",
+            isLoading = false,
             error = null,
         )
-        observeSearchFilters(LedgerScope.All)
     }
 
-    private fun updateSearch(query: TransactionSearchQuery) {
+    private fun updateSearch(query: TransactionSearchQuery, debounceMillis: Long = 0) {
         _searchUiState.value = _searchUiState.value.copy(query = query)
         searchJob?.cancel()
+        if (!query.hasFilters) {
+            _searchUiState.value = _searchUiState.value.copy(result = null, isLoading = false, error = null)
+            return
+        }
         searchJob = viewModelScope.launch {
+            if (debounceMillis > 0) delay(debounceMillis)
             _searchUiState.value = _searchUiState.value.copy(isLoading = true, error = null)
             sharedApp.search(query).onSuccess { result ->
                 _searchUiState.value = _searchUiState.value.copy(result = result, isLoading = false)
             }.onFailure { error ->
                 _searchUiState.value = _searchUiState.value.copy(isLoading = false, error = error.message)
-            }
-        }
-    }
-
-    private fun observeSearchFilters(scope: LedgerScope) {
-        searchCategoriesJob?.cancel()
-        searchTagsJob?.cancel()
-        val ledgerIds = when (scope) {
-            LedgerScope.All -> _searchUiState.value.ledgers.map { it.id }
-            is LedgerScope.Single -> listOf(scope.ledgerId)
-        }
-        if (ledgerIds.isEmpty()) {
-            _searchUiState.value = _searchUiState.value.copy(categories = emptyList(), tags = emptyList())
-            return
-        }
-        searchCategoriesJob = viewModelScope.launch {
-            val categoriesByLedger = mutableMapOf<String, List<Category>>()
-            ledgerIds.forEach { ledgerId ->
-                launch {
-                    sharedApp.management.observeCategories(ledgerId).collect { result ->
-                        categoriesByLedger[ledgerId] = result.getOrDefault(emptyList())
-                        _searchUiState.value = _searchUiState.value.copy(
-                            categories = ledgerIds.flatMap { categoriesByLedger[it].orEmpty() },
-                        )
-                    }
-                }
-            }
-        }
-        searchTagsJob = viewModelScope.launch {
-            val tagsByLedger = mutableMapOf<String, List<Tag>>()
-            ledgerIds.forEach { ledgerId ->
-                launch {
-                    sharedApp.management.observeTags(ledgerId).collect { result ->
-                        tagsByLedger[ledgerId] = result.getOrDefault(emptyList())
-                        _searchUiState.value = _searchUiState.value.copy(
-                            tags = ledgerIds.flatMap { tagsByLedger[it].orEmpty() },
-                        )
-                    }
-                }
             }
         }
     }
@@ -1142,6 +1125,12 @@ private fun javaDate(date: LocalDate) = JavaLocalDate.of(date.year, date.monthNu
 private fun JavaLocalDate.toKotlinDate() = LocalDate(year, monthValue, dayOfMonth)
 
 private fun Money.toInputString(): String = "${minor / 100}.${kotlin.math.abs(minor % 100).toString().padStart(2, '0')}"
+
+private fun String.toSearchMoneyOrNull(): Money? {
+    val value = trim().takeIf(String::isNotEmpty)?.toBigDecimalOrNull() ?: return null
+    if (value.signum() < 0 || value.scale() > 2) return null
+    return runCatching { Money(value.movePointRight(2).longValueExact()) }.getOrNull()
+}
 
 private fun evaluateAmount(expression: String): Long? {
     if (expression.isBlank()) return null

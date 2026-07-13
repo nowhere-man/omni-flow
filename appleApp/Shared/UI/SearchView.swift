@@ -13,8 +13,9 @@ struct SearchView: View {
                     TextField("关键词、分类、账户或标签", text: $store.searchText)
                         .textFieldStyle(.plain)
                         .onSubmit { search() }
+                        .onChange(of: store.searchText) { _ in store.scheduleSearch() }
                     if !store.searchText.isEmpty {
-                        Button { store.searchText = ""; search() } label: { Image(systemName: "xmark.circle.fill") }
+                        Button { store.searchText = ""; store.scheduleSearch() } label: { Image(systemName: "xmark.circle.fill") }
                             .buttonStyle(.plain)
                             .foregroundStyle(.secondary)
                     }
@@ -72,14 +73,21 @@ struct SearchView: View {
                 .padding(12)
                 .liquidGlassSurface(cornerRadius: 18)
 
-                if let error = store.error { Text(error).foregroundStyle(.red) }
-                if store.searchResults.isEmpty {
+                if case let .failed(message) = store.searchStatus {
+                    Text(message).foregroundStyle(.red)
+                }
+                if store.searchStatus == .loading {
+                    ProgressView("搜索中…").frame(maxWidth: .infinity)
+                }
+                if store.searchStatus == .idle {
                     EmptyStateView(
-                        title: hasFilters ? "没有符合条件的交易" : "还没有可搜索的交易",
+                        title: "输入关键词或选择筛选条件开始搜索",
                         systemImage: "magnifyingglass",
-                        detail: hasFilters ? "调整筛选条件后再试" : "交易会显示在这里"
+                        detail: "全部筛选恢复默认时不会展示历史交易"
                     )
-                } else {
+                } else if store.searchStatus == .loaded && store.searchResults.isEmpty {
+                    EmptyStateView(title: "没有符合当前条件的交易", systemImage: "magnifyingglass", detail: "调整筛选条件后再试")
+                } else if !store.searchResults.isEmpty {
                     LiquidGlassContainer(spacing: 12) {
                         HStack(spacing: 12) {
                             SummaryCard(title: "收入", value: store.searchIncomeMinor.rmb)
@@ -105,13 +113,7 @@ struct SearchView: View {
         .onChange(of: store.searchEndDate) { _ in if store.searchDateEnabled { search() } }
     }
 
-    private var hasFilters: Bool {
-        !store.searchText.isEmpty || store.searchLedgerID != nil || store.searchType != nil ||
-            store.searchAccountID != nil || !store.searchPrimaryCategoryText.isEmpty ||
-            !store.searchSecondaryCategoryText.isEmpty || !store.searchTagText.isEmpty ||
-            !store.searchNoteText.isEmpty || !store.searchMinimumAmount.isEmpty ||
-            !store.searchMaximumAmount.isEmpty || store.searchDateEnabled
-    }
+    private var hasFilters: Bool { store.hasSearchFilters }
 
     private func filterTextField(_ title: String, text: Binding<String>) -> some View {
         TextField(title, text: text)
@@ -120,6 +122,7 @@ struct SearchView: View {
             .frame(maxWidth: .infinity, minHeight: 38)
             .iOSLiquidGlassControl(cornerRadius: 12)
             .onSubmit(search)
+            .onChange(of: text.wrappedValue) { _ in store.scheduleSearch() }
     }
 
     @ViewBuilder
@@ -186,20 +189,5 @@ struct SearchView: View {
     private func search() { store.search() }
     private func setType(_ value: EntryType?) { store.searchType = value; search() }
     private func setAccount(_ value: String?) { store.searchAccountID = value; search() }
-    private func clear() {
-        store.searchText = ""
-        store.searchPrimaryCategoryText = ""
-        store.searchSecondaryCategoryText = ""
-        store.searchTagText = ""
-        store.searchNoteText = ""
-        store.searchMinimumAmount = ""
-        store.searchMaximumAmount = ""
-        store.searchDateEnabled = false
-        store.searchType = nil
-        store.searchAccountID = nil
-        store.searchPrimaryCategoryID = nil
-        store.searchSecondaryCategoryID = nil
-        store.searchTagID = nil
-        store.setSearchLedger(nil)
-    }
+    private func clear() { store.clearSearch() }
 }

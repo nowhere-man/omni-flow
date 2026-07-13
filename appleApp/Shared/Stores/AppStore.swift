@@ -44,6 +44,7 @@ final class AppStore: ObservableObject {
     @Published var searchResults: [TransactionUI] = []
     @Published var searchExpenseMinor: Int64 = 0
     @Published var searchIncomeMinor: Int64 = 0
+    @Published var searchStatus = SearchStatus.idle
     @Published var selectedTransactionDetail: TransactionUI?
     @Published var editingTransaction: TransactionUI?
     @Published var editingTagIDs: Set<String> = []
@@ -53,11 +54,6 @@ final class AppStore: ObservableObject {
     @Published var searchLedgerID: String?
     @Published var searchType: EntryType?
     @Published var searchAccountID: String?
-    @Published var searchPrimaryCategoryID: String?
-    @Published var searchSecondaryCategoryID: String?
-    @Published var searchTagID: String?
-    @Published var searchCategories: [CategoryUI] = []
-    @Published var searchTags: [TagUI] = []
     @Published var importItems: [ImportItemUI] = []
     @Published var importSessionID: String?
     @Published var importProgress: Double = 0
@@ -82,15 +78,14 @@ final class AppStore: ObservableObject {
     @Published var syncError: String?
     private var analyticsObservation: (start: Date, end: Date, ledgerID: String?)?
     private var pendingTransactionDetail: TransactionUI?
+    private var searchDebounceTask: Task<Void, Never>?
+    private var searchGeneration = 0
     #if canImport(OmniFlowShared)
     private var analyticsSubscription: AppleFlowSubscription?
     private var homeSubscription: AppleFlowSubscription?
     private var categorySubscription: AppleFlowSubscription?
     private var tagSubscription: AppleFlowSubscription?
     private var ruleSubscription: AppleFlowSubscription?
-    private var searchResourceSubscriptions: [AppleFlowSubscription] = []
-    private var searchCategoriesByLedger: [String: [CategoryUI]] = [:]
-    private var searchTagsByLedger: [String: [TagUI]] = [:]
     private var dateDetailSubscription: AppleFlowSubscription?
     private var importSubscription: AppleFlowSubscription?
     private var backupObjects: [RemoteBackupMeta] = []
@@ -318,14 +313,72 @@ final class AppStore: ObservableObject {
         showTransactionDetail(pendingTransactionDetail)
     }
 
-    func search() {
-        #if canImport(OmniFlowShared)
-        let minimum = Self.minorUnits(searchMinimumAmount)
-        let maximum = Self.minorUnits(searchMaximumAmount)
-        if let minimum, let maximum, minimum > maximum {
-            error = "最低金额不能大于最高金额"
+    var hasSearchFilters: Bool {
+        !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+            searchLedgerID != nil || searchType != nil || searchAccountID != nil ||
+            !searchPrimaryCategoryText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+            !searchSecondaryCategoryText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+            !searchTagText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+            !searchNoteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+            !searchMinimumAmount.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+            !searchMaximumAmount.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+            searchDateEnabled
+    }
+
+    func scheduleSearch() {
+        searchDebounceTask?.cancel()
+        guard hasSearchFilters else {
+            resetSearchState()
             return
         }
+        searchDebounceTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled else { return }
+            self?.performSearch()
+        }
+    }
+
+    func search() {
+        searchDebounceTask?.cancel()
+        performSearch()
+    }
+
+    func clearSearch() {
+        searchText = ""
+        searchPrimaryCategoryText = ""
+        searchSecondaryCategoryText = ""
+        searchTagText = ""
+        searchNoteText = ""
+        searchMinimumAmount = ""
+        searchMaximumAmount = ""
+        searchDateEnabled = false
+        searchType = nil
+        searchLedgerID = nil
+        searchAccountID = nil
+        resetSearchState()
+    }
+
+    private func performSearch() {
+        guard hasSearchFilters else {
+            resetSearchState()
+            return
+        }
+        #if canImport(OmniFlowShared)
+        let minimumResult = Self.minorUnits(searchMinimumAmount)
+        let maximumResult = Self.minorUnits(searchMaximumAmount)
+        if let message = minimumResult.message ?? maximumResult.message {
+            failSearch(message)
+            return
+        }
+        let minimum = minimumResult.value
+        let maximum = maximumResult.value
+        if let minimum, let maximum, minimum > maximum {
+            failSearch("最低金额不能大于最高金额")
+            return
+        }
+        searchGeneration += 1
+        let generation = searchGeneration
+        searchStatus = .loading
         bridge.search(
             keyword: searchText,
             primaryCategoryText: searchPrimaryCategoryText,
@@ -335,9 +388,9 @@ final class AppStore: ObservableObject {
             ledgerId: searchLedgerID,
             typeName: searchType?.rawValue,
             accountId: searchAccountID,
-            primaryCategoryId: searchPrimaryCategoryID,
-            secondaryCategoryId: searchSecondaryCategoryID,
-            tagId: searchTagID,
+            primaryCategoryId: nil,
+            secondaryCategoryId: nil,
+            tagId: nil,
             exactMinor: nil,
             minimumMinor: Self.boxedLong(minimum),
             maximumMinor: Self.boxedLong(maximum),
@@ -345,75 +398,58 @@ final class AppStore: ObservableObject {
             endMillis: Self.boxedLong(searchDateEnabled ? Int64((Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: max(searchStartDate, searchEndDate))) ?? max(searchStartDate, searchEndDate)).timeIntervalSince1970 * 1000) : nil)
         ) { [weak self] result, message in
             Task { @MainActor in
-                if let message { self?.error = message }
-                self?.searchResults = result?.items.map { Self.transaction($0.transaction, tagNames: $0.tags.map { $0.name }) } ?? []
-                self?.searchExpenseMinor = result?.summary.expenseTotal ?? 0
-                self?.searchIncomeMinor = result?.summary.incomeTotal ?? 0
+                guard let self, generation == self.searchGeneration else { return }
+                if let message {
+                    self.failSearch(message)
+                    return
+                }
+                self.searchResults = result?.items.map { Self.transaction($0.transaction, tagNames: $0.tags.map { $0.name }) } ?? []
+                self.searchExpenseMinor = result?.summary.expenseTotal ?? 0
+                self.searchIncomeMinor = result?.summary.incomeTotal ?? 0
+                self.searchStatus = .loaded
             }
         }
         #else
         searchResults = transactions.filter { $0.note.localizedCaseInsensitiveContains(searchText) }
+        searchStatus = .loaded
         #endif
     }
 
-    private static func minorUnits(_ text: String) -> Int64? {
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              let decimal = Decimal(string: text) else { return nil }
-        return NSDecimalNumber(decimal: decimal * 100).int64Value
+    private static func minorUnits(_ text: String) -> (value: Int64?, message: String?) {
+        let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return (nil, nil) }
+        let pattern = #"^(?:\d+(?:\.\d{0,2})?|\.\d{1,2})$"#
+        guard value.range(of: pattern, options: .regularExpression) != nil,
+              let decimal = Decimal(string: value.hasPrefix(".") ? "0\(value)" : value, locale: Locale(identifier: "en_US_POSIX")) else {
+            return (nil, "金额格式有误，最多输入两位小数")
+        }
+        return (NSDecimalNumber(decimal: decimal * 100).int64Value, nil)
+    }
+
+    private func failSearch(_ message: String) {
+        searchGeneration += 1
+        searchResults = []
+        searchExpenseMinor = 0
+        searchIncomeMinor = 0
+        searchStatus = .failed(message)
+    }
+
+    private func resetSearchState() {
+        searchDebounceTask?.cancel()
+        searchGeneration += 1
+        searchResults = []
+        searchExpenseMinor = 0
+        searchIncomeMinor = 0
+        searchStatus = .idle
     }
 
     func setSearchLedger(_ id: String?) {
         searchLedgerID = id
-        searchPrimaryCategoryID = nil
-        searchSecondaryCategoryID = nil
-        searchTagID = nil
-        observeSearchResources()
         search()
     }
 
     func prepareSearch() {
-        observeSearchResources()
         search()
-    }
-
-    private func observeSearchResources() {
-        #if canImport(OmniFlowShared)
-        searchResourceSubscriptions.forEach { $0.cancel() }
-        searchResourceSubscriptions = []
-        searchCategoriesByLedger = [:]
-        searchTagsByLedger = [:]
-        let ledgerIDs = searchLedgerID.map { [$0] } ?? ledgers.map(\.id)
-        guard !ledgerIDs.isEmpty else { searchCategories = []; searchTags = []; return }
-        for ledgerID in ledgerIDs {
-            searchResourceSubscriptions.append(bridge.watchCategories(ledgerId: ledgerID) { [weak self] values, message in
-                Task { @MainActor in
-                    guard let self else { return }
-                    if let message { self.error = message }
-                    self.searchCategoriesByLedger[ledgerID] = values?.map {
-                        CategoryUI(
-                            id: $0.id,
-                            name: $0.name,
-                            type: String(describing: $0.type).contains("INCOME") ? .income : .expense,
-                            parentID: $0.parentId,
-                            iconKey: $0.iconKey
-                        )
-                    } ?? []
-                    self.searchCategories = ledgerIDs.flatMap { self.searchCategoriesByLedger[$0] ?? [] }
-                }
-            })
-            searchResourceSubscriptions.append(bridge.watchTags(ledgerId: ledgerID) { [weak self] values, message in
-                Task { @MainActor in
-                    guard let self else { return }
-                    if let message { self.error = message }
-                    self.searchTagsByLedger[ledgerID] = values?.map { TagUI(id: $0.id, name: $0.name) } ?? []
-                    self.searchTags = ledgerIDs.flatMap { self.searchTagsByLedger[$0] ?? [] }
-                }
-            })
-        }
-        #else
-        searchCategories = categories
-        searchTags = tags
-        #endif
     }
 
     func showTransactionDetail(_ transaction: TransactionUI) {
@@ -970,7 +1006,6 @@ final class AppStore: ObservableObject {
                     self?.observeCategories()
                 }
                 self?.observeHome()
-                if self?.searchLedgerID == nil { self?.observeSearchResources() }
             }
         })
         subscriptions.append(bridge.watchDefaultLedgerId { [weak self] value, message in

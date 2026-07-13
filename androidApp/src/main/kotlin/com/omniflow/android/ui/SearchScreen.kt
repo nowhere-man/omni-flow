@@ -46,7 +46,6 @@ import com.omniflow.shared.domain.model.Account
 import com.omniflow.shared.domain.model.DateRange
 import com.omniflow.shared.domain.model.Ledger
 import com.omniflow.shared.domain.model.LedgerScope
-import com.omniflow.shared.domain.model.Money
 import com.omniflow.shared.domain.model.TransactionType
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
@@ -65,7 +64,7 @@ internal fun SearchScreen(
     onTagText: (String) -> Unit,
     onNoteText: (String) -> Unit,
     onAccount: (String?) -> Unit,
-    onAmount: (Money?, Money?) -> Unit,
+    onAmount: (String, String) -> Unit,
     onDateRange: (DateRange?) -> Unit,
     onClear: () -> Unit,
     onEditTransaction: (String) -> Unit,
@@ -130,7 +129,7 @@ internal fun SearchScreen(
                     SearchTextField("二级分类", state.query.secondaryCategoryText, onSecondaryCategoryText)
                     SearchTextField("标签", state.query.tagText, onTagText)
                     SearchTextField("备注", state.query.noteText, onNoteText)
-                    AmountFilterRow(state.query.amount.minimum, state.query.amount.maximum, onAmount)
+                    AmountFilterRow(state.minimumAmountText, state.maximumAmountText, onAmount)
                     DateFilterRow(state.query.dateRange, onDateRange)
                 }
             }
@@ -231,20 +230,18 @@ private fun SearchTextField(label: String, value: String, onValue: (String) -> U
 }
 
 @Composable
-private fun AmountFilterRow(minimum: Money?, maximum: Money?, onAmount: (Money?, Money?) -> Unit) {
-    var minimumText by remember(minimum?.minor) { mutableStateOf(minimum?.inputText().orEmpty()) }
-    var maximumText by remember(maximum?.minor) { mutableStateOf(maximum?.inputText().orEmpty()) }
+private fun AmountFilterRow(minimumText: String, maximumText: String, onAmount: (String, String) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(
             value = minimumText,
-            onValueChange = { minimumText = it; onAmount(it.toMoneyOrNull(), maximumText.toMoneyOrNull()) },
+            onValueChange = { onAmount(it, maximumText) },
             label = { Text("最低金额") },
             modifier = Modifier.weight(1f),
             singleLine = true,
         )
         OutlinedTextField(
             value = maximumText,
-            onValueChange = { maximumText = it; onAmount(minimumText.toMoneyOrNull(), it.toMoneyOrNull()) },
+            onValueChange = { onAmount(minimumText, it) },
             label = { Text("最高金额") },
             modifier = Modifier.weight(1f),
             singleLine = true,
@@ -292,13 +289,6 @@ private fun dateRangeOrNull(first: LocalDate?, second: LocalDate?): DateRange? {
         start.atStartOfDayIn(ChinaTimeZone),
         LocalDate(next.year, next.monthValue, next.dayOfMonth).atStartOfDayIn(ChinaTimeZone),
     )
-}
-
-private fun Money.inputText(): String = "${minor / 100}.${(minor % 100).toString().padStart(2, '0')}"
-
-private fun String.toMoneyOrNull(): Money? {
-    val value = trim().toBigDecimalOrNull() ?: return null
-    return Money(value.movePointRight(2).toLong())
 }
 
 @Composable

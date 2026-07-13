@@ -136,6 +136,14 @@ struct CategoryBreakdownUI: Identifiable, Hashable {
     var secondary: [CategoryShareUI]
 }
 struct BackupUI: Identifiable, Hashable { let id: String; var createdAt: String }
+
+enum SearchStatus: Equatable {
+    case idle
+    case loading
+    case loaded
+    case failed(String)
+}
+
 struct StatementMonthUI: Identifiable, Hashable {
     var month: Int
     var expenseMinor: Int64
