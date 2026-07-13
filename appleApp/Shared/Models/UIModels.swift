@@ -125,7 +125,7 @@ struct AnalyticsRankingUI: Identifiable, Hashable {
     var secondaryName: String?
     var iconKey: String?
     var amount: Int64
-    var displayName: String { secondaryName.map { "\(primaryName)-\($0)" } ?? primaryName }
+    var displayName: String { secondaryName.map { "\(primaryName) - \($0)" } ?? primaryName }
 }
 struct CategoryShareUI: Identifiable, Hashable { let id: String; var name: String; var iconKey: String?; var amount: Int64 }
 struct CategoryBreakdownUI: Identifiable, Hashable {

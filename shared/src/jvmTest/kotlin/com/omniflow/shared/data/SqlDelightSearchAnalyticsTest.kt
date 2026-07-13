@@ -57,7 +57,7 @@ class SqlDelightSearchAnalyticsTest {
         ).first().getOrThrow()
         assertEquals(Money(800), dashboard.summary.expenseTotal)
         assertEquals(Money(1_000), dashboard.summary.incomeTotal)
-        assertEquals(listOf("餐饮-餐厅"), dashboard.ranking.map { it.categoryDisplayName })
+        assertEquals(listOf("餐饮 - 餐厅"), dashboard.ranking.map { it.categoryDisplayName })
         assertEquals(Money(800), dashboard.ranking.single().amount)
         assertEquals("utensils", dashboard.ranking.single().iconKey)
         assertEquals(listOf("food"), dashboard.categoryBreakdowns.map { it.primaryCategoryId })
@@ -89,7 +89,7 @@ class SqlDelightSearchAnalyticsTest {
         ).first().getOrThrow()
 
         assertEquals(10, dashboard.ranking.size)
-        assertEquals("分类1-子类", dashboard.ranking.first().categoryDisplayName)
+        assertEquals("分类1 - 子类", dashboard.ranking.first().categoryDisplayName)
         assertEquals(Money(1_300), dashboard.ranking.first().amount)
         assertEquals("分类11", dashboard.ranking[1].categoryDisplayName)
         val primary = dashboard.categoryBreakdowns.first { it.primaryCategoryId == "primary-1" }
@@ -119,7 +119,7 @@ class SqlDelightSearchAnalyticsTest {
             ),
         ).first().getOrThrow()
 
-        assertEquals(listOf("餐饮-餐厅"), dashboard.ranking.map { it.categoryDisplayName })
+        assertEquals(listOf("餐饮 - 餐厅"), dashboard.ranking.map { it.categoryDisplayName })
         assertEquals(Money(1_200), dashboard.ranking.single().amount)
         assertEquals(listOf("餐饮"), dashboard.categoryBreakdowns.map { it.primaryCategoryName })
         assertEquals(Money(1_200), dashboard.categoryBreakdowns.single().amount)

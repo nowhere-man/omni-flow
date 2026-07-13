@@ -129,7 +129,7 @@ data class TransactionRecordDetailUiState(
     val error: String? = null,
 ) {
     val isVisible: Boolean get() = isLoading || transaction != null || error != null
-    val categoryDisplayName: String get() = secondaryCategoryName?.let { "$primaryCategoryName-$it" } ?: primaryCategoryName
+    val categoryDisplayName: String get() = secondaryCategoryName?.let { "$primaryCategoryName - $it" } ?: primaryCategoryName
 }
 
 data class TransactionEditorUiState(

@@ -42,7 +42,7 @@ data class TransactionListItem(
     val source: TransactionSource?,
 ) {
     val categoryDisplayName: String
-        get() = if (primaryCategoryName == categoryName) categoryName else "$primaryCategoryName-$categoryName"
+        get() = if (primaryCategoryName == categoryName) categoryName else "$primaryCategoryName - $categoryName"
 }
 
 data class TransactionRecordDetail(

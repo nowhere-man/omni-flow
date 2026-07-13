@@ -32,7 +32,7 @@ data class CategoryRankingItem(
     val amount: Money,
 ) {
     val categoryDisplayName: String
-        get() = secondaryCategoryName?.let { "$primaryCategoryName-$it" } ?: primaryCategoryName
+        get() = secondaryCategoryName?.let { "$primaryCategoryName - $it" } ?: primaryCategoryName
 }
 
 data class CategoryShareItem(
