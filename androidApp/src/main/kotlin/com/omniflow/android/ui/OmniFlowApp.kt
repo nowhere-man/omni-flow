@@ -255,7 +255,6 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
                     onShiftRange = viewModel::shiftAnalyticsRange,
                     onCurrentRange = viewModel::resetAnalyticsRange,
                     onCustomRange = viewModel::setAnalyticsCustomRange,
-                    onSummary = viewModel::showAnalyticsSummary,
                     onRankingType = viewModel::setRankingType,
                     onCategoryType = viewModel::setCategoryType,
                     onMonthSelected = viewModel::selectAnalyticsMonth,

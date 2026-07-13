@@ -325,11 +325,6 @@ class OmniFlowViewModel(
         _rangeDetailUiState.value = RangeDetailUiState()
     }
     fun showHomeSummary(type: TransactionType?) = showTransactionDetails(homeQuery.month, homeQuery.scope, type)
-    fun showAnalyticsSummary(type: TransactionType?) = showTransactionDetails(
-        _analyticsUiState.value.range,
-        _analyticsUiState.value.scope,
-        type,
-    )
     fun toggleDisplayMode() {
         val mode = when (_homeUiState.value.displayMode) {
             TransactionDetailDisplayMode.LIST -> TransactionDetailDisplayMode.CARD

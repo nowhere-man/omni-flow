@@ -51,6 +51,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -86,7 +88,6 @@ internal fun AnalyticsScreen(
     onShiftRange: (Long) -> Unit,
     onCurrentRange: () -> Unit,
     onCustomRange: (DateRange) -> Unit,
-    onSummary: (TransactionType?) -> Unit,
     onRankingType: (TransactionType) -> Unit,
     onCategoryType: (TransactionType) -> Unit,
     onMonthSelected: (Int) -> Unit,
@@ -144,11 +145,12 @@ internal fun AnalyticsScreen(
             state.dashboard != null -> {
                 val dashboard = state.dashboard
                 val hasTransactions = dashboard.summary.expenseTotal != Money.Zero || dashboard.summary.incomeTotal != Money.Zero
-                item { YearBars(dashboard, state, onMonthSelected, onStatementTable) }
+                if (state.rangeMode == AnalyticsRangeMode.MONTH) {
+                    item { YearBars(dashboard, state, onMonthSelected, onStatementTable) }
+                }
                 if (!hasTransactions) {
                     item { EmptyAnalytics(onAddTransaction) }
                 } else {
-                    item { SummaryCards(dashboard, onSummary) }
                     item { RankingCard(dashboard, state.rankingType, onRankingType) }
                     item { CategoryCard(dashboard, state.categoryType, onCategoryType) }
                 }
@@ -167,12 +169,14 @@ private fun YearBars(
     onStatementTable: (Int) -> Unit,
 ) {
     var layout by remember { mutableStateOf(BarLayout.DIVERGING) }
-    AnalyticsCard("${dashboard.yearStatement.year} 年收支") {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            FilterChip(layout == BarLayout.DIVERGING, { layout = BarLayout.DIVERGING }, { Text("上下") })
-            Spacer(Modifier.width(8.dp))
-            FilterChip(layout == BarLayout.SIDE_BY_SIDE, { layout = BarLayout.SIDE_BY_SIDE }, { Text("并排") })
+    AnalyticsCard {
+        AnalyticsHeader("收支柱状图") {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(layout == BarLayout.DIVERGING, { layout = BarLayout.DIVERGING }, { Text("上下") })
+                FilterChip(layout == BarLayout.SIDE_BY_SIDE, { layout = BarLayout.SIDE_BY_SIDE }, { Text("并排") })
+            }
         }
+        Text("${dashboard.yearStatement.year} 年", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         val maximum = max(
             dashboard.yearStatement.months.maxOfOrNull { it.income.minor } ?: 0,
             dashboard.yearStatement.months.maxOfOrNull { it.expense.minor } ?: 0,
@@ -189,9 +193,14 @@ private fun YearBars(
                     selected = state.rangeMode == AnalyticsRangeMode.MONTH &&
                         state.range.startInclusive.toLocalDateTime(ChinaTimeZone).monthNumber == month.month,
                     onClick = { onMonthSelected(month.month) },
-                    modifier = Modifier.width(42.dp),
+                    modifier = Modifier.width(48.dp),
                 )
             }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+            BarLegend(AnalyticsIncomeColor, "收入")
+            Spacer(Modifier.width(16.dp))
+            BarLegend(ExpenseColor, "支出")
         }
         TextButton(onClick = { onStatementTable(dashboard.yearStatement.year) }, modifier = Modifier.fillMaxWidth()) {
             Text("查看账单表格")
@@ -208,7 +217,12 @@ private fun MonthBars(
     onClick: () -> Unit,
     modifier: Modifier,
 ) {
-    Column(modifier.clickable(onClick = onClick), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier.semantics {
+            contentDescription = "${month.month}月，收入${month.income.asRmb()}，支出${month.expense.asRmb()}"
+        }.clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         if (layout == BarLayout.DIVERGING) {
             Column(Modifier.height(126.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
@@ -242,40 +256,31 @@ private fun Bar(value: Long, maximum: Long, color: Color) {
 }
 
 @Composable
-private fun SummaryCards(dashboard: AnalyticsDashboardState, onSummary: (TransactionType?) -> Unit) {
-    val net = dashboard.summary.netIncome
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        SummaryCard("总支出", dashboard.summary.expenseTotal, ExpenseColor, { onSummary(TransactionType.EXPENSE) }, Modifier.weight(1f))
-        SummaryCard("总收入", dashboard.summary.incomeTotal, AnalyticsIncomeColor, { onSummary(TransactionType.INCOME) }, Modifier.weight(1f))
-        SummaryCard("总结余", net, if (net.minor >= 0) MaterialTheme.colorScheme.primary else ExpenseColor, { onSummary(null) }, Modifier.weight(1f))
-    }
-}
-
-@Composable
-private fun SummaryCard(label: String, amount: Money, color: Color, onClick: () -> Unit, modifier: Modifier) {
-    Card(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.12f))) {
-        Column(Modifier.padding(horizontal = 10.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(amount.asRmb(), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-    }
+private fun BarLegend(color: Color, label: String) {
+    Box(Modifier.size(10.dp).background(color, CircleShape))
+    Spacer(Modifier.width(6.dp))
+    Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable
 private fun RankingCard(dashboard: AnalyticsDashboardState, selected: TransactionType, onSelected: (TransactionType) -> Unit) {
     var expanded by remember(dashboard.query.range, selected) { mutableStateOf(false) }
-    AnalyticsCard(if (selected == TransactionType.EXPENSE) "支出排行榜" else "收入排行榜") {
-        TypeSwitch(selected, onSelected)
+    AnalyticsCard {
+        AnalyticsHeader("收支排行榜") { TypeSwitch(selected, onSelected) }
         val items = dashboard.ranking.take(if (expanded) 10 else 3)
-        items.forEachIndexed { index, item ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("${index + 1}.", Modifier.width(28.dp), fontWeight = FontWeight.Bold)
-                Surface(Modifier.size(42.dp), RoundedCornerShape(13.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)) {
-                    Box(contentAlignment = Alignment.Center) { SvgIcon(categoryIconKey(item.iconKey), Modifier.size(25.dp), tint = MaterialTheme.colorScheme.primary) }
+        if (items.isEmpty()) {
+            Text(if (selected == TransactionType.EXPENSE) "暂无支出排行" else "暂无收入排行", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            items.forEachIndexed { index, item ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("${index + 1}.", Modifier.width(28.dp), fontWeight = FontWeight.Bold)
+                    Surface(Modifier.size(42.dp), RoundedCornerShape(13.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)) {
+                        Box(contentAlignment = Alignment.Center) { SvgIcon(categoryIconKey(item.iconKey), Modifier.size(25.dp), tint = MaterialTheme.colorScheme.primary) }
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Text(item.categoryDisplayName, Modifier.weight(1f), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(item.amount.asRmb(), fontWeight = FontWeight.Bold, color = if (selected == TransactionType.EXPENSE) ExpenseColor else AnalyticsIncomeColor)
                 }
-                Spacer(Modifier.width(10.dp))
-                Text(item.categoryDisplayName, Modifier.weight(1f), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(item.amount.asRmb(), fontWeight = FontWeight.Bold, color = if (selected == TransactionType.EXPENSE) ExpenseColor else AnalyticsIncomeColor)
             }
         }
         if (dashboard.ranking.size > 3) {
@@ -290,16 +295,20 @@ private fun RankingCard(dashboard: AnalyticsDashboardState, selected: Transactio
 private fun CategoryCard(dashboard: AnalyticsDashboardState, selected: TransactionType, onSelected: (TransactionType) -> Unit) {
     var showSecondary by remember { mutableStateOf(false) }
     val total = dashboard.categoryBreakdowns.fold(Money.Zero) { value, item -> value + item.amount }
-    AnalyticsCard(if (selected == TransactionType.EXPENSE) "支出分类" else "收入分类") {
-        TypeSwitch(selected, onSelected)
-        CategoryDonut(dashboard.categoryBreakdowns)
-        FilterChip(showSecondary, { showSecondary = !showSecondary }, { Text("显示二级分类") })
-        dashboard.categoryBreakdowns.forEachIndexed { index, item ->
-            val color = AnalyticsColors[index % AnalyticsColors.size]
-            CategoryRow(item.primaryCategoryName, item.amount, total, item.iconKey, color)
-            if (showSecondary) {
-                item.secondaryCategories.forEach { secondary ->
-                    CategoryRow("  ${secondary.categoryName}", secondary.amount, item.amount, secondary.iconKey, color.copy(alpha = 0.75f))
+    AnalyticsCard {
+        AnalyticsHeader("收支饼图") { TypeSwitch(selected, onSelected) }
+        if (dashboard.categoryBreakdowns.isEmpty()) {
+            Text(if (selected == TransactionType.EXPENSE) "暂无支出分类数据" else "暂无收入分类数据", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            CategoryDonut(dashboard.categoryBreakdowns)
+            FilterChip(showSecondary, { showSecondary = !showSecondary }, { Text("显示二级分类占比") })
+            dashboard.categoryBreakdowns.forEachIndexed { index, item ->
+                val color = AnalyticsColors[index % AnalyticsColors.size]
+                CategoryRow(item.primaryCategoryName, item.amount, total, item.iconKey, color)
+                if (showSecondary) {
+                    item.secondaryCategories.forEach { secondary ->
+                        CategoryRow("  ${secondary.categoryName}", secondary.amount, item.amount, secondary.iconKey, color.copy(alpha = 0.75f))
+                    }
                 }
             }
         }
@@ -330,7 +339,10 @@ private fun CategoryRow(label: String, amount: Money, total: Money, iconKey: Str
 @Composable
 private fun CategoryDonut(items: List<CategoryBreakdownItem>) {
     val total = items.sumOf { it.amount.minor }.coerceAtLeast(1)
-    Canvas(Modifier.fillMaxWidth().height(190.dp)) {
+    val description = items.joinToString("，") { item ->
+        "${item.primaryCategoryName} ${(item.amount.minor * 100 / total)}%"
+    }
+    Canvas(Modifier.fillMaxWidth().height(190.dp).semantics { contentDescription = description }) {
         var start = -90f
         items.forEachIndexed { index, item ->
             val sweep = item.amount.minor.toFloat() / total * 360f
@@ -360,14 +372,21 @@ private fun TypeSwitch(selected: TransactionType, onSelected: (TransactionType) 
 }
 
 @Composable
-private fun AnalyticsCard(title: String, content: @Composable () -> Unit) {
+private fun AnalyticsHeader(title: String, trailing: @Composable () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        trailing()
+    }
+}
+
+@Composable
+private fun AnalyticsCard(content: @Composable () -> Unit) {
     Card(
         Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             content()
         }
     }

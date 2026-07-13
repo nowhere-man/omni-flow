@@ -104,18 +104,16 @@ class SqlDelightAnalyticsFacade(
         .filter { TransactionType.valueOf(it.type) == type }
         .groupBy { row ->
             CategoryPath(
-                categoryId = row.category_id,
                 primaryName = row.primary_category_name,
                 secondaryName = row.category_name.takeIf { row.category_id != row.primary_category_id },
-                iconKey = row.primary_category_icon_key,
             )
         }
         .map { (category, entries) ->
             CategoryRankingItem(
-                categoryId = category.categoryId,
+                categoryId = entries.first().category_id,
                 primaryCategoryName = category.primaryName,
                 secondaryCategoryName = category.secondaryName,
-                iconKey = category.iconKey,
+                iconKey = entries.firstNotNullOfOrNull { it.primary_category_icon_key },
                 amount = entries.fold(Money.Zero) { total, row -> total + Money(row.amount_minor) },
             )
         }
@@ -129,25 +127,25 @@ class SqlDelightAnalyticsFacade(
     ): List<CategoryBreakdownItem> = rows.asSequence()
         .filterNot { it.is_excluded != 0L }
         .filter { TransactionType.valueOf(it.type) == type }
-        .groupBy { PrimaryCategory(it.primary_category_id, it.primary_category_name, it.primary_category_icon_key) }
+        .groupBy { PrimaryCategory(it.primary_category_name) }
         .map { (primary, entries) ->
             val secondaries = entries.asSequence()
                 .filter { it.category_id != it.primary_category_id }
-                .groupBy { CategoryKey(it.category_id, it.category_name, it.category_icon_key) }
+                .groupBy { CategoryKey(it.category_name) }
                 .map { (category, categoryRows) ->
                     CategoryShareItem(
-                        categoryId = category.id,
+                        categoryId = categoryRows.first().category_id,
                         categoryName = category.name,
-                        iconKey = category.iconKey,
+                        iconKey = categoryRows.firstNotNullOfOrNull { it.category_icon_key },
                         amount = categoryRows.fold(Money.Zero) { total, row -> total + Money(row.amount_minor) },
                     )
                 }
                 .sortedByDescending(CategoryShareItem::amount)
                 .toList()
             CategoryBreakdownItem(
-                primaryCategoryId = primary.id,
+                primaryCategoryId = entries.first().primary_category_id,
                 primaryCategoryName = primary.name,
-                iconKey = primary.iconKey,
+                iconKey = entries.firstNotNullOfOrNull { it.primary_category_icon_key },
                 amount = entries.fold(Money.Zero) { total, row -> total + Money(row.amount_minor) },
                 secondaryCategories = secondaries,
             )
@@ -198,13 +196,11 @@ class SqlDelightAnalyticsFacade(
     }
 
     private data class CategoryPath(
-        val categoryId: String,
         val primaryName: String,
         val secondaryName: String?,
-        val iconKey: String?,
     )
-    private data class PrimaryCategory(val id: String, val name: String, val iconKey: String?)
-    private data class CategoryKey(val id: String, val name: String, val iconKey: String?)
+    private data class PrimaryCategory(val name: String)
+    private data class CategoryKey(val name: String)
 
     private companion object {
         val CHINA_TIME_ZONE: TimeZone = TimeZone.currentSystemDefault()

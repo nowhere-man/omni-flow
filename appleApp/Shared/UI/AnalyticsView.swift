@@ -25,7 +25,7 @@ struct AnalyticsView: View {
                 }
                 rangeControls
 
-                if let statement = store.analyticsYearStatement {
+                if mode == .month, let statement = store.analyticsYearStatement {
                     YearBarsCard(statement: statement, selectedMonth: selectedMonth, onMonth: selectMonth) {
                         store.analyticsStatement = statement
                     }
@@ -40,20 +40,8 @@ struct AnalyticsView: View {
                         action: { store.startNewTransaction() }
                     )
                 } else {
-                    HStack(spacing: 12) {
-                        summaryButton("总支出", store.analyticsExpenseMinor, .expense)
-                        summaryButton("总收入", store.analyticsIncomeMinor, .income)
-                        summaryButton("总结余", store.analyticsIncomeMinor - store.analyticsExpenseMinor, nil)
-                    }
-                    #if os(macOS)
-                    HStack(alignment: .top, spacing: 18) {
-                        RankingCard().frame(maxWidth: .infinity, alignment: .top)
-                        CategoryCard().frame(maxWidth: .infinity, alignment: .top)
-                    }
-                    #else
                     RankingCard()
                     CategoryCard()
-                    #endif
                 }
             }
             .padding()
@@ -104,15 +92,6 @@ struct AnalyticsView: View {
                     .frame(maxWidth: .infinity)
             }
         }
-    }
-
-    private func summaryButton(_ title: String, _ amount: Int64, _ type: EntryType?) -> some View {
-        Button {
-            store.showTransactionDetails(range: range, ledgerID: store.analyticsLedgerID, type: type)
-        } label: {
-            SummaryCard(title: title, value: amount.rmb)
-        }
-        .buttonStyle(.plain)
     }
 
     private func RankingCard() -> some View {
@@ -201,14 +180,17 @@ private struct YearBarsCard: View {
     @State private var layout = BarLayout.diverging
 
     var body: some View {
-        AnalyticsCard(title: "\(statement.year) 年收支") {
-            Picker("柱状图布局", selection: $layout) {
-                Text("上下").tag(BarLayout.diverging)
-                Text("并排").tag(BarLayout.sideBySide)
+        AnalyticsCard {
+            AnalyticsHeader(title: "收支柱状图") {
+                Picker("柱状图布局", selection: $layout) {
+                    Text("上下").tag(BarLayout.diverging)
+                    Text("并排").tag(BarLayout.sideBySide)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 150)
+                .frame(minHeight: 44)
             }
-            .pickerStyle(.segmented)
-            .frame(maxWidth: 220)
-            .frame(maxWidth: .infinity, alignment: .trailing)
+            Text("\(statement.year) 年").font(.headline)
             Chart {
                 ForEach(statement.months) { month in
                     if layout == .diverging {
@@ -226,16 +208,55 @@ private struct YearBarsCard: View {
             .chartXAxis(.hidden)
             .chartLegend(.hidden)
             .frame(height: 210)
+            .chartOverlay { proxy in
+                GeometryReader { geometry in
+                    Rectangle()
+                        .fill(.clear)
+                        .contentShape(Rectangle())
+                        .gesture(
+                            SpatialTapGesture().onEnded { value in
+                                let plotFrame = geometry[proxy.plotAreaFrame]
+                                guard plotFrame.contains(value.location) else { return }
+                                let plotX = value.location.x - plotFrame.origin.x
+                                if let month: Int = proxy.value(atX: plotX), statement.months.contains(where: { $0.month == month }) {
+                                    onMonth(month)
+                                }
+                            }
+                        )
+                        .accessibilityHidden(true)
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(chartAccessibilityLabel)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
                     ForEach(statement.months) { month in
                         Button("\(String(format: "%02d", month.month))月") { onMonth(month.month) }
                             .buttonStyle(.bordered)
                             .tint(selectedMonth == month.month ? Color.accentColor : Color.secondary)
+                            .frame(minWidth: 44, minHeight: 44)
                     }
                 }
             }
+            HStack(spacing: 16) {
+                Spacer()
+                barLegend("收入", color: .income)
+                barLegend("支出", color: .expense)
+            }
             Button("查看账单表格", action: onStatement).buttonStyle(.bordered).frame(maxWidth: .infinity)
+        }
+    }
+
+    private var chartAccessibilityLabel: String {
+        statement.months.map {
+            "\($0.month)月，收入\($0.incomeMinor.rmb)，支出\($0.expenseMinor.rmb)"
+        }.joined(separator: "；")
+    }
+
+    private func barLegend(_ title: String, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Circle().fill(color).frame(width: 10, height: 10)
+            Text(title).font(.subheadline).foregroundStyle(.secondary)
         }
     }
 }
@@ -248,21 +269,30 @@ private struct AnalyticsRankingCard: View {
     @State private var expanded = false
 
     var body: some View {
-        AnalyticsCard(title: selectedType == .expense ? "支出排行榜" : "收入排行榜") {
-            ThemeSegmentedControl(selection: $selectedType, options: EntryType.allCases, title: \.label)
-            ForEach(Array(items.prefix(expanded ? 10 : 3).enumerated()), id: \.element.id) { index, item in
-                HStack(spacing: 12) {
-                    Text("\(index + 1).").font(.headline).frame(width: 28)
-                    SVGIconView(
-                        key: categoryIconAssetKey(item.iconKey),
-                        size: 28,
-                        tint: (AppThemeColor(rawValue: store.themeColor) ?? .lavender).cssColor(for: colorScheme)
-                    )
-                    Text(item.displayName).fontWeight(.semibold).lineLimit(1)
-                    Spacer()
-                    Text(item.amount.rmb).fontWeight(.bold).foregroundStyle(selectedType == .expense ? Color.expense : Color.income)
+        AnalyticsCard {
+            AnalyticsHeader(title: "收支排行榜") {
+                ThemeSegmentedControl(selection: $selectedType, options: EntryType.allCases, title: \.label)
+                    .frame(width: 150)
+                    .frame(minHeight: 44)
+            }
+            if items.isEmpty {
+                Text(selectedType == .expense ? "暂无支出排行" : "暂无收入排行")
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(Array(items.prefix(expanded ? 10 : 3).enumerated()), id: \.element.id) { index, item in
+                    HStack(spacing: 12) {
+                        Text("\(index + 1).").font(.headline).frame(width: 28)
+                        SVGIconView(
+                            key: categoryIconAssetKey(item.iconKey),
+                            size: 28,
+                            tint: (AppThemeColor(rawValue: store.themeColor) ?? .lavender).cssColor(for: colorScheme)
+                        )
+                        Text(item.displayName).fontWeight(.semibold).lineLimit(1)
+                        Spacer()
+                        Text(item.amount.rmb).fontWeight(.bold).foregroundStyle(selectedType == .expense ? Color.expense : Color.income)
+                    }
+                    .padding(.vertical, 6)
                 }
-                .padding(.vertical, 6)
             }
             if items.count > 3 {
                 Button(expanded ? "收起" : "展示更多") { expanded.toggle() }
@@ -270,24 +300,36 @@ private struct AnalyticsRankingCard: View {
                     .frame(maxWidth: .infinity)
             }
         }
+        .onChange(of: selectedType) { _ in expanded = false }
     }
 }
 
 private struct AnalyticsCategoryCard: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject private var store: AppStore
     let items: [CategoryBreakdownUI]
     @Binding var selectedType: EntryType
     @State private var showSecondary = false
 
     var body: some View {
-        AnalyticsCard(title: selectedType == .expense ? "支出分类" : "收入分类") {
-            ThemeSegmentedControl(selection: $selectedType, options: EntryType.allCases, title: \.label)
-            CategoryDonut(items: items)
-            Toggle("显示二级分类", isOn: $showSecondary)
-            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                categoryRow(item.name, amount: item.amount, total: total, color: analyticsPalette[index % analyticsPalette.count])
-                if showSecondary {
-                    ForEach(item.secondary) { secondary in
-                        categoryRow("  \(secondary.name)", amount: secondary.amount, total: item.amount, color: analyticsPalette[index % analyticsPalette.count].opacity(0.75))
+        AnalyticsCard {
+            AnalyticsHeader(title: "收支饼图") {
+                ThemeSegmentedControl(selection: $selectedType, options: EntryType.allCases, title: \.label)
+                    .frame(width: 150)
+                    .frame(minHeight: 44)
+            }
+            if items.isEmpty {
+                Text(selectedType == .expense ? "暂无支出分类数据" : "暂无收入分类数据")
+                    .foregroundStyle(.secondary)
+            } else {
+                CategoryDonut(items: items)
+                Toggle("显示二级分类占比", isOn: $showSecondary)
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                    categoryRow(item.name, iconKey: item.iconKey, amount: item.amount, total: total, color: analyticsPalette[index % analyticsPalette.count])
+                    if showSecondary {
+                        ForEach(item.secondary) { secondary in
+                            categoryRow(secondary.name, iconKey: secondary.iconKey, amount: secondary.amount, total: item.amount, color: analyticsPalette[index % analyticsPalette.count].opacity(0.75), secondary: true)
+                        }
                     }
                 }
             }
@@ -296,10 +338,15 @@ private struct AnalyticsCategoryCard: View {
 
     private var total: Int64 { max(items.map(\.amount).reduce(0, +), 1) }
 
-    private func categoryRow(_ name: String, amount: Int64, total: Int64, color: Color) -> some View {
+    private func categoryRow(_ name: String, iconKey: String?, amount: Int64, total: Int64, color: Color, secondary: Bool = false) -> some View {
         let ratio = Double(amount) / Double(max(total, 1))
         return VStack(alignment: .leading, spacing: 5) {
             HStack {
+                SVGIconView(
+                    key: categoryIconAssetKey(iconKey),
+                    size: secondary ? 18 : 24,
+                    tint: (AppThemeColor(rawValue: store.themeColor) ?? .lavender).cssColor(for: colorScheme)
+                )
                 Text(name).fontWeight(.medium)
                 Spacer()
                 Text(amount.rmb).fontWeight(.semibold)
@@ -308,6 +355,7 @@ private struct AnalyticsCategoryCard: View {
             ProgressView(value: ratio).tint(color)
         }
         .padding(.vertical, 4)
+        .padding(.leading, secondary ? 32 : 0)
     }
 }
 
@@ -329,6 +377,16 @@ private struct CategoryDonut: View {
             }
         }
         .frame(height: 220)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var accessibilityLabel: String {
+        let total = max(items.map(\.amount).reduce(0, +), 1)
+        return items.map {
+            let ratio = Double($0.amount) / Double(total)
+            return "\($0.name)\(ratio.formatted(.percent.precision(.fractionLength(0))))"
+        }.joined(separator: "；")
     }
 }
 
@@ -369,13 +427,24 @@ private enum RangeMode: String, CaseIterable, Identifiable {
 
 private enum BarLayout { case diverging, sideBySide }
 
-private struct AnalyticsCard<Content: View>: View {
+private struct AnalyticsHeader<Trailing: View>: View {
     let title: String
+    @ViewBuilder let trailing: Trailing
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(title).font(.title2.bold())
+            Spacer(minLength: 8)
+            trailing
+        }
+    }
+}
+
+private struct AnalyticsCard<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(title).font(.title2.bold())
             content
         }
         .frame(maxWidth: .infinity, alignment: .leading)
