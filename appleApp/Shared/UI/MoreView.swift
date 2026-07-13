@@ -173,12 +173,12 @@ private struct LedgerManagementView: View {
                 )
             }
         }
-        .sheet(isPresented: $showingEditor) {
+        .sheet(isPresented: $showingEditor, onDismiss: { editing = nil }) {
             LedgerEditor(ledger: editing) { name, coverKey in
                 store.saveLedger(id: editing?.id, name: name, coverKey: coverKey)
-                editing = nil
                 showingEditor = false
             }
+            .managementEditorSheet(title: editing == nil ? "新建账本" : "编辑账本") { showingEditor = false }
         }
     }
 }
@@ -193,7 +193,7 @@ private struct AccountManagementView: View {
                 ManagementRow(title: account.name, subtitle: account.balanceMinor.rmb, edit: { editing = account; showingEditor = true }, delete: { store.deleteAccount(account.id) })
             }
         }
-        .sheet(isPresented: $showingEditor) {
+        .sheet(isPresented: $showingEditor, onDismiss: { editing = nil }) {
             AccountEditor(account: editing) { name, balance, type, iconKey, cardNumber, note, included in
                 store.saveAccount(
                     id: editing?.id,
@@ -205,9 +205,9 @@ private struct AccountManagementView: View {
                     note: note,
                     included: included
                 )
-                editing = nil
                 showingEditor = false
             }
+            .managementEditorSheet(title: editing == nil ? "新建账户" : "编辑账户") { showingEditor = false }
         }
     }
 }
@@ -273,12 +273,12 @@ private struct CategoryManagementView: View {
             EditButton()
             #endif
         }
-        .sheet(isPresented: $showingEditor) {
+        .sheet(isPresented: $showingEditor, onDismiss: { editing = nil }) {
             CategoryEditor(category: editing) { name, type, parentID, iconKey in
                 store.saveCategory(id: editing?.id, name: name, type: type, parentID: parentID, iconKey: iconKey)
-                editing = nil
                 showingEditor = false
             }
+            .managementEditorSheet(title: editing == nil ? "新建分类" : "编辑分类") { showingEditor = false }
         }
     }
 
@@ -304,10 +304,11 @@ private struct TagManagementView: View {
             LedgerResourcePicker()
             ForEach(store.tags) { tag in ManagementRow(title: tag.name, edit: { editing = tag; showingEditor = true }, delete: { store.deleteTag(tag.id) }) }
         }
-        .sheet(isPresented: $showingEditor) {
+        .sheet(isPresented: $showingEditor, onDismiss: { editing = nil }) {
             NameEditor(title: editing == nil ? "新建标签" : "编辑标签", initial: editing?.name ?? "") {
-                store.saveTag(id: editing?.id, name: $0); editing = nil; showingEditor = false
+                store.saveTag(id: editing?.id, name: $0); showingEditor = false
             }
+            .managementEditorSheet(title: editing == nil ? "新建标签" : "编辑标签") { showingEditor = false }
         }
     }
 }
@@ -340,9 +341,13 @@ private struct RuleManagementView: View {
                 .padding(.vertical, 4)
             }
         }
-        .sheet(isPresented: $showingEditor) { RuleEditor(rule: editing) { name, conditionType, conditionValue, actionType, actionValue, priority in
-            store.saveRule(id: editing?.id, name: name, conditionType: conditionType, conditionValue: conditionValue, actionType: actionType, actionValue: actionValue, priority: priority); editing = nil; showingEditor = false
-        } }
+        .sheet(isPresented: $showingEditor, onDismiss: { editing = nil }) {
+            RuleEditor(rule: editing) { name, conditionType, conditionValue, actionType, actionValue, priority in
+                store.saveRule(id: editing?.id, name: name, conditionType: conditionType, conditionValue: conditionValue, actionType: actionType, actionValue: actionValue, priority: priority)
+                showingEditor = false
+            }
+            .managementEditorSheet(title: editing == nil ? "新建规则" : "编辑规则") { showingEditor = false }
+        }
     }
 }
 
@@ -365,27 +370,32 @@ private struct ReminderManagementView: View {
         ManagementContainer(title: "提醒", add: { showingEditor = true }) {
             ForEach(store.reminders) { reminder in
                 HStack {
-                    Toggle(isOn: Binding(get: { !reminder.paused }, set: { store.setReminderPaused(reminder.id, paused: !$0) })) { EmptyView() }.labelsHidden()
+                    Toggle(isOn: Binding(get: { !reminder.paused }, set: { store.setReminderPaused(reminder.id, paused: !$0) })) { EmptyView() }
+                        .labelsHidden()
+                        .accessibilityLabel("\(reminder.name)提醒")
+                        .accessibilityValue(reminder.paused ? "已停用" : "已启用")
                     ManagementRow(title: reminder.name, subtitle: reminder.scheduleKind, edit: { editing = reminder; showingEditor = true }, delete: { store.deleteReminder(reminder.id) })
                 }
             }
         }
-        .sheet(isPresented: $showingEditor) { ReminderEditor(reminder: editing) { name, type, amount, schedule, day, daysAfter, weekday, month, paused in
-            store.saveReminder(
-                id: editing?.id,
-                name: name,
-                type: type,
-                amountMinor: amount,
-                schedule: schedule,
-                dayOfMonth: day,
-                daysAfter: daysAfter,
-                dayOfWeek: weekday,
-                month: month,
-                paused: paused
-            )
-            editing = nil
-            showingEditor = false
-        } }
+        .sheet(isPresented: $showingEditor, onDismiss: { editing = nil }) {
+            ReminderEditor(reminder: editing) { name, type, amount, schedule, day, daysAfter, weekday, month, paused in
+                store.saveReminder(
+                    id: editing?.id,
+                    name: name,
+                    type: type,
+                    amountMinor: amount,
+                    schedule: schedule,
+                    dayOfMonth: day,
+                    daysAfter: daysAfter,
+                    dayOfWeek: weekday,
+                    month: month,
+                    paused: paused
+                )
+                showingEditor = false
+            }
+            .managementEditorSheet(title: editing == nil ? "新建提醒" : "编辑提醒") { showingEditor = false }
+        }
     }
 }
 
@@ -562,6 +572,20 @@ private struct ManagementRow: View {
         }
         .padding(.vertical, 5)
         .contentShape(Rectangle())
+    }
+}
+
+private extension View {
+    func managementEditorSheet(title: String, cancel: @escaping () -> Void) -> some View {
+        NavigationStack {
+            self
+                .navigationTitle(title)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("取消", action: cancel)
+                    }
+                }
+        }
     }
 }
 
