@@ -60,6 +60,8 @@ final class AppStore: ObservableObject {
     @Published var importSessionID: String?
     @Published var importProgress: Double = 0
     @Published var importReady = false
+    @Published private(set) var importUpdating = false
+    @Published private(set) var importSessionLedgerID: String?
     @Published var selectedImportItemIDs: Set<String> = []
     @Published var importError: String?
     @Published var importMessage: String?
@@ -84,6 +86,10 @@ final class AppStore: ObservableObject {
     private var pendingTransactionDetail: TransactionUI?
     private var searchDebounceTask: Task<Void, Never>?
     private var searchGeneration = 0
+    private var importSessionGeneration = 0
+    private var pendingImportItemEdits: [String: ImportItemUI] = [:]
+    private var pendingImportItemOrder: [String] = []
+    private var importItemEditInFlight = false
     #if canImport(OmniFlowShared)
     private var analyticsSubscription: AppleFlowSubscription?
     private var homeSubscription: AppleFlowSubscription?
@@ -92,6 +98,7 @@ final class AppStore: ObservableObject {
     private var ruleSubscription: AppleFlowSubscription?
     private var dateDetailSubscription: AppleFlowSubscription?
     private var importSubscription: AppleFlowSubscription?
+    private var latestImportPreview: ImportPreviewState?
     private var backupObjects: [RemoteBackupMeta] = []
     #endif
 
@@ -587,7 +594,7 @@ final class AppStore: ObservableObject {
         }
     }
 
-    func saveLedger(id: String?, name: String, coverKey: String?) { performManagement { done in
+    func saveLedger(id: String?, name: String, coverKey: String?, completion: @escaping (String?) -> Void = { _ in }) { performManagement(completion: completion) { done in
         #if canImport(OmniFlowShared)
         bridge.saveLedger(id: id, name: name, coverKey: coverKey, callback: done)
         #else
@@ -619,8 +626,9 @@ final class AppStore: ObservableObject {
         iconKey: String,
         cardNumber: String?,
         note: String?,
-        included: Bool
-    ) { performManagement { done in
+        included: Bool,
+        completion: @escaping (String?) -> Void = { _ in }
+    ) { performManagement(completion: completion) { done in
         #if canImport(OmniFlowShared)
         bridge.saveAccount(
             id: id,
@@ -646,9 +654,9 @@ final class AppStore: ObservableObject {
         #endif
     } }
 
-    func saveCategory(id: String?, name: String, type: EntryType, parentID: String? = nil, iconKey: String? = nil) {
-        guard let ledgerID = resourceLedgerID else { managementError = "请先选择账本"; return }
-        performManagement { done in
+    func saveCategory(id: String?, name: String, type: EntryType, parentID: String? = nil, iconKey: String? = nil, completion: @escaping (String?) -> Void = { _ in }) {
+        guard let ledgerID = resourceLedgerID else { completeManagement("请先选择账本", completion: completion); return }
+        performManagement(completion: completion) { done in
             #if canImport(OmniFlowShared)
             bridge.saveCategory(id: id, ledgerId: ledgerID, parentId: parentID, name: name, iconKey: parentID == nil ? (iconKey ?? "category") : nil, typeName: type.rawValue, callback: done)
             #else
@@ -676,9 +684,9 @@ final class AppStore: ObservableObject {
         }
     }
 
-    func saveTag(id: String?, name: String) {
-        guard let ledgerID = resourceLedgerID else { managementError = "请先选择账本"; return }
-        performManagement { done in
+    func saveTag(id: String?, name: String, completion: @escaping (String?) -> Void = { _ in }) {
+        guard let ledgerID = resourceLedgerID else { completeManagement("请先选择账本", completion: completion); return }
+        performManagement(completion: completion) { done in
             #if canImport(OmniFlowShared)
             bridge.saveTag(id: id, ledgerId: ledgerID, name: name, callback: done)
             #else
@@ -702,10 +710,11 @@ final class AppStore: ObservableObject {
         conditionValue: String,
         actionType: String,
         actionValue: String,
-        priority: Int
+        priority: Int,
+        completion: @escaping (String?) -> Void = { _ in }
     ) {
-        guard let ledgerID = resourceLedgerID else { managementError = "请先选择账本"; return }
-        performManagement { done in
+        guard let ledgerID = resourceLedgerID else { completeManagement("请先选择账本", completion: completion); return }
+        performManagement(completion: completion) { done in
             #if canImport(OmniFlowShared)
             bridge.saveRule(id: id, ledgerId: ledgerID, name: name, conditionTypeName: conditionType, conditionValue: conditionValue, actionTypeName: actionType, actionValue: actionValue, priority: Int32(priority), callback: done)
             #else
@@ -749,8 +758,9 @@ final class AppStore: ObservableObject {
         daysAfter: Int?,
         dayOfWeek: Int?,
         month: Int?,
-        paused: Bool
-    ) { performManagement { done in
+        paused: Bool,
+        completion: @escaping (String?) -> Void = { _ in }
+    ) { performManagement(completion: completion) { done in
         #if canImport(OmniFlowShared)
         bridge.saveReminder(
             id: id,
@@ -884,6 +894,10 @@ final class AppStore: ObservableObject {
     func importFile(_ url: URL, selectedFormat: AppleImportFormat? = nil) {
         clearImportFeedback()
         guard let ledgerID = resourceLedgerID else { importError = "请先选择账本"; return }
+        importSessionGeneration += 1
+        clearImportEditQueue()
+        importSessionLedgerID = ledgerID
+        importUpdating = true
         #if canImport(OmniFlowShared)
         Task {
             do {
@@ -899,19 +913,46 @@ final class AppStore: ObservableObject {
                 importSubscription = bridge.previewImport(ledgerId: ledgerID, fileName: url.lastPathComponent, bytes: bytes, formatName: selectedFormat?.rawValue) { [weak self] preview, message in
                     Task { @MainActor in
                         self?.importError = message
+                        self?.importUpdating = message == nil && Double(preview?.progress ?? 0) < 1
+                        if message != nil, preview == nil { self?.importSessionLedgerID = nil }
                         self?.applyImportPreview(preview)
                     }
                 }
-            } catch { self.importError = error.localizedDescription }
+            } catch {
+                self.importError = error.localizedDescription
+                self.importUpdating = false
+                self.importSessionLedgerID = nil
+            }
         }
         #else
+        importUpdating = false
+        importSessionLedgerID = nil
         importError = "共享 Framework 尚未构建"
         #endif
     }
 
     func updateImportItem(_ item: ImportItemUI) {
         guard let sessionID = importSessionID else { return }
+        if pendingImportItemEdits.isEmpty, !importItemEditInFlight { importError = nil }
+        if pendingImportItemEdits[item.id] == nil { pendingImportItemOrder.append(item.id) }
+        pendingImportItemEdits[item.id] = item
+        importUpdating = true
+        importReady = false
         #if canImport(OmniFlowShared)
+        sendNextImportItemEdit(sessionID: sessionID)
+        #endif
+    }
+
+    #if canImport(OmniFlowShared)
+    private func sendNextImportItemEdit(sessionID: String) {
+        guard !importItemEditInFlight, let itemID = pendingImportItemOrder.first else { return }
+        pendingImportItemOrder.removeFirst()
+        guard let item = pendingImportItemEdits.removeValue(forKey: itemID) else {
+            sendNextImportItemEdit(sessionID: sessionID)
+            return
+        }
+        let generation = importSessionGeneration
+        importItemEditInFlight = true
         bridge.editImportItem(
             sessionId: sessionID,
             itemId: item.id,
@@ -923,13 +964,21 @@ final class AppStore: ObservableObject {
             excluded: item.excluded,
             skipped: item.skipped
         ) { [weak self] preview, message in
-            Task { @MainActor in self?.importError = message; self?.applyImportPreview(preview) }
+            Task { @MainActor in
+                guard let self else { return }
+                guard generation == self.importSessionGeneration else { return }
+                if let message { self.importError = message }
+                if let preview { self.latestImportPreview = preview }
+                self.importItemEditInFlight = false
+                self.sendNextImportItemEdit(sessionID: sessionID)
+                self.finishImportEditsIfNeeded()
+            }
         }
-        #endif
     }
+    #endif
 
-    func toggleImportSelection(_ id: String) {
-        if selectedImportItemIDs.contains(id) { selectedImportItemIDs.remove(id) } else { selectedImportItemIDs.insert(id) }
+    func setImportSelection(_ id: String, selected: Bool) {
+        if selected { selectedImportItemIDs.insert(id) } else { selectedImportItemIDs.remove(id) }
     }
 
     func selectAllImportItems() {
@@ -941,39 +990,68 @@ final class AppStore: ObservableObject {
     }
 
     func setSelectedImportCategory(_ categoryID: String?) {
-        guard let sessionID = importSessionID, !selectedImportItemIDs.isEmpty else { return }
+        guard let sessionID = importSessionID, !selectedImportItemIDs.isEmpty, !importUpdating else { return }
+        importUpdating = true
+        importReady = false
         #if canImport(OmniFlowShared)
         bridge.editImportCategories(sessionId: sessionID, itemIds: selectedImportItemIDs, categoryId: categoryID) { [weak self] preview, message in
-            Task { @MainActor in self?.importError = message; self?.applyImportPreview(preview) }
+            Task { @MainActor in self?.importError = message; self?.importUpdating = false; self?.applyImportPreview(preview) }
         }
+        #else
+        importUpdating = false
         #endif
     }
 
     func setSelectedImportSkipped(_ skipped: Bool) {
-        guard let sessionID = importSessionID, !selectedImportItemIDs.isEmpty else { return }
+        guard let sessionID = importSessionID, !selectedImportItemIDs.isEmpty, !importUpdating else { return }
+        importUpdating = true
+        importReady = false
         #if canImport(OmniFlowShared)
         bridge.editImportSkipped(sessionId: sessionID, itemIds: selectedImportItemIDs, skipped: skipped) { [weak self] preview, message in
-            Task { @MainActor in self?.importError = message; self?.applyImportPreview(preview) }
+            Task { @MainActor in self?.importError = message; self?.importUpdating = false; self?.applyImportPreview(preview) }
         }
+        #else
+        importUpdating = false
         #endif
     }
 
     func commitImport() {
-        guard let sessionID = importSessionID else { return }
+        guard let sessionID = importSessionID, !importUpdating else { return }
         #if canImport(OmniFlowShared)
         bridge.commitImport(sessionId: sessionID) { [weak self] result, message in
             Task { @MainActor in
                 self?.importError = message
                 self?.importMessage = message == nil ? result.map { "已导入 \($0.importedCount) 条" } : nil
                 if message == nil, result != nil {
-                    self?.importItems = []
-                    self?.selectedImportItemIDs = []
-                    self?.importSessionID = nil
-                    self?.importReady = false
+                    self?.clearImportSessionState()
                 }
             }
         }
         #endif
+    }
+
+    func resetImportSession() {
+        #if canImport(OmniFlowShared)
+        importSubscription?.cancel()
+        guard let sessionID = importSessionID else { clearImportSessionState(); return }
+        importSessionGeneration += 1
+        clearImportEditQueue()
+        importUpdating = true
+        bridge.cancelImport(sessionId: sessionID) { [weak self] message in
+            Task { @MainActor in
+                self?.importError = message
+                self?.importUpdating = false
+                if message == nil { self?.clearImportSessionState() }
+            }
+        }
+        #else
+        clearImportSessionState()
+        #endif
+    }
+
+    func restoreImportLedgerSelection() {
+        guard let importSessionLedgerID, resourceLedgerID != importSessionLedgerID else { return }
+        selectResourceLedger(importSessionLedgerID)
     }
 
     func clearImportFeedback() {
@@ -985,9 +1063,19 @@ final class AppStore: ObservableObject {
         operation { [weak self] message in Task { @MainActor in self?.error = message } }
     }
 
-    private func performManagement(_ operation: (@escaping (String?) -> Void) -> Void) {
+    private func performManagement(completion: @escaping (String?) -> Void = { _ in }, _ operation: (@escaping (String?) -> Void) -> Void) {
         managementError = nil
-        operation { [weak self] message in Task { @MainActor in self?.managementError = message } }
+        operation { [weak self] message in
+            Task { @MainActor in
+                self?.managementError = message
+                completion(message)
+            }
+        }
+    }
+
+    private func completeManagement(_ message: String, completion: @escaping (String?) -> Void) {
+        managementError = message
+        completion(message)
     }
 
     private func performDataManagement(_ operation: (@escaping (String?) -> Void) -> Void) {
@@ -997,7 +1085,10 @@ final class AppStore: ObservableObject {
 
     #if canImport(OmniFlowShared)
     private func applyImportPreview(_ preview: ImportPreviewState?) {
-        importSessionID = preview?.sessionId
+        if let preview, !preview.sessionId.isEmpty {
+            importSessionID = preview.sessionId
+            importSessionLedgerID = preview.ledgerId
+        }
         importProgress = Double(preview?.progress ?? 0)
         importReady = preview?.isReadyToCommit ?? false
         importItems = preview?.items.map {
@@ -1017,6 +1108,15 @@ final class AppStore: ObservableObject {
             )
         } ?? []
         selectedImportItemIDs = selectedImportItemIDs.intersection(importItems.map(\.id))
+    }
+
+    private func finishImportEditsIfNeeded() {
+        guard pendingImportItemEdits.isEmpty, pendingImportItemOrder.isEmpty, !importItemEditInFlight else { return }
+        importUpdating = false
+        if let latestImportPreview {
+            self.latestImportPreview = nil
+            applyImportPreview(latestImportPreview)
+        }
     }
 
     private func startObservers() {
@@ -1218,6 +1318,27 @@ final class AppStore: ObservableObject {
     private func observeCategories() {}
     private func observeDateDetails() {}
     #endif
+
+    private func clearImportEditQueue() {
+        pendingImportItemEdits = [:]
+        pendingImportItemOrder = []
+        importItemEditInFlight = false
+        #if canImport(OmniFlowShared)
+        latestImportPreview = nil
+        #endif
+    }
+
+    private func clearImportSessionState() {
+        importSessionGeneration += 1
+        clearImportEditQueue()
+        importItems = []
+        selectedImportItemIDs = []
+        importSessionID = nil
+        importSessionLedgerID = nil
+        importProgress = 0
+        importReady = false
+        importUpdating = false
+    }
 
     private static func monthInterval(_ date: Date) -> DateInterval {
         Calendar.current.dateInterval(of: .month, for: date) ?? DateInterval(start: date, duration: 30 * 86_400)

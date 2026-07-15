@@ -209,10 +209,10 @@ struct DateTransactionDetailView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack(spacing: 22) {
                         if store.dateDetailType != .income {
-                            Text("支出 \(store.dateDetailExpenseMinor.wholeRmb)").foregroundStyle(Color.expense)
+                            Text("支出 \(store.dateDetailExpenseMinor.rmb)").foregroundStyle(Color.expense)
                         }
                         if store.dateDetailType != .expense {
-                            Text("收入 \(store.dateDetailIncomeMinor.wholeRmb)").foregroundStyle(Color.income)
+                            Text("收入 \(store.dateDetailIncomeMinor.rmb)").foregroundStyle(Color.income)
                         }
                         Spacer()
                         displayModeButton
@@ -304,10 +304,10 @@ private struct TransactionGroupsView: View {
                     Spacer()
                     HStack(spacing: 16) {
                         if group.expenseMinor != 0 {
-                            Text("支出 \(group.expenseMinor.wholeRmb)").foregroundStyle(Color.expense)
+                            Text("支出 \(group.expenseMinor.rmb)").foregroundStyle(Color.expense)
                         }
                         if group.incomeMinor != 0 {
-                            Text("收入 \(group.incomeMinor.wholeRmb)").foregroundStyle(Color.income)
+                            Text("收入 \(group.incomeMinor.rmb)").foregroundStyle(Color.income)
                         }
                     }
                     .font(.caption.weight(.semibold))

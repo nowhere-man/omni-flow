@@ -21,5 +21,6 @@ interface ImportWorkflow {
         sessionId: ImportSessionId,
         edit: ImportExcludeBatchEdit,
     ): Result<ImportPreviewState>
+    suspend fun cancel(sessionId: ImportSessionId): Result<Unit>
     suspend fun commit(sessionId: ImportSessionId): Result<ImportCommitResult>
 }

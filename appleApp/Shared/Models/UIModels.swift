@@ -84,6 +84,34 @@ struct RuleUI: Identifiable, Hashable {
     var actionType: String
     var actionValue: String
     var priority: Int
+
+    var conditionDisplayText: String {
+        let value: String
+        switch conditionType {
+        case "TRANSACTION_TYPE": value = EntryType(rawValue: conditionValue)?.label ?? conditionValue
+        case "TRANSACTION_SOURCE": value = transactionSourceDisplayName(conditionValue)
+        default: value = conditionValue
+        }
+        return "\(conditionLabel)：\(value)"
+    }
+
+    var actionDisplayText: String {
+        switch actionType {
+        case "SET_CATEGORY": return "设置分类"
+        case "SET_EXCLUDED": return "不计入收支"
+        case "EXCLUDE": return "排除不入账"
+        default: return "应用规则"
+        }
+    }
+
+    private var conditionLabel: String {
+        switch conditionType {
+        case "NOTE_CONTAINS": return "备注包含"
+        case "TRANSACTION_TYPE": return "收支类型"
+        case "TRANSACTION_SOURCE": return "来源平台"
+        default: return "匹配条件"
+        }
+    }
 }
 struct ReminderUI: Identifiable, Hashable {
     let id: String
@@ -96,6 +124,18 @@ struct ReminderUI: Identifiable, Hashable {
     var daysAfter: Int?
     var dayOfWeek: Int?
     var month: Int?
+
+    var scheduleDisplayName: String {
+        switch scheduleKind.components(separatedBy: ".").last {
+        case "FIXED_REPAYMENT_DAY": return "每月 \(dayOfMonth ?? 1) 日"
+        case "DAYS_AFTER_STATEMENT": return "账单日后 \(daysAfter ?? 0) 天"
+        case "DAILY": return "每天"
+        case "WEEKLY": return "每周星期 \(dayOfWeek ?? 1)"
+        case "MONTHLY": return "每月 \(dayOfMonth ?? 1) 日"
+        case "YEARLY": return "每年 \(month ?? 1) 月 \(dayOfMonth ?? 1) 日"
+        default: return "自定义周期"
+        }
+    }
 }
 struct ImportItemUI: Identifiable, Hashable {
     let id: String
@@ -110,6 +150,15 @@ struct ImportItemUI: Identifiable, Hashable {
     var excluded: Bool
     var skipped: Bool
     var duplicate: String
+
+    var sourceDisplayName: String { transactionSourceDisplayName(source) }
+    var duplicateDisplayName: String? {
+        switch duplicate.components(separatedBy: ".").last {
+        case "CONFIRMED": return "已确认重复"
+        case "SUSPECTED": return "可能重复"
+        default: return nil
+        }
+    }
 }
 struct CalendarDayUI: Identifiable, Hashable {
     let id: String
@@ -178,16 +227,26 @@ struct TransactionUI: Identifiable, Hashable {
     var categoryDisplayName: String
 
     var sourceDisplayName: String? {
-        switch source {
-        case "MANUAL": return "手动记录"
-        case "ALIPAY": return "支付宝"
-        case "WECHAT": return "微信"
-        case "JD": return "京东"
-        case "MEITUAN": return "美团"
-        case "CCB": return "建设银行"
-        default: return source
-        }
+        source.map(transactionSourceDisplayName)
     }
+}
+
+struct TransactionSourceOptionUI: Identifiable, Hashable {
+    let id: String
+    let label: String
+}
+
+let transactionSourceOptions = [
+    TransactionSourceOptionUI(id: "MANUAL", label: "手动记录"),
+    TransactionSourceOptionUI(id: "ALIPAY", label: "支付宝"),
+    TransactionSourceOptionUI(id: "WECHAT", label: "微信"),
+    TransactionSourceOptionUI(id: "JD", label: "京东"),
+    TransactionSourceOptionUI(id: "MEITUAN", label: "美团"),
+    TransactionSourceOptionUI(id: "CCB", label: "建设银行"),
+]
+
+func transactionSourceDisplayName(_ source: String) -> String {
+    transactionSourceOptions.first { $0.id == source }?.label ?? source
 }
 
 struct TransactionRecordDetailUI {
@@ -263,7 +322,6 @@ extension Int64 {
         return value.formatted(.currency(code: "CNY"))
     }
 
-    var wholeRmb: String { "¥\(self / 100)" }
 }
 
 extension String {

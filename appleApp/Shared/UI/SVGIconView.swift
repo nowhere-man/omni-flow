@@ -138,19 +138,27 @@ private final class SVGSnapshotRenderer: NSObject, WKNavigationDelegate {
         </body></html>
         """
         return await withCheckedContinuation { continuation in
-            if pending[cacheKey] != nil {
-                pending[cacheKey]?.append(continuation)
-                return
-            }
-            pending[cacheKey] = [continuation]
-            queue.append(Request(
-                cacheKey: cacheKey,
-                html: html,
-                baseURL: asset.url.deletingLastPathComponent(),
-                pixelSize: pixelSize
-            ))
-            renderNextIfNeeded()
+            enqueue(
+                continuation,
+                request: Request(
+                    cacheKey: cacheKey,
+                    html: html,
+                    baseURL: asset.url.deletingLastPathComponent(),
+                    pixelSize: pixelSize
+                )
+            )
         }
+    }
+
+    private func enqueue(_ continuation: CheckedContinuation<PlatformImage?, Never>, request: Request) {
+        if var continuations = pending[request.cacheKey] {
+            continuations.append(continuation)
+            pending[request.cacheKey] = continuations
+            return
+        }
+        pending[request.cacheKey] = [continuation]
+        queue.append(request)
+        renderNextIfNeeded()
     }
 
     nonisolated func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {

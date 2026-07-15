@@ -595,6 +595,10 @@ class AppleAppBridge(val app: SharedApp) {
         }
     }
 
+    fun cancelImport(sessionId: String, callback: (String?) -> Unit) {
+        scope.launch { callback(app.imports.cancel(sessionId).exceptionOrNull()?.message) }
+    }
+
     fun editImportItem(
         sessionId: String,
         itemId: String,

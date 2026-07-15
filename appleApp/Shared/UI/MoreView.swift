@@ -181,9 +181,12 @@ private struct LedgerManagementView: View {
             }
         }
         .sheet(isPresented: $showingEditor, onDismiss: { editing = nil }) {
-            LedgerEditor(ledger: editing) { name, coverKey in
-                store.saveLedger(id: editing?.id, name: name, coverKey: coverKey)
-                showingEditor = false
+            LedgerEditor(ledger: editing) { name, coverKey, completion in
+                store.saveLedger(id: editing?.id, name: name, coverKey: coverKey) { error in
+                    store.managementError = nil
+                    if error == nil { showingEditor = false }
+                    completion(error)
+                }
             }
             .managementEditorSheet(title: editing == nil ? "新建账本" : "编辑账本") { showingEditor = false }
         }
@@ -201,7 +204,7 @@ private struct AccountManagementView: View {
             }
         }
         .sheet(isPresented: $showingEditor, onDismiss: { editing = nil }) {
-            AccountEditor(account: editing) { name, balance, type, iconKey, cardNumber, note, included in
+            AccountEditor(account: editing) { name, balance, type, iconKey, cardNumber, note, included, completion in
                 store.saveAccount(
                     id: editing?.id,
                     name: name,
@@ -211,8 +214,11 @@ private struct AccountManagementView: View {
                     cardNumber: cardNumber,
                     note: note,
                     included: included
-                )
-                showingEditor = false
+                ) { error in
+                    store.managementError = nil
+                    if error == nil { showingEditor = false }
+                    completion(error)
+                }
             }
             .managementEditorSheet(title: editing == nil ? "新建账户" : "编辑账户") { showingEditor = false }
         }
@@ -281,9 +287,12 @@ private struct CategoryManagementView: View {
             #endif
         }
         .sheet(isPresented: $showingEditor, onDismiss: { editing = nil }) {
-            CategoryEditor(category: editing) { name, type, parentID, iconKey in
-                store.saveCategory(id: editing?.id, name: name, type: type, parentID: parentID, iconKey: iconKey)
-                showingEditor = false
+            CategoryEditor(category: editing) { name, type, parentID, iconKey, completion in
+                store.saveCategory(id: editing?.id, name: name, type: type, parentID: parentID, iconKey: iconKey) { error in
+                    store.managementError = nil
+                    if error == nil { showingEditor = false }
+                    completion(error)
+                }
             }
             .managementEditorSheet(title: editing == nil ? "新建分类" : "编辑分类") { showingEditor = false }
         }
@@ -312,8 +321,12 @@ private struct TagManagementView: View {
             ForEach(store.tags) { tag in ManagementRow(title: tag.name, edit: { editing = tag; showingEditor = true }, delete: { store.deleteTag(tag.id) }) }
         }
         .sheet(isPresented: $showingEditor, onDismiss: { editing = nil }) {
-            NameEditor(title: editing == nil ? "新建标签" : "编辑标签", initial: editing?.name ?? "") {
-                store.saveTag(id: editing?.id, name: $0); showingEditor = false
+            NameEditor(title: editing == nil ? "新建标签" : "编辑标签", initial: editing?.name ?? "") { name, completion in
+                store.saveTag(id: editing?.id, name: name) { error in
+                    store.managementError = nil
+                    if error == nil { showingEditor = false }
+                    completion(error)
+                }
             }
             .managementEditorSheet(title: editing == nil ? "新建标签" : "编辑标签") { showingEditor = false }
         }
@@ -333,7 +346,7 @@ private struct RuleManagementView: View {
                 HStack {
                     VStack(alignment: .leading) {
                         Text(rule.name)
-                        Text("\(rule.conditionValue) → 分类").font(.caption).foregroundStyle(.secondary)
+                        Text("\(rule.conditionDisplayText) → \(rule.actionDisplayText)").font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
                     Menu {
@@ -350,9 +363,12 @@ private struct RuleManagementView: View {
             }
         }
         .sheet(isPresented: $showingEditor, onDismiss: { editing = nil }) {
-            RuleEditor(rule: editing) { name, conditionType, conditionValue, actionType, actionValue, priority in
-                store.saveRule(id: editing?.id, name: name, conditionType: conditionType, conditionValue: conditionValue, actionType: actionType, actionValue: actionValue, priority: priority)
-                showingEditor = false
+            RuleEditor(rule: editing) { name, conditionType, conditionValue, actionType, actionValue, priority, completion in
+                store.saveRule(id: editing?.id, name: name, conditionType: conditionType, conditionValue: conditionValue, actionType: actionType, actionValue: actionValue, priority: priority) { error in
+                    store.managementError = nil
+                    if error == nil { showingEditor = false }
+                    completion(error)
+                }
             }
             .managementEditorSheet(title: editing == nil ? "新建规则" : "编辑规则") { showingEditor = false }
         }
@@ -395,12 +411,12 @@ private struct ReminderManagementView: View {
                         .labelsHidden()
                         .accessibilityLabel("\(reminder.name)提醒")
                         .accessibilityValue(reminder.paused ? "已停用" : "已启用")
-                    ManagementRow(title: reminder.name, subtitle: reminder.scheduleKind, edit: { editing = reminder; showingEditor = true }, delete: { store.deleteReminder(reminder.id) })
+                    ManagementRow(title: reminder.name, subtitle: reminder.scheduleDisplayName, edit: { editing = reminder; showingEditor = true }, delete: { store.deleteReminder(reminder.id) })
                 }
             }
         }
         .sheet(isPresented: $showingEditor, onDismiss: { editing = nil }) {
-            ReminderEditor(reminder: editing) { name, type, amount, schedule, day, daysAfter, weekday, month, paused in
+            ReminderEditor(reminder: editing) { name, type, amount, schedule, day, daysAfter, weekday, month, paused, completion in
                 store.saveReminder(
                     id: editing?.id,
                     name: name,
@@ -412,8 +428,11 @@ private struct ReminderManagementView: View {
                     dayOfWeek: weekday,
                     month: month,
                     paused: paused
-                )
-                showingEditor = false
+                ) { error in
+                    store.managementError = nil
+                    if error == nil { showingEditor = false }
+                    completion(error)
+                }
             }
             .managementEditorSheet(title: editing == nil ? "新建提醒" : "编辑提醒") { showingEditor = false }
         }
@@ -425,102 +444,172 @@ private struct ImportView: View {
     @State private var importing = false
     @State private var batchCategoryID = ""
     @State private var selectedFormat: AppleImportFormat?
+
     var body: some View {
         List {
-            Section {
-                Picker("目标账本", selection: Binding(get: { store.resourceLedgerID }, set: { store.selectResourceLedger($0) })) {
-                    Text("请选择").tag(String?.none)
-                    ForEach(store.ledgers) { Text($0.name).tag(Optional($0.id)) }
-                }
-                Picker("账单来源", selection: $selectedFormat) {
-                    Text("自动识别").tag(AppleImportFormat?.none)
-                    ForEach(AppleImportFormat.allCases) { Text($0.label).tag(Optional($0)) }
-                }
-                Button("选择账单文件") { importing = true }
-                ProgressView(value: store.importProgress)
-            }
-            if !store.importItems.isEmpty {
-                Section("批量操作") {
-                    HStack {
-                        Button("全选", action: store.selectAllImportItems)
-                        Button("反选", action: store.invertImportSelection)
-                        Spacer()
-                        Text("已选 \(store.selectedImportItemIDs.count) 条").foregroundStyle(.secondary)
-                    }
-                    Picker("批量分类", selection: $batchCategoryID) {
-                        Text("请选择").tag("")
-                        ForEach(store.categories) { Text($0.name).tag($0.id) }
-                    }
-                    .onChange(of: batchCategoryID) { value in
-                        guard !value.isEmpty else { return }
-                        store.setSelectedImportCategory(value)
-                        batchCategoryID = ""
-                    }
-                    HStack {
-                        Button("批量排除") { store.setSelectedImportSkipped(true) }
-                        Button("恢复入账") { store.setSelectedImportSkipped(false) }
-                    }
-                    .disabled(store.selectedImportItemIDs.isEmpty)
-                }
-            }
-            Section("预览") {
-                ForEach($store.importItems) { $item in
-                    VStack(alignment: .leading) {
-                        Toggle(
-                            isOn: Binding(
-                                get: { store.selectedImportItemIDs.contains(item.id) },
-                                set: { _ in store.toggleImportSelection(item.id) }
-                            )
-                        ) {
-                            HStack { Text(item.note.isEmpty ? "无备注" : item.note); Spacer(); Text(item.amountMinor.rmb) }
-                        }
-                        Text("\(item.date.formatted(date: .abbreviated, time: .shortened)) · \(item.source)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        if item.duplicate != "NONE" { Text(item.duplicate).foregroundStyle(.red) }
-                        Picker("类型", selection: Binding(get: { item.type ?? .expense }, set: { item.type = $0; store.updateImportItem(item) })) {
-                            ForEach(EntryType.allCases) { Text($0.label).tag($0) }
-                        }
-                        Picker("分类", selection: Binding(get: { item.categoryID ?? "" }, set: { item.categoryID = $0; store.updateImportItem(item) })) {
-                            Text("请选择").tag("")
-                            ForEach(store.categories.filter { item.type == nil || $0.type == item.type }) { Text($0.name).tag($0.id) }
-                        }
-                        Picker("账户", selection: Binding(get: { item.accountID ?? "" }, set: { item.accountID = $0; store.updateImportItem(item) })) {
-                            Text("请选择").tag("")
-                            ForEach(store.accounts) { Text($0.name).tag($0.id) }
-                        }
-                        TextField("备注", text: Binding(get: { item.note }, set: { item.note = $0; store.updateImportItem(item) }))
-                        TextField(
-                            "标签（逗号分隔）",
-                            text: Binding(
-                                get: { item.tags.joined(separator: ",") },
-                                set: {
-                                    item.tags = $0.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
-                                    store.updateImportItem(item)
-                                }
-                            )
-                        )
-                        Toggle("不计入收支", isOn: Binding(get: { item.excluded }, set: { item.excluded = $0; store.updateImportItem(item) }))
-                        Toggle("排除不入账", isOn: Binding(get: { item.skipped }, set: { item.skipped = $0; store.updateImportItem(item) }))
-                    }
-                }
-                Button("确认入账", action: store.commitImport).disabled(!store.importReady)
-            }
-            if let message = store.importMessage {
-                Section { Label(message, systemImage: "checkmark.circle").foregroundStyle(Color.income) }
-            }
-            if let error = store.importError {
-                Section { Text(error).foregroundStyle(.red) }
-            }
+            setupSection
+            batchSection
+            previewSection
+            feedbackSections
         }
         .navigationTitle("导入")
-        .onAppear(perform: store.clearImportFeedback)
+        .onAppear {
+            store.clearImportFeedback()
+            store.restoreImportLedgerSelection()
+        }
         // fileImporter 挂在 List 上在 iOS 中无法可靠弹出（无法找到 presentationAnchor）
         // 挂在 background EmptyView 上提供稳定的呈现锚点
         .background(
             EmptyView().fileImporter(isPresented: $importing, allowedContentTypes: [.data]) { result in
                 if case let .success(url) = result { store.importFile(url, selectedFormat: selectedFormat) }
             }
+        )
+    }
+
+    private var setupSection: some View {
+        Section {
+            Picker("目标账本", selection: Binding(get: { store.resourceLedgerID }, set: { store.selectResourceLedger($0) })) {
+                Text("请选择").tag(String?.none)
+                ForEach(store.ledgers) { Text($0.name).tag(Optional($0.id)) }
+            }
+            .disabled(store.importSessionLedgerID != nil)
+            Picker("账单来源", selection: $selectedFormat) {
+                Text("自动识别").tag(AppleImportFormat?.none)
+                ForEach(AppleImportFormat.allCases) { Text($0.label).tag(Optional($0)) }
+            }
+            .disabled(store.importSessionLedgerID != nil)
+            if store.importSessionLedgerID == nil {
+                Button("选择账单文件") { importing = true }
+            } else {
+                Button("重新选择账本", role: .destructive, action: store.resetImportSession)
+                    .disabled(store.importUpdating)
+            }
+            if store.importUpdating || store.importProgress > 0 {
+                ProgressView(value: store.importProgress)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var batchSection: some View {
+        if !store.importItems.isEmpty {
+            Section("批量操作") {
+                HStack {
+                    Button("全选", action: store.selectAllImportItems)
+                    Button("反选", action: store.invertImportSelection)
+                    Spacer()
+                    Text("已选 \(store.selectedImportItemIDs.count) 条").foregroundStyle(.secondary)
+                }
+                .disabled(store.importUpdating)
+                Picker("批量分类", selection: $batchCategoryID) {
+                    Text("请选择").tag("")
+                    ForEach(store.categories) { Text($0.name).tag($0.id) }
+                }
+                .onChange(of: batchCategoryID) { value in
+                    guard !value.isEmpty else { return }
+                    store.setSelectedImportCategory(value)
+                    batchCategoryID = ""
+                }
+                HStack {
+                    Button("批量排除") { store.setSelectedImportSkipped(true) }
+                    Button("恢复入账") { store.setSelectedImportSkipped(false) }
+                }
+                .disabled(store.selectedImportItemIDs.isEmpty || store.importUpdating)
+            }
+        }
+    }
+
+    private var previewSection: some View {
+        Section("预览") {
+            ForEach($store.importItems) { $item in
+                ImportPreviewRow(item: $item)
+            }
+            Button("确认入账", action: store.commitImport)
+                .disabled(!store.importReady || store.importUpdating)
+        }
+    }
+
+    @ViewBuilder
+    private var feedbackSections: some View {
+        if let message = store.importMessage {
+            Section { Label(message, systemImage: "checkmark.circle").foregroundStyle(Color.income) }
+        }
+        if let error = store.importError {
+            Section { Text(error).foregroundStyle(.red) }
+        }
+    }
+}
+
+private struct ImportPreviewRow: View {
+    @EnvironmentObject private var store: AppStore
+    @Binding var item: ImportItemUI
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            Toggle(isOn: selection) {
+                HStack { Text(item.note.isEmpty ? "无备注" : item.note); Spacer(); Text(item.amountMinor.rmb) }
+            }
+            Text("\(item.date.formatted(date: .abbreviated, time: .shortened)) · \(item.sourceDisplayName)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            if let duplicate = item.duplicateDisplayName { Text(duplicate).foregroundStyle(.red) }
+            Picker("类型", selection: type) {
+                Text("请选择").tag(EntryType?.none)
+                ForEach(EntryType.allCases) { Text($0.label).tag(Optional($0)) }
+            }
+            Picker("分类", selection: categoryID) {
+                Text("请选择").tag("")
+                ForEach(availableCategories) { Text($0.name).tag($0.id) }
+            }
+            Picker("账户", selection: accountID) {
+                Text("请选择").tag("")
+                ForEach(store.accounts) { Text($0.name).tag($0.id) }
+            }
+            TextField("备注", text: note)
+            TextField("标签（逗号分隔）", text: tags)
+            Toggle("不计入收支", isOn: excluded)
+            Toggle("排除不入账", isOn: skipped)
+        }
+    }
+
+    private var availableCategories: [CategoryUI] {
+        store.categories.filter { item.type == nil || $0.type == item.type }
+    }
+
+    private var selection: Binding<Bool> {
+        Binding(
+            get: { store.selectedImportItemIDs.contains(item.id) },
+            set: { store.setImportSelection(item.id, selected: $0) }
+        )
+    }
+
+    private var type: Binding<EntryType?> { edit(\.type) }
+    private var categoryID: Binding<String> { editOptional(\.categoryID) }
+    private var accountID: Binding<String> { editOptional(\.accountID) }
+    private var note: Binding<String> { edit(\.note) }
+    private var excluded: Binding<Bool> { edit(\.excluded) }
+    private var skipped: Binding<Bool> { edit(\.skipped) }
+    private var tags: Binding<String> {
+        Binding(
+            get: { item.tags.joined(separator: ",") },
+            set: {
+                item.tags = $0.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+                store.updateImportItem(item)
+            }
+        )
+    }
+
+    private func edit<Value>(_ keyPath: WritableKeyPath<ImportItemUI, Value>) -> Binding<Value> {
+        Binding(
+            get: { item[keyPath: keyPath] },
+            set: { item[keyPath: keyPath] = $0; store.updateImportItem(item) }
+        )
+    }
+
+    private func editOptional(_ keyPath: WritableKeyPath<ImportItemUI, String?>) -> Binding<String> {
+        Binding(
+            get: { item[keyPath: keyPath] ?? "" },
+            set: { item[keyPath: keyPath] = $0.isEmpty ? nil : $0; store.updateImportItem(item) }
         )
     }
 }
@@ -629,22 +718,77 @@ private extension View {
                 }
         }
     }
+
+    @ViewBuilder
+    func managementEditorFrame(minWidth: CGFloat) -> some View {
+        #if os(macOS)
+        frame(minWidth: minWidth)
+        #else
+        self
+        #endif
+    }
+}
+
+private struct AsyncSaveButton: View {
+    let action: (@escaping (String?) -> Void) -> Void
+    @State private var saving = false
+    @State private var error: String?
+
+    var body: some View {
+        if let error {
+            Text(error)
+                .foregroundStyle(Color.expense)
+                .accessibilityLabel("保存失败：\(error)")
+        }
+        Button {
+            saving = true
+            error = nil
+            action {
+                saving = false
+                error = $0
+            }
+        } label: {
+            if saving {
+                HStack {
+                    ProgressView()
+                    Text("保存中")
+                }
+            } else {
+                Text("保存")
+            }
+        }
+        .disabled(saving)
+        .accessibilityHint(saving ? "正在保存，请稍候" : "验证并保存当前输入")
+    }
 }
 
 private struct NameEditor: View {
     let title: String
     @State private var name: String
-    let save: (String) -> Void
-    init(title: String, initial: String, save: @escaping (String) -> Void) { self.title = title; _name = State(initialValue: initial); self.save = save }
-    var body: some View { Form { TextField("名称", text: $name); Button("保存") { save(name) } }.padding().frame(minWidth: 320) }
+    let save: (String, @escaping (String?) -> Void) -> Void
+    init(title: String, initial: String, save: @escaping (String, @escaping (String?) -> Void) -> Void) { self.title = title; _name = State(initialValue: initial); self.save = save }
+    var body: some View {
+        Form {
+            TextField("名称", text: $name)
+            AsyncSaveButton { completion in
+                guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    completion("请输入名称")
+                    return
+                }
+                save(name, completion)
+            }
+        }
+        .padding()
+        .managementEditorFrame(minWidth: 320)
+    }
 }
 
 private struct LedgerEditor: View {
     @State private var name: String
     @State private var coverKey: String
-    let save: (String, String?) -> Void
+    let save: (String, String?, @escaping (String?) -> Void) -> Void
 
-    init(ledger: LedgerUI?, save: @escaping (String, String?) -> Void) {
+    init(ledger: LedgerUI?, save: @escaping (String, String?, @escaping (String?) -> Void) -> Void) {
         _name = State(initialValue: ledger?.name ?? "")
         _coverKey = State(initialValue: ledger?.coverKey ?? "")
         self.save = save
@@ -654,10 +798,16 @@ private struct LedgerEditor: View {
         Form {
             TextField("名称", text: $name)
             TextField("封面标识（可选）", text: $coverKey)
-            Button("保存") { save(name, coverKey.isEmpty ? nil : coverKey) }
+            AsyncSaveButton { completion in
+                guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    completion("请输入账本名称")
+                    return
+                }
+                save(name, coverKey.isEmpty ? nil : coverKey, completion)
+            }
         }
         .padding()
-        .frame(minWidth: 340)
+        .managementEditorFrame(minWidth: 340)
     }
 }
 
@@ -669,9 +819,8 @@ private struct AccountEditor: View {
     @State private var cardNumber: String
     @State private var note: String
     @State private var included: Bool
-    @State private var balanceError: String?
-    let save: (String, Int64, String, String, String?, String?, Bool) -> Void
-    init(account: AccountUI?, save: @escaping (String, Int64, String, String, String?, String?, Bool) -> Void) {
+    let save: (String, Int64, String, String, String?, String?, Bool, @escaping (String?) -> Void) -> Void
+    init(account: AccountUI?, save: @escaping (String, Int64, String, String, String?, String?, Bool, @escaping (String?) -> Void) -> Void) {
         _name = State(initialValue: account?.name ?? "")
         _balance = State(initialValue: account.map { NSDecimalNumber(decimal: Decimal($0.balanceMinor) / 100).stringValue } ?? "0")
         _type = State(initialValue: account?.type ?? "CASH")
@@ -679,7 +828,6 @@ private struct AccountEditor: View {
         _cardNumber = State(initialValue: account?.cardNumber ?? "")
         _note = State(initialValue: account?.note ?? "")
         _included = State(initialValue: account?.includeInTotalAssets ?? true)
-        _balanceError = State(initialValue: nil)
         self.save = save
     }
     var body: some View {
@@ -696,16 +844,12 @@ private struct AccountEditor: View {
             TextField("卡号（可选）", text: $cardNumber)
             TextField("备注（可选）", text: $note)
             TextField("余额", text: $balance)
-            if let balanceError {
-                Text(balanceError).foregroundStyle(Color.expense)
-            }
             Toggle("计入总资产", isOn: $included)
-            Button("保存") {
+            AsyncSaveButton { completion in
                 guard let balanceMinor = balance.signedMoneyMinor else {
-                    balanceError = "请输入有效余额，最多两位小数"
+                    completion("请输入有效余额，最多两位小数")
                     return
                 }
-                balanceError = nil
                 save(
                     name,
                     balanceMinor,
@@ -713,12 +857,13 @@ private struct AccountEditor: View {
                     iconKey,
                     cardNumber.isEmpty ? nil : cardNumber,
                     note.isEmpty ? nil : note,
-                    included
+                    included,
+                    completion
                 )
             }
         }
         .padding()
-        .frame(minWidth: 320)
+        .managementEditorFrame(minWidth: 320)
     }
 }
 
@@ -728,8 +873,8 @@ private struct CategoryEditor: View {
     @State private var type: EntryType
     @State private var parentID: String?
     @State private var iconKey: String
-    let save: (String, EntryType, String?, String?) -> Void
-    init(category: CategoryUI?, save: @escaping (String, EntryType, String?, String?) -> Void) {
+    let save: (String, EntryType, String?, String?, @escaping (String?) -> Void) -> Void
+    init(category: CategoryUI?, save: @escaping (String, EntryType, String?, String?, @escaping (String?) -> Void) -> Void) {
         _name = State(initialValue: category?.name ?? "")
         _type = State(initialValue: category?.type ?? .expense)
         _parentID = State(initialValue: category?.parentID)
@@ -745,8 +890,16 @@ private struct CategoryEditor: View {
                 ForEach(store.categories.filter { $0.parentID == nil && $0.type == type }) { Text($0.name).tag(Optional($0.id)) }
             }
             if parentID == nil { CategoryIconPicker(selection: $iconKey) }
-            Button("保存") { save(name, type, parentID, parentID == nil ? iconKey : nil) }
-        }.padding().frame(minWidth: 360)
+            AsyncSaveButton { completion in
+                guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    completion("请输入分类名称")
+                    return
+                }
+                save(name, type, parentID, parentID == nil ? iconKey : nil, completion)
+            }
+        }
+        .padding()
+        .managementEditorFrame(minWidth: 360)
     }
 }
 
@@ -824,16 +977,14 @@ private struct RuleEditor: View {
     @State private var actionType: String
     @State private var actionValue: String
     @State private var priority: Int
-    @State private var validationError: String?
-    let save: (String, String, String, String, String, Int) -> Void
-    init(rule: RuleUI?, save: @escaping (String, String, String, String, String, Int) -> Void) {
+    let save: (String, String, String, String, String, Int, @escaping (String?) -> Void) -> Void
+    init(rule: RuleUI?, save: @escaping (String, String, String, String, String, Int, @escaping (String?) -> Void) -> Void) {
         _name = State(initialValue: rule?.name ?? "")
         _conditionType = State(initialValue: rule?.conditionType ?? "NOTE_CONTAINS")
         _conditionValue = State(initialValue: rule?.conditionValue ?? "")
         _actionType = State(initialValue: rule?.actionType ?? "SET_CATEGORY")
         _actionValue = State(initialValue: rule?.actionValue ?? "")
         _priority = State(initialValue: rule?.priority ?? 0)
-        _validationError = State(initialValue: nil)
         self.save = save
     }
     var body: some View {
@@ -846,6 +997,12 @@ private struct RuleEditor: View {
             }
             if conditionType == "TRANSACTION_TYPE" {
                 Picker("匹配值", selection: $conditionValue) { Text("支出").tag("EXPENSE"); Text("收入").tag("INCOME") }
+            } else if conditionType == "TRANSACTION_SOURCE" {
+                Picker("来源平台", selection: $conditionValue) {
+                    ForEach(transactionSourceOptions, id: \.id) { source in
+                        Text(source.label).tag(source.id)
+                    }
+                }
             } else {
                 TextField("匹配值", text: $conditionValue)
             }
@@ -861,43 +1018,44 @@ private struct RuleEditor: View {
                 }
             }
             Stepper("优先级 \(priority)", value: $priority, in: 0...999)
-            if let validationError {
-                Text(validationError).foregroundStyle(Color.expense)
-            }
-            Button("保存", action: saveIfValid)
+            AsyncSaveButton { saveIfValid(completion: $0) }
         }
         .onAppear {
             if actionType == "SET_CATEGORY", !store.categories.contains(where: { $0.id == actionValue }) {
                 actionValue = ""
             }
+            if conditionType == "TRANSACTION_SOURCE", !transactionSourceOptions.contains(where: { $0.id == conditionValue }) {
+                conditionValue = transactionSourceOptions[0].id
+            }
         }
         .onChange(of: conditionType) {
-            conditionValue = $0 == "TRANSACTION_TYPE" ? "EXPENSE" : ""
-            validationError = nil
+            switch $0 {
+            case "TRANSACTION_TYPE": conditionValue = "EXPENSE"
+            case "TRANSACTION_SOURCE": conditionValue = transactionSourceOptions[0].id
+            default: conditionValue = ""
+            }
         }
         .onChange(of: actionType) { _ in
             actionValue = ""
-            validationError = nil
         }
         .padding()
-        .frame(minWidth: 360)
+        .managementEditorFrame(minWidth: 360)
     }
 
-    private func saveIfValid() {
+    private func saveIfValid(completion: @escaping (String?) -> Void) {
         guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            validationError = "请输入规则名称"
+            completion("请输入规则名称")
             return
         }
         guard !conditionValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            validationError = "请输入匹配值"
+            completion("请选择或输入匹配值")
             return
         }
         guard actionType != "SET_CATEGORY" || store.categories.contains(where: { $0.id == actionValue }) else {
-            validationError = "请选择有效分类"
+            completion("请选择有效分类")
             return
         }
-        validationError = nil
-        save(name, conditionType, conditionValue, actionType, actionValue, priority)
+        save(name, conditionType, conditionValue, actionType, actionValue, priority, completion)
     }
 }
 
@@ -911,8 +1069,8 @@ private struct ReminderEditor: View {
     @State private var weekday: Int
     @State private var month: Int
     @State private var paused: Bool
-    let save: (String, String, Int64?, String, Int?, Int?, Int?, Int?, Bool) -> Void
-    init(reminder: ReminderUI?, save: @escaping (String, String, Int64?, String, Int?, Int?, Int?, Int?, Bool) -> Void) {
+    let save: (String, String, Int64?, String, Int?, Int?, Int?, Int?, Bool, @escaping (String?) -> Void) -> Void
+    init(reminder: ReminderUI?, save: @escaping (String, String, Int64?, String, Int?, Int?, Int?, Int?, Bool, @escaping (String?) -> Void) -> Void) {
         _name = State(initialValue: reminder?.name ?? "")
         _type = State(initialValue: reminder?.type.contains("SUBSCRIPTION") == true ? "SUBSCRIPTION" : "REPAYMENT")
         _amount = State(initialValue: reminder?.amountMinor.map { NSDecimalNumber(decimal: Decimal($0) / 100).stringValue } ?? "")
@@ -952,8 +1110,17 @@ private struct ReminderEditor: View {
             default: Stepper("日期 \(day)", value: $day, in: 1...31)
             }
             Toggle("暂停", isOn: $paused)
-            Button("保存") {
-                let amountMinor = amount.isEmpty ? nil : amount.moneyMinor
+            AsyncSaveButton { completion in
+                let trimmedAmount = amount.trimmingCharacters(in: .whitespacesAndNewlines)
+                let amountMinor: Int64?
+                if trimmedAmount.isEmpty {
+                    amountMinor = nil
+                } else if let value = trimmedAmount.moneyMinor, value > 0 {
+                    amountMinor = value
+                } else {
+                    completion("请输入大于 0 且最多两位小数的金额，或留空")
+                    return
+                }
                 save(
                     name,
                     type,
@@ -963,12 +1130,13 @@ private struct ReminderEditor: View {
                     schedule == "DAYS_AFTER_STATEMENT" ? daysAfter : nil,
                     schedule == "WEEKLY" ? weekday : nil,
                     schedule == "YEARLY" ? month : nil,
-                    paused
+                    paused,
+                    completion
                 )
             }
         }
         .onChange(of: type) { schedule = $0 == "REPAYMENT" ? "FIXED_REPAYMENT_DAY" : "MONTHLY" }
         .padding()
-        .frame(minWidth: 360)
+        .managementEditorFrame(minWidth: 360)
     }
 }
