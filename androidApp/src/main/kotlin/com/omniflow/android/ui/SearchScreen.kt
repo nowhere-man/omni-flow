@@ -35,8 +35,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
@@ -73,6 +75,7 @@ internal fun SearchScreen(
     onEditTransaction: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var filtersExpanded by rememberSaveable { mutableStateOf(false) }
     LazyColumn(
         modifier = modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -93,17 +96,22 @@ internal fun SearchScreen(
             )
         }
         item {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = { filtersExpanded = !filtersExpanded }) {
+                    Text(if (filtersExpanded) "收起筛选" else "展开筛选")
+                }
+                Spacer(Modifier.weight(1f))
+                if (state.query.hasFilters) TextButton(onClick = onClear) { Text("清除") }
+            }
+        }
+        if (filtersExpanded) item {
             Card(
                 Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             ) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text("筛选", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.weight(1f))
-                        if (state.query.hasFilters) TextButton(onClick = onClear) { Text("清除") }
-                    }
+                    Text("筛选条件", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     SearchTypeSelector(state.query.type, onType)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         ValueMenu(
@@ -173,7 +181,7 @@ internal fun SearchScreen(
             }
             items(result.items, key = { it.transaction.id }) { item ->
                 Card(
-                    Modifier.fillMaxWidth().clickable { onEditTransaction(item.transaction.id) },
+                    Modifier.fillMaxWidth().clickable(role = Role.Button) { onEditTransaction(item.transaction.id) },
                     shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 ) {

@@ -11,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -43,6 +44,7 @@ import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material3.Card
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -56,6 +58,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -65,12 +69,12 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.Modifier
@@ -81,6 +85,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import com.omniflow.shared.domain.model.CalendarDaySummary
 import com.omniflow.shared.domain.model.AppearanceMode
 import com.omniflow.shared.domain.model.CalendarTransactionFilter
@@ -105,7 +111,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import com.omniflow.android.ReminderScheduler
 
 private enum class MainDestination(val label: String, val icon: ImageVector) {
@@ -118,15 +127,18 @@ private enum class MainDestination(val label: String, val icon: ImageVector) {
 
 @Composable
 fun OmniFlowApp(viewModel: OmniFlowViewModel) {
-    val homeState by viewModel.homeUiState.collectAsState()
-    val analyticsState by viewModel.analyticsUiState.collectAsState()
-    val rangeDetailState by viewModel.rangeDetailUiState.collectAsState()
-    val searchState by viewModel.searchUiState.collectAsState()
-    val transactionState by viewModel.transactionUiState.collectAsState()
-    val transactionRecordDetailState by viewModel.transactionRecordDetailUiState.collectAsState()
-    val moreState by viewModel.moreUiState.collectAsState()
+    val homeState by viewModel.homeUiState.collectAsStateWithLifecycle()
+    val analyticsState by viewModel.analyticsUiState.collectAsStateWithLifecycle()
+    val rangeDetailState by viewModel.rangeDetailUiState.collectAsStateWithLifecycle()
+    val searchState by viewModel.searchUiState.collectAsStateWithLifecycle()
+    val transactionState by viewModel.transactionUiState.collectAsStateWithLifecycle()
+    val transactionRecordDetailState by viewModel.transactionRecordDetailUiState.collectAsStateWithLifecycle()
+    val moreState by viewModel.moreUiState.collectAsStateWithLifecycle()
     var destination by rememberSaveable { mutableStateOf(MainDestination.HOME) }
     var moreStartPage by rememberSaveable { mutableStateOf(MorePage.HOME) }
+    var transactionReturnDestination by rememberSaveable { mutableStateOf(MainDestination.HOME) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+    var notificationPermissionRequested by rememberSaveable { mutableStateOf(false) }
     var lastBackPressedAt by remember { mutableStateOf(0L) }
     val darkTheme = when (homeState.appearanceMode) {
         AppearanceMode.SYSTEM -> isSystemInDarkTheme()
@@ -136,16 +148,15 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
     val primaryColor = themePrimaryColor(moreState.preferences.themeColor, darkTheme)
     val primaryContainerColor = themePrimaryContainerColor(moreState.preferences.themeColor, darkTheme)
     val context = LocalContext.current
+    val view = LocalView.current
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     LaunchedEffect(moreState.reminders) {
         ReminderScheduler(context).sync(moreState.reminders)
-        if (moreState.reminders.isNotEmpty() && Build.VERSION.SDK_INT >= 33) {
-            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
     }
     LaunchedEffect(transactionState.completed) {
         if (transactionState.completed) {
-            destination = MainDestination.HOME
+            destination = transactionReturnDestination
+            transactionReturnDestination = MainDestination.HOME
             viewModel.consumeTransactionCompletion()
         }
     }
@@ -155,6 +166,14 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
         } else if (transactionRecordDetailState.isVisible) {
             viewModel.dismissTransactionRecordDetail()
         } else if (destination == MainDestination.ADD) {
+            val hasDraft = transactionState.editingId != null ||
+                transactionState.amountInput.isNotBlank() ||
+                transactionState.note.isNotBlank() ||
+                transactionState.categoryId != null ||
+                transactionState.selectedTagIds.isNotEmpty() ||
+                transactionState.isExcluded
+            if (hasDraft) showDiscardDialog = true else destination = transactionReturnDestination
+        } else if (destination != MainDestination.HOME) {
             destination = MainDestination.HOME
         } else {
             val now = SystemClock.elapsedRealtime()
@@ -202,10 +221,19 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
             )
         },
     ) {
+        SideEffect {
+            (context as? Activity)?.window?.let { window ->
+                val controller = WindowCompat.getInsetsController(window, view)
+                controller.isAppearanceLightStatusBars = !darkTheme
+                controller.isAppearanceLightNavigationBars = !darkTheme
+            }
+        }
         AppLockGate(moreState.preferences.appLockEnabled) {
+        BoxWithConstraints {
+        val useNavigationRail = maxWidth >= 600.dp && destination != MainDestination.ADD
         Scaffold(
             bottomBar = {
-                if (destination != MainDestination.ADD) {
+                if (destination != MainDestination.ADD && !useNavigationRail) {
                     PrimaryNavigation(
                         destination = destination,
                         onDestination = {
@@ -214,12 +242,29 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
                         },
                         onAdd = {
                             viewModel.startNewTransaction()
+                            transactionReturnDestination = destination
                             destination = MainDestination.ADD
                         },
                     )
                 }
             },
         ) { padding ->
+            Row(Modifier.fillMaxSize()) {
+                if (useNavigationRail) {
+                    PrimaryNavigationRail(
+                        destination = destination,
+                        onDestination = {
+                            destination = it
+                            if (it == MainDestination.MORE) moreStartPage = MorePage.HOME
+                        },
+                        onAdd = {
+                            viewModel.startNewTransaction()
+                            transactionReturnDestination = destination
+                            destination = MainDestination.ADD
+                        },
+                    )
+                }
+                Box(Modifier.weight(1f)) {
             when (destination) {
                 MainDestination.HOME -> HomeScreen(
                     state = homeState,
@@ -234,10 +279,12 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
                     onToggleDisplayMode = viewModel::toggleDisplayMode,
                     onAdd = { date, ledgerId ->
                         viewModel.startNewTransaction(date, ledgerId)
+                        transactionReturnDestination = destination
                         destination = MainDestination.ADD
                     },
                     onEdit = { transactionId ->
                         viewModel.dismissDate()
+                        transactionReturnDestination = MainDestination.HOME
                         viewModel.showTransactionRecordDetail(transactionId)
                     },
                     onManageLedgers = {
@@ -260,6 +307,7 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
                     onDismissStatementTable = viewModel::dismissStatementTable,
                     onAddTransaction = {
                         viewModel.startNewTransaction()
+                        transactionReturnDestination = destination
                         destination = MainDestination.ADD
                     },
                     modifier = Modifier.padding(padding),
@@ -295,6 +343,7 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
                     onDateRange = viewModel::setSearchDateRange,
                     onClear = viewModel::clearSearch,
                     onEditTransaction = { transactionId ->
+                        transactionReturnDestination = destination
                         viewModel.showTransactionRecordDetail(transactionId)
                     },
                     modifier = Modifier.padding(padding),
@@ -303,8 +352,16 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
                     state = moreState,
                     viewModel = viewModel,
                     initialPage = moreStartPage,
+                    onRequestNotificationPermission = {
+                        if (Build.VERSION.SDK_INT >= 33 && !notificationPermissionRequested) {
+                            notificationPermissionRequested = true
+                            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    },
                     modifier = Modifier.padding(padding),
                 )
+            }
+                }
             }
         }
         if (rangeDetailState.isVisible) {
@@ -315,6 +372,7 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
                 onDismiss = viewModel::dismissDate,
                 onEdit = { transactionId ->
                     viewModel.dismissDate()
+                    transactionReturnDestination = MainDestination.HOME
                     viewModel.showTransactionRecordDetail(transactionId)
                 },
             )
@@ -326,10 +384,27 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel) {
                 onEdit = { transactionId ->
                     viewModel.dismissTransactionRecordDetail()
                     viewModel.editTransaction(transactionId)
+                    transactionReturnDestination = destination
                     destination = MainDestination.ADD
                 },
                 onDelete = viewModel::deleteTransactionRecordDetail,
             )
+        }
+        if (showDiscardDialog) {
+            AlertDialog(
+                onDismissRequest = { showDiscardDialog = false },
+                title = { Text("放弃未保存的交易？") },
+                text = { Text("当前输入还没有保存，返回后将丢失这些内容。") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showDiscardDialog = false
+                        destination = transactionReturnDestination
+                        transactionReturnDestination = MainDestination.HOME
+                    }) { Text("放弃") }
+                },
+                dismissButton = { TextButton(onClick = { showDiscardDialog = false }) { Text("继续编辑") } },
+            )
+        }
         }
         }
     }
@@ -389,6 +464,35 @@ private fun PrimaryNavigation(
             shape = CircleShape,
         ) {
             Icon(Icons.Default.Add, contentDescription = "新增交易")
+        }
+    }
+}
+
+@Composable
+private fun PrimaryNavigationRail(
+    destination: MainDestination,
+    onDestination: (MainDestination) -> Unit,
+    onAdd: () -> Unit,
+) {
+    NavigationRail(
+        header = {
+            FloatingActionButton(onClick = onAdd, modifier = Modifier.padding(vertical = 12.dp)) {
+                Icon(Icons.Default.Add, contentDescription = "新增交易")
+            }
+        },
+    ) {
+        listOf(
+            MainDestination.HOME,
+            MainDestination.ANALYTICS,
+            MainDestination.SEARCH,
+            MainDestination.MORE,
+        ).forEach { item ->
+            NavigationRailItem(
+                selected = destination == item,
+                onClick = { onDestination(item) },
+                icon = { Icon(item.icon, contentDescription = item.label) },
+                label = { Text(item.label) },
+            )
         }
     }
 }
@@ -463,7 +567,9 @@ private fun HomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 16.dp)
+                    .widthIn(max = 1040.dp)
+                    .wrapContentWidth(Alignment.CenterHorizontally),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 Spacer(Modifier.height(8.dp))

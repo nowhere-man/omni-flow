@@ -66,6 +66,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -118,9 +120,14 @@ internal fun MoreScreen(
     state: MoreUiState,
     viewModel: OmniFlowViewModel,
     initialPage: MorePage = MorePage.HOME,
+    onRequestNotificationPermission: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var pageStack by remember(initialPage) {
+    val pageStackSaver = listSaver<List<MorePage>, String>(
+        save = { stack -> stack.map(MorePage::name) },
+        restore = { names -> names.map(MorePage::valueOf) },
+    )
+    var pageStack by rememberSaveable(initialPage, stateSaver = pageStackSaver) {
         mutableStateOf(if (initialPage == MorePage.HOME) listOf(MorePage.HOME) else listOf(MorePage.HOME, initialPage))
     }
     val page = pageStack.last()
@@ -152,7 +159,13 @@ internal fun MoreScreen(
             MorePage.ACCOUNTS,
             MorePage.ASSETS,
             MorePage.CATEGORIES,
-            MorePage.TAGS -> ManagementPage(page, state, viewModel, onPage = ::navigate)
+            MorePage.TAGS -> ManagementPage(
+                page,
+                state,
+                viewModel,
+                onPage = ::navigate,
+                onRequestNotificationPermission = onRequestNotificationPermission,
+            )
         }
     }
 }
@@ -234,11 +247,11 @@ private fun GroupedOptionRow(
     val modifier = if (onClick == null) {
         Modifier.fillMaxWidth()
     } else {
-        Modifier.fillMaxWidth().clickable(onClick = onClick)
+        Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onClick)
     }
     Surface(modifier = modifier, color = MaterialTheme.colorScheme.surfaceVariant, shape = shape) {
         Row(
-            Modifier.fillMaxWidth().heightIn(min = 84.dp).padding(horizontal = 20.dp, vertical = 16.dp),
+            Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -248,7 +261,7 @@ private fun GroupedOptionRow(
                 tint = MaterialTheme.colorScheme.primary,
             )
             Column(
-                Modifier.weight(1f).padding(horizontal = 20.dp),
+                Modifier.weight(1f).padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
