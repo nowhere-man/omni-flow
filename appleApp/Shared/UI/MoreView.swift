@@ -9,7 +9,17 @@ struct MoreView: View {
             VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("净资产").font(.caption.weight(.medium))
-                    Text(store.accounts.filter(\.includeInTotalAssets).map(\.balanceMinor).reduce(0, +).rmb).font(.largeTitle.bold())
+                    Text(netWorth.rmb).font(.largeTitle.bold())
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 12) {
+                            assetMetric("资产", value: assets, color: .income)
+                            assetMetric("负债", value: liabilities, color: .expense)
+                        }
+                        VStack(spacing: 8) {
+                            assetMetric("资产", value: assets, color: .income)
+                            assetMetric("负债", value: liabilities, color: .expense)
+                        }
+                    }
                     Label(syncStatus, systemImage: "arrow.triangle.2.circlepath")
                         .font(.caption)
                 }
@@ -25,6 +35,20 @@ struct MoreView: View {
         }
         .navigationTitle("更多")
         .onAppear(perform: store.loadBackups)
+    }
+
+    private var includedAccounts: [AccountUI] { store.accounts.filter(\.includeInTotalAssets) }
+    private var assets: Int64 { includedAccounts.lazy.map(\.balanceMinor).filter { $0 > 0 }.reduce(0, +) }
+    private var liabilities: Int64 { includedAccounts.lazy.map(\.balanceMinor).filter { $0 < 0 }.reduce(0) { $0 + abs($1) } }
+    private var netWorth: Int64 { includedAccounts.lazy.map(\.balanceMinor).reduce(0, +) }
+
+    private func assetMetric(_ title: String, value: Int64, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Text(title).font(.caption).foregroundStyle(.secondary)
+            Spacer(minLength: 4)
+            Text(value.rmb).font(.subheadline.weight(.semibold)).foregroundStyle(color).monospacedDigit()
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private var syncStatus: String {
@@ -48,27 +72,31 @@ private struct ModuleSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title).font(.headline)
-            VStack(spacing: 0) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 132), spacing: 12)], spacing: 12) {
                 ForEach(modules, id: \.0) { module in
                     NavigationLink { ModuleView(title: module.0) } label: {
-                        HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 12) {
                             Image(systemName: module.1)
-                                .frame(width: 24)
+                                .font(.title3.weight(.semibold))
                                 .foregroundStyle(themeColor)
-                            Text(module.0).foregroundStyle(.primary)
-                            Spacer()
-                            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+                                .frame(width: 44, height: 44)
+                                .background(themeColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                                .accessibilityHidden(true)
+                            HStack {
+                                Text(module.0).foregroundStyle(.primary).fontWeight(.medium).lineLimit(1)
+                                Spacer(minLength: 6)
+                                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary).accessibilityHidden(true)
+                            }
                         }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 16)
-                            .contentShape(Rectangle())
+                        .frame(maxWidth: .infinity, minHeight: 104, alignment: .leading)
+                        .padding(14)
+                        .contentShape(Rectangle())
+                        .liquidGlassSurface(cornerRadius: 16, interactive: true)
                     }
                     .buttonStyle(.plain)
-                    if module.0 != modules.last?.0 { Divider() }
+                    .accessibilityHint("打开\(module.0)")
                 }
             }
-            .liquidGlassSurface(cornerRadius: 16)
         }
     }
 }

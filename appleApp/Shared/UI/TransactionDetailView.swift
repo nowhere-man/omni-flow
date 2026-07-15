@@ -180,6 +180,7 @@ struct TransactionDetailView: View {
             Image(systemName: systemImage)
                 .frame(width: 24)
                 .foregroundStyle(themeColor)
+                .accessibilityHidden(true)
             Text(label).foregroundStyle(.secondary)
             Spacer()
             Text(value)
@@ -189,5 +190,7 @@ struct TransactionDetailView: View {
                 .minimumScaleFactor(lineLimit == 1 ? 0.75 : 1)
         }
         .padding(.vertical, 12)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(label)：\(value)")
     }
 }

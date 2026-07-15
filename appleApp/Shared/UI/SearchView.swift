@@ -19,6 +19,9 @@ struct SearchView: View {
                         Button { store.searchText = ""; store.scheduleSearch() } label: { Image(systemName: "xmark.circle.fill") }
                             .buttonStyle(.plain)
                             .foregroundStyle(.secondary)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                            .accessibilityLabel("清除搜索关键词")
                     }
                 }
                 .padding(.horizontal, 14)
@@ -34,6 +37,8 @@ struct SearchView: View {
                             Button("清除全部", action: clear)
                                 .buttonStyle(.plain)
                                 .foregroundStyle(themeColor)
+                                .frame(minHeight: 44)
+                                .contentShape(Rectangle())
                                 .accessibilityLabel("清除全部筛选条件")
                         }
                     }
@@ -121,7 +126,7 @@ struct SearchView: View {
             label: "账本",
             title: store.searchLedgerID.flatMap { id in store.ledgers.first { $0.id == id }?.name } ?? "所有账本",
             allTitle: "所有账本",
-            values: store.ledgers.map { ($0.id, $0.name) },
+            values: store.ledgers.map { SearchMenuOption(id: $0.id, title: $0.name) },
             onAll: { store.setSearchLedger(nil) },
             onSelected: { store.setSearchLedger($0) }
         )
@@ -129,7 +134,7 @@ struct SearchView: View {
             label: "账户",
             title: store.searchAccountID.flatMap { id in store.accounts.first { $0.id == id }?.name } ?? "所有账户",
             allTitle: "所有账户",
-            values: store.accounts.map { ($0.id, $0.name) },
+            values: store.accounts.map { SearchMenuOption(id: $0.id, title: $0.name) },
             onAll: { setAccount(nil) },
             onSelected: { setAccount($0) }
         )
@@ -192,14 +197,14 @@ struct SearchView: View {
         label: String,
         title: String,
         allTitle: String,
-        values: [(String, String)],
+        values: [SearchMenuOption],
         onAll: @escaping () -> Void,
         onSelected: @escaping (String) -> Void
     ) -> some View {
         let menu = Menu {
             Button(allTitle, action: onAll)
-            ForEach(values.indices, id: \.self) { index in
-                Button(values[index].1) { onSelected(values[index].0) }
+            ForEach(values) { value in
+                Button(value.title) { onSelected(value.id) }
             }
         } label: {
             VStack(alignment: .leading, spacing: 3) {
@@ -247,7 +252,7 @@ struct SearchView: View {
                     }
                 }
                 Spacer()
-                Text(item.amountMinor.rmb)
+                Text("\(item.type == .expense ? "−" : "+")\(item.amountMinor.rmb)")
                     .fontWeight(.bold).monospacedDigit()
                     .foregroundStyle(item.type == .expense ? Color.expense : Color.income)
             }
@@ -257,16 +262,16 @@ struct SearchView: View {
         .buttonStyle(.plain)
         .liquidGlassSurface(cornerRadius: 18, interactive: true)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(store.transactionDateTimeText(item.date))，\(item.categoryDisplayName)，\(item.type.label)，\(item.amountMinor.rmb)，\(item.accountName)\(item.excluded ? "，未计入收支" : "")")
+        .accessibilityLabel("\(store.transactionDateTimeText(item.date))，\(item.categoryDisplayName)，\(item.type.label)，\(item.type == .expense ? "负" : "正")\(item.amountMinor.rmb)，\(item.accountName)\(item.excluded ? "，未计入收支" : "")")
     }
 
     private var resultSummary: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("共 \(store.searchResults.count) 笔匹配交易").font(.headline)
             HStack {
-                Text("收入 \(store.searchIncomeMinor.rmb)").foregroundStyle(Color.income)
+                Text("收入 +\(store.searchIncomeMinor.rmb)").foregroundStyle(Color.income)
                 Spacer()
-                Text("支出 \(store.searchExpenseMinor.rmb)").foregroundStyle(Color.expense)
+                Text("支出 −\(store.searchExpenseMinor.rmb)").foregroundStyle(Color.expense)
             }
             .font(.subheadline.weight(.semibold))
             if store.searchResults.contains(where: \.excluded) {
@@ -284,6 +289,11 @@ struct SearchView: View {
     private func setType(_ value: EntryType?) { store.searchType = value; search() }
     private func setAccount(_ value: String?) { store.searchAccountID = value; search() }
     private func clear() { store.clearSearch() }
+}
+
+private struct SearchMenuOption: Identifiable {
+    let id: String
+    let title: String
 }
 
 private extension View {

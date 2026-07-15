@@ -1,9 +1,35 @@
 import Foundation
 import SwiftUI
+#if os(iOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 
 extension Color {
-    static let expense = Color(red: 232 / 255, green: 121 / 255, blue: 112 / 255)
-    static let income = Color(red: 85 / 255, green: 182 / 255, blue: 167 / 255)
+    #if os(iOS)
+    static let expense = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 1, green: 143 / 255, blue: 135 / 255, alpha: 1)
+            : UIColor(red: 179 / 255, green: 58 / 255, blue: 50 / 255, alpha: 1)
+    })
+    static let income = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 111 / 255, green: 214 / 255, blue: 196 / 255, alpha: 1)
+            : UIColor(red: 38 / 255, green: 114 / 255, blue: 102 / 255, alpha: 1)
+    })
+    #else
+    static let expense = Color(nsColor: NSColor(name: nil) { appearance in
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            ? NSColor(red: 1, green: 143 / 255, blue: 135 / 255, alpha: 1)
+            : NSColor(red: 179 / 255, green: 58 / 255, blue: 50 / 255, alpha: 1)
+    })
+    static let income = Color(nsColor: NSColor(name: nil) { appearance in
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            ? NSColor(red: 111 / 255, green: 214 / 255, blue: 196 / 255, alpha: 1)
+            : NSColor(red: 38 / 255, green: 114 / 255, blue: 102 / 255, alpha: 1)
+    })
+    #endif
 }
 
 enum AppThemeColor: String, CaseIterable, Identifiable {
@@ -41,11 +67,20 @@ enum AppThemeColor: String, CaseIterable, Identifiable {
     }
 
     func selectionForeground(for scheme: ColorScheme) -> Color {
-        self == .graphite && scheme == .dark ? .black : .white
+        relativeLuminance(for: scheme) > 0.179 ? .black : .white
     }
 
     func selectionCSSColor(for scheme: ColorScheme) -> String {
-        self == .graphite && scheme == .dark ? "#000000" : "#FFFFFF"
+        relativeLuminance(for: scheme) > 0.179 ? "#000000" : "#FFFFFF"
+    }
+
+    private func relativeLuminance(for scheme: ColorScheme) -> Double {
+        let hex = hexValue(for: scheme)
+        let components = [16, 8, 0].map { shift -> Double in
+            let value = Double((hex >> UInt32(shift)) & 0xFF) / 255
+            return value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * components[0] + 0.7152 * components[1] + 0.0722 * components[2]
     }
 
     private func hexValue(for scheme: ColorScheme) -> UInt32 {
@@ -146,6 +181,8 @@ struct SettingsView: View {
                     SettingsRow(systemImage: "lock.shield", title: "应用锁", detail: "打开应用时验证设备密码或生物识别") {
                         Toggle("", isOn: Binding(get: { store.appLockEnabled }, set: store.setAppLockEnabled))
                             .labelsHidden()
+                            .accessibilityLabel("应用锁")
+                            .accessibilityValue(store.appLockEnabled ? "已开启" : "已关闭")
                     }
                 }
 
@@ -261,6 +298,7 @@ private struct SettingsRow<Accessory: View>: View {
                 .font(.body.weight(.semibold))
                 .foregroundStyle(themeColor)
                 .frame(width: 26)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
                 Text(title).fontWeight(.medium)
                 Text(detail).font(.caption).foregroundStyle(.secondary)
