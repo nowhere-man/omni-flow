@@ -115,6 +115,10 @@ class SqlDelightImportWorkflow(
         }
     }
 
+    override suspend fun cancel(sessionId: ImportSessionId): Result<Unit> = withContext(Dispatchers.Default) {
+        runCatching { sessions.delete(sessionId) }
+    }
+
     override suspend fun commit(sessionId: ImportSessionId): Result<ImportCommitResult> = withContext(Dispatchers.Default) {
         runCatching {
             val session = sessions.state(sessionId) ?: error("导入会话不存在或已结束")

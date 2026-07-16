@@ -3,26 +3,11 @@ import SwiftUI
 #if os(iOS)
 struct PhoneRootView: View {
     @EnvironmentObject private var store: AppStore
+    @Environment(\.colorScheme) private var colorScheme
     @State private var lastContentDestination = MainDestination.home
 
     var body: some View {
-        TabView(selection: phoneDestination) {
-            NavigationStack { HomeView() }
-                .tabItem { Label("首页", systemImage: "house") }
-                .tag(MainDestination.home)
-            NavigationStack { AnalyticsView() }
-                .tabItem { Label("统计", systemImage: "chart.bar") }
-                .tag(MainDestination.analytics)
-            Color.clear
-                .tabItem { Label("记账", systemImage: "plus") }
-                .tag(MainDestination.transaction)
-            NavigationStack { SearchView() }
-                .tabItem { Label("搜索", systemImage: "magnifyingglass") }
-                .tag(MainDestination.search)
-            NavigationStack { MoreView() }
-                .tabItem { Label("更多", systemImage: "ellipsis.circle") }
-                .tag(MainDestination.more)
-        }
+        tabViewWithTransactionAction
         .sheet(isPresented: Binding(
             get: { store.destination == .transaction },
             set: { if !$0 { store.destination = lastContentDestination } }
@@ -42,19 +27,78 @@ struct PhoneRootView: View {
         .onChange(of: store.destination) { destination in
             if destination != .transaction { lastContentDestination = destination }
         }
+        .task(id: "\(store.themeColor)|\(colorScheme)") {
+            let theme = AppThemeColor(rawValue: store.themeColor) ?? .lavender
+            let keys = bundledIconKeys.prefix(6).map { "fluent-\($0)" }
+            await SVGIconPreheater.preheat(keys: keys, tint: theme.cssColor(for: colorScheme))
+        }
+    }
+
+    @ViewBuilder
+    private var tabViewWithTransactionAction: some View {
+        if #available(iOS 26.0, *) {
+            contentTabs
+                .tabViewBottomAccessory {
+                    transactionButton
+                        .buttonStyle(.glassProminent)
+                        .controlSize(.extraLarge)
+                        .padding(.horizontal)
+                }
+        } else {
+            contentTabs
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    transactionButton
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                        .background(.ultraThinMaterial)
+                }
+        }
+    }
+
+    @ViewBuilder
+    private var contentTabs: some View {
+        if #available(iOS 18.0, *) {
+            TabView(selection: phoneDestination) {
+                Tab("首页", systemImage: "house", value: MainDestination.home) { NavigationStack { HomeView() } }
+                Tab("统计", systemImage: "chart.bar", value: MainDestination.analytics) { NavigationStack { AnalyticsView() } }
+                Tab("搜索", systemImage: "magnifyingglass", value: MainDestination.search) { NavigationStack { SearchView() } }
+                Tab("更多", systemImage: "ellipsis.circle", value: MainDestination.more) { NavigationStack { MoreView() } }
+            }
+        } else {
+            TabView(selection: phoneDestination) {
+                NavigationStack { HomeView() }
+                    .tabItem { Label("首页", systemImage: "house") }
+                    .tag(MainDestination.home)
+                NavigationStack { AnalyticsView() }
+                    .tabItem { Label("统计", systemImage: "chart.bar") }
+                    .tag(MainDestination.analytics)
+                NavigationStack { SearchView() }
+                    .tabItem { Label("搜索", systemImage: "magnifyingglass") }
+                    .tag(MainDestination.search)
+                NavigationStack { MoreView() }
+                    .tabItem { Label("更多", systemImage: "ellipsis.circle") }
+                    .tag(MainDestination.more)
+            }
+        }
+    }
+
+    private var transactionButton: some View {
+        Button { store.startNewTransaction() } label: {
+            Label("记账", systemImage: "plus")
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity, minHeight: 44)
+        }
+        .accessibilityHint("打开新建交易表单")
     }
 
     private var phoneDestination: Binding<MainDestination> {
         Binding(
-            get: { store.destination == .transaction ? lastContentDestination : store.destination },
+            get: { lastContentDestination },
             set: { destination in
-                if destination == .transaction {
-                    if store.destination != .transaction { lastContentDestination = store.destination }
-                    store.startNewTransaction()
-                } else {
-                    lastContentDestination = destination
-                    store.destination = destination
-                }
+                lastContentDestination = destination
+                store.destination = destination
             }
         )
     }
