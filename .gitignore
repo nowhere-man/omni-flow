@@ -8,6 +8,7 @@ logs
 
 # Gradle
 .gradle/
+.kotlin/
 **/build/
 local.properties
 

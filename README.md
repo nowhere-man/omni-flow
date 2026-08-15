@@ -4,7 +4,7 @@
   <h1>OmniFlow</h1>
   <p>一款原生多端记账 App，让账单自动流入账本 </p>
   <p>
-    <img src="https://img.shields.io/badge/Platform-Android%20%C2%B7%20iOS%20%C2%B7%20macOS-brightgreen.svg" alt="Platform" />
+    <img src="https://img.shields.io/badge/Platform-Android-brightgreen.svg" alt="Platform" />
     <a href="https://github.com/nowhere-man/OmniFlow/releases/latest"><img src="https://img.shields.io/github/v/release/nowhere-man/OmniFlow?label=release&color=orange" alt="Latest release" /></a>
     <a href="https://github.com/nowhere-man/OmniFlow/releases"><img src="https://img.shields.io/github/downloads/nowhere-man/OmniFlow/total?label=downloads" alt="Total release downloads" /></a>
     <a href="https://github.com/nowhere-man/OmniFlow/commits/master"><img src="https://img.shields.io/github/last-commit/nowhere-man/OmniFlow/master" alt="Last commit" /></a>
@@ -19,11 +19,11 @@
 
 ### ☁️ 多端数据同步
 
-数据本地优先，可通过 iCloud 或 WebDAV 备份与恢复，在多个设备间保持数据一致。
+数据本地优先，可通过 WebDAV 备份与恢复，在多个设备间保持数据一致。
 
 ### 📱 原生应用体验
 
-Android 使用 Kotlin 与 Jetpack Compose，iOS 和 macOS 使用 SwiftUI，交互与界面遵循各平台习惯。
+Android 使用 Kotlin 与 Jetpack Compose，交互与界面遵循平台习惯。
 
 ## 🧩 核心功能
 
@@ -36,19 +36,7 @@ Android 使用 Kotlin 与 Jetpack Compose，iOS 和 macOS 使用 SwiftUI，交�
 
 ## 📦 安装
 
-### iOS
-
-在 SideStore 中添加源：
-
-```text
-https://raw.githubusercontent.com/nowhere-man/OmniFlow/master/sidestore-source.json
-```
-
-### macOS
-
-```bash
-sudo xattr -rd com.apple.quarantine /Applications/OmniFlow.app
-```
+从 [GitHub Releases](https://github.com/nowhere-man/OmniFlow/releases/latest) 下载最新的 Android APK。
 
 ## 🤝 贡献
 
