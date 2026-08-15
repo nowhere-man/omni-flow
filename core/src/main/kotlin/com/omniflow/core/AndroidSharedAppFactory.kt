@@ -1,0 +1,15 @@
+package com.omniflow.core
+
+import android.content.Context
+import app.cash.sqldelight.driver.android.AndroidSqliteDriver
+import com.omniflow.core.data.sync.SyncAdapter
+import com.omniflow.core.db.OmniFlowDatabase
+import com.omniflow.core.domain.model.SyncTarget
+
+fun createAndroidSharedApp(
+    context: Context,
+    syncAdapters: Map<SyncTarget, SyncAdapter> = emptyMap(),
+): SharedApp = SharedApp(
+    AndroidSqliteDriver(OmniFlowDatabase.Schema, context, "omniflow.db"),
+    syncAdapters,
+)

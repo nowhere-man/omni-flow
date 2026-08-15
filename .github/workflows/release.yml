@@ -1,21 +1,23 @@
-name: Build Multiplatform
+name: Build Android
 
 on:
   push:
-    tags: ['v*']
   workflow_dispatch:
+    inputs:
+      version:
+        description: Android version, for example v0.2.1
+        required: true
+        type: string
 
 permissions:
   contents: read
-
-concurrency:
-  group: build-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   android:
     name: Android arm64-v8a APK
     runs-on: ubuntu-latest
+    env:
+      REQUESTED_VERSION: ${{ inputs.version }}
     steps:
       - uses: actions/checkout@v5
 
@@ -26,8 +28,27 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v5
 
-      - name: Verify shared logic, migrations, and Android lint
-        run: ./gradlew :shared:jvmTest :shared:verifySqlDelightMigration :androidApp:lintRelease --stacktrace
+      - name: Resolve Android version
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-].*)?$ ]]; then
+              echo "Release tag must use v<semver>: $GITHUB_REF_NAME"
+              exit 1
+            fi
+            VERSION="${GITHUB_REF_NAME#v}"
+          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            VERSION="${REQUESTED_VERSION#v}"
+          else
+            VERSION="0.0.0-${GITHUB_SHA::7}"
+          fi
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-].*)?$ ]]; then
+            echo "Version must use v<semver> or <semver>: $VERSION"
+            exit 1
+          fi
+          echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Verify core logic, migrations, and Android lint
+        run: ./gradlew :core:testDebugUnitTest :core:verifySqlDelightMigration :app:lintRelease -PversionName="$APP_VERSION" --stacktrace
 
       - name: Decode Android keystore
         env:
@@ -42,7 +63,8 @@ jobs:
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          ./gradlew :shared:compileKotlinJvm :androidApp:assembleRelease --stacktrace \
+          ./gradlew :app:assembleRelease --stacktrace \
+            -PversionName="$APP_VERSION" \
             -PandroidArm64Only=true \
             -Pandroid.injected.signing.store.file="$RUNNER_TEMP/omniflow-release.keystore" \
             -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \
@@ -52,10 +74,9 @@ jobs:
       - name: Collect APK
         run: |
           mkdir -p dist
-          APK=$(find androidApp/build/outputs/apk -type f -name '*arm64-v8a*.apk' -print -quit)
+          APK=$(find app/build/outputs/apk -type f -name '*arm64-v8a*.apk' -print -quit)
           test -n "$APK"
-          VERSION="${GITHUB_REF_NAME//\//-}"
-          cp "$APK" "dist/OmniFlow-Android-arm64-v8a-${VERSION}.apk"
+          cp "$APK" "dist/OmniFlow-Android-arm64-v8a-v${APP_VERSION}.apk"
 
       - uses: actions/upload-artifact@v6
         with:

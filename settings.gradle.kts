@@ -17,5 +17,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "OmniFlow"
-include(":shared")
-include(":androidApp")
+include(":app", ":core")

@@ -1,0 +1,9 @@
+package com.omniflow.core.domain.facade
+
+import com.omniflow.core.domain.model.AppPreferences
+import kotlinx.coroutines.flow.Flow
+
+interface AppPreferenceFacade {
+    fun observe(): Flow<Result<AppPreferences>>
+    suspend fun save(preferences: AppPreferences): Result<Unit>
+}

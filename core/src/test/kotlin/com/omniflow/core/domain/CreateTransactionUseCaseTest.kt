@@ -1,0 +1,85 @@
+package com.omniflow.core.domain
+
+import com.omniflow.core.domain.model.AccountId
+import com.omniflow.core.domain.model.Money
+import com.omniflow.core.domain.model.Transaction
+import com.omniflow.core.domain.model.TransactionType
+import com.omniflow.core.domain.repository.TransactionRepository
+import com.omniflow.core.domain.usecase.CreateTransactionCommand
+import com.omniflow.core.domain.usecase.CreateTransactionUseCase
+import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.Instant
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+class CreateTransactionUseCaseTest {
+    @Test
+    fun createsRmbTransactionWithMinorUnits() = runBlocking {
+        val repository = RecordingTransactionRepository()
+        val result = CreateTransactionUseCase(repository)(
+            CreateTransactionCommand(
+                id = "transaction-1",
+                ledgerId = "ledger-1",
+                accountId = "account-1",
+                categoryId = "category-1",
+                amount = Money(1234),
+                type = TransactionType.EXPENSE,
+                occurredAt = Instant.fromEpochMilliseconds(1_000),
+                note = " 午餐 ",
+                isExcluded = false,
+            )
+        )
+
+        assertTrue(result.isSuccess)
+        assertEquals(Money(1234), repository.transaction?.amount)
+        assertEquals("午餐", repository.transaction?.note)
+    }
+
+    @Test
+    fun rejectsMissingLedgerAndZeroAmount() = runBlocking {
+        val repository = RecordingTransactionRepository()
+        val useCase = CreateTransactionUseCase(repository)
+        val missingLedger = useCase(validCommand(ledgerId = null))
+        val zeroAmount = useCase(validCommand(amount = Money.Zero))
+
+        assertFalse(missingLedger.isSuccess)
+        assertFalse(zeroAmount.isSuccess)
+        assertEquals(null, repository.transaction)
+    }
+
+    private fun validCommand(
+        ledgerId: String? = "ledger-1",
+        amount: Money = Money(1),
+    ) = CreateTransactionCommand(
+        id = "transaction-1",
+        ledgerId = ledgerId,
+        accountId = "account-1",
+        categoryId = "category-1",
+        amount = amount,
+        type = TransactionType.EXPENSE,
+        occurredAt = Instant.fromEpochMilliseconds(1_000),
+        note = null,
+        isExcluded = false,
+    )
+
+    private class RecordingTransactionRepository : TransactionRepository {
+        var transaction: Transaction? = null
+
+        override suspend fun activeTransaction(transactionId: String): Transaction? =
+            transaction?.takeIf { it.id == transactionId }
+
+        override suspend fun create(transaction: Transaction) {
+            this.transaction = transaction
+        }
+
+        override suspend fun update(transaction: Transaction) {
+            this.transaction = transaction
+        }
+
+        override suspend fun archive(transactionId: String) {
+            if (transaction?.id == transactionId) transaction = null
+        }
+    }
+}
