@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -51,11 +52,13 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRail
@@ -148,6 +151,7 @@ private fun androidx.navigation3.runtime.NavKey.toMainDestination(): MainDestina
     else -> error("Unknown route: $this")
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String, Long>? = null) {
     val homeState by viewModel.homeUiState.collectAsStateWithLifecycle()
@@ -164,7 +168,9 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
     )
     val destination = MainDestination.entries[pagerState.targetPage]
     val isEditor = navigationState.currentRoute == OmniRoute.TransactionEditor
+    val editorSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showDiscardDialog by remember { mutableStateOf(false) }
+    var restoreEditorSheet by remember { mutableStateOf(false) }
     var notificationPermissionRequested by rememberSaveable { mutableStateOf(false) }
     var lastBackPressedAt by remember { mutableLongStateOf(0L) }
     val darkTheme = when (homeState.appearanceMode) {
@@ -201,6 +207,13 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
     LaunchedEffect(navigationState.topLevelRoute) {
         val target = navigationState.topLevelRoute.toMainDestination().ordinal
         if (pagerState.currentPage != target) pagerState.animateScrollToPage(target)
+    }
+    // 有草稿时下滑关闭只弹确认框、不出栈，此时弹层已经滑到隐藏位，选「继续编辑」要把它推回来。
+    LaunchedEffect(restoreEditorSheet) {
+        if (restoreEditorSheet) {
+            editorSheetState.show()
+            restoreEditorSheet = false
+        }
     }
     fun handleBack() {
         if (isEditor) {
@@ -245,22 +258,34 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
         }
         AppLockGate(moreState.preferences.appLockEnabled) {
         BoxWithConstraints {
-        val useNavigationRail = maxWidth >= 600.dp && !isEditor
+        val useNavigationRail = maxWidth >= 600.dp
         Scaffold(
             bottomBar = {
-                if (!isEditor && !useNavigationRail) {
+                if (!useNavigationRail) {
                     PrimaryNavigation(
                         destination = destination,
                         onDestination = {
                             navigationState.navigate(it.route)
                         },
-                        onAdd = {
-                            viewModel.startNewTransaction()
-                            navigationState.navigate(OmniRoute.TransactionEditor)
-                        },
                     )
                 }
             },
+            floatingActionButton = {
+                if (!useNavigationRail && !isEditor) {
+                    FloatingActionButton(
+                        onClick = {
+                            viewModel.startNewTransaction()
+                            navigationState.navigate(OmniRoute.TransactionEditor)
+                        },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        shape = CircleShape,
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "新增交易")
+                    }
+                }
+            },
+            floatingActionButtonPosition = FabPosition.End,
         ) { padding ->
             // nav3 的 NavDisplay 只在自己的 backStack 深度 > 1 时才注册返回处理器，
             // 停在某个 tab 根部时返回键会直接落到 Activity 默认行为把应用关掉。
@@ -318,23 +343,30 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
                     },
                     modifier = Modifier.padding(padding),
                 )
-                OmniRoute.TransactionEditor -> TransactionEditorScreen(
-                    state = transactionState,
-                    onType = viewModel::setTransactionType,
-                    onLedger = viewModel::setTransactionLedger,
-                    onAccount = viewModel::setTransactionAccount,
-                    onCategory = viewModel::setTransactionCategory,
-                    onReorderPrimary = viewModel::reorderTransactionPrimaryCategories,
-                    onCreateSecondary = viewModel::createTransactionSecondaryCategory,
-                    onTag = viewModel::toggleTransactionTag,
-                    onNote = viewModel::setTransactionNote,
-                    onDate = viewModel::setTransactionDate,
-                    onExcluded = viewModel::setTransactionExcluded,
-                    onAmountKey = viewModel::pressAmountKey,
-                    onSaveAgain = { viewModel.saveTransaction(true) },
-                    onDone = { viewModel.saveTransaction(false) },
-                    modifier = Modifier.padding(padding),
-                )
+                OmniRoute.TransactionEditor -> ModalBottomSheet(
+                    onDismissRequest = ::handleBack,
+                    sheetState = editorSheetState,
+                    contentWindowInsets = { WindowInsets(0) },
+                    dragHandle = null,
+                ) {
+                    TransactionEditorScreen(
+                        state = transactionState,
+                        onType = viewModel::setTransactionType,
+                        onLedger = viewModel::setTransactionLedger,
+                        onAccount = viewModel::setTransactionAccount,
+                        onCategory = viewModel::setTransactionCategory,
+                        onReorderPrimary = viewModel::reorderTransactionPrimaryCategories,
+                        onCreateSecondary = viewModel::createTransactionSecondaryCategory,
+                        onTag = viewModel::toggleTransactionTag,
+                        onNote = viewModel::setTransactionNote,
+                        onDate = viewModel::setTransactionDate,
+                        onExcluded = viewModel::setTransactionExcluded,
+                        onAmountKey = viewModel::pressAmountKey,
+                        onSaveAgain = { viewModel.saveTransaction(true) },
+                        onDone = { viewModel.saveTransaction(false) },
+                        onClose = ::handleBack,
+                    )
+                }
                 OmniRoute.Search -> SearchScreen(
                     state = searchState,
                     onKeyword = viewModel::setSearchKeyword,
@@ -471,7 +503,7 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
         }
         if (showDiscardDialog) {
             AlertDialog(
-                onDismissRequest = { showDiscardDialog = false },
+                onDismissRequest = { showDiscardDialog = false; restoreEditorSheet = true },
                 title = { Text("放弃未保存的交易？") },
                 text = { Text("当前输入还没有保存，返回后将丢失这些内容。") },
                 confirmButton = {
@@ -480,7 +512,9 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
                         navigationState.goBack()
                     }) { Text("放弃") }
                 },
-                dismissButton = { TextButton(onClick = { showDiscardDialog = false }) { Text("继续编辑") } },
+                dismissButton = {
+                    TextButton(onClick = { showDiscardDialog = false; restoreEditorSheet = true }) { Text("继续编辑") }
+                },
             )
         }
         }
@@ -604,38 +638,15 @@ private fun omniColorScheme(
 private fun PrimaryNavigation(
     destination: MainDestination,
     onDestination: (MainDestination) -> Unit,
-    onAdd: () -> Unit,
 ) {
-    Box {
-        NavigationBar {
-            listOf(MainDestination.HOME, MainDestination.ANALYTICS).forEach { item ->
-                NavigationBarItem(
-                    selected = destination == item,
-                    onClick = { onDestination(item) },
-                    icon = { Icon(item.icon, contentDescription = item.label) },
-                    label = { Text(item.label) },
-                )
-            }
-            Spacer(Modifier.weight(1.2f))
-            listOf(MainDestination.SEARCH, MainDestination.MORE).forEach { item ->
-                NavigationBarItem(
-                    selected = destination == item,
-                    onClick = { onDestination(item) },
-                    icon = { Icon(item.icon, contentDescription = item.label) },
-                    label = { Text(item.label) },
-                )
-            }
-        }
-        FloatingActionButton(
-            onClick = onAdd,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 12.dp),
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            shape = CircleShape,
-        ) {
-            Icon(Icons.Default.Add, contentDescription = "新增交易")
+    NavigationBar {
+        MainDestination.entries.forEach { item ->
+            NavigationBarItem(
+                selected = destination == item,
+                onClick = { onDestination(item) },
+                icon = { Icon(item.icon, contentDescription = item.label) },
+                label = { Text(item.label) },
+            )
         }
     }
 }
@@ -843,7 +854,8 @@ private fun HomeScreen(
                         )
                     }
                 }
-                Spacer(Modifier.height(12.dp))
+                // 给右下角的悬浮记账按钮让位，避免压住最后一条明细
+                Spacer(Modifier.height(88.dp))
             }
         }
 

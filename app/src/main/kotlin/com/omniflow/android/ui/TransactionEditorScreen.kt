@@ -15,8 +15,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
@@ -25,12 +27,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -40,7 +46,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -57,12 +62,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
@@ -79,7 +88,6 @@ import com.omniflow.core.domain.model.Ledger
 import com.omniflow.core.domain.model.TransactionType
 import kotlin.math.ceil
 import kotlin.math.roundToInt
-import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
@@ -102,6 +110,7 @@ internal fun TransactionEditorScreen(
     onAmountKey: (String) -> Unit,
     onSaveAgain: () -> Unit,
     onDone: () -> Unit,
+    onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val selectedCategory = state.categories.firstOrNull { it.id == state.categoryId }
@@ -111,53 +120,65 @@ internal fun TransactionEditorScreen(
     val selectedPrimary = state.categories.firstOrNull { it.id == primaryId }
     val selectedSecondary = selectedCategory?.takeIf { it.parentId != null }
     var showSecondaryDialog by remember { mutableStateOf(false) }
+    var showMoreMenu by remember { mutableStateOf(false) }
+    // 备注聚焦时让出数字键盘的位置给系统输入法，否则面板会被两块键盘一起挤没。
+    var noteFocused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
 
-    Scaffold(
-        modifier = modifier.fillMaxSize().imePadding(),
-        bottomBar = {
-            TransactionFooter(state, onAmountKey, onSaveAgain, onDone)
-        },
-    ) { contentPadding ->
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .imePadding(),
+    ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(contentPadding).padding(horizontal = 12.dp),
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .padding(horizontal = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            TransactionTopBar(
+            EditorTopBar(
                 state = state,
-                selectedType = state.type,
-                ledgers = state.ledgers,
-                accounts = state.accounts,
                 onType = onType,
                 onLedger = { onLedger(it.id) },
-                onAccount = { onAccount(it.id) },
+                onClose = onClose,
             )
             if (primaryCategories.isEmpty()) {
                 Text("选择账本后加载分类", color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
-                ReorderableCategoryGrid(
-                    primaryCategories,
-                    primaryId,
-                    onCategory,
-                    onReorderPrimary,
+                PagedCategoryGrid(
+                    categories = primaryCategories,
+                    selectedId = primaryId,
+                    onSelected = onCategory,
+                    onReordered = onReorderPrimary,
+                    resetSignal = state.error,
                 )
             }
-            Spacer(Modifier.weight(1f))
-            if (state.tags.isNotEmpty()) {
-                CompactTagRow(state.tags, state.selectedTagIds, onTag)
-            }
-            if (selectedPrimary != null) {
-                TransactionEntryPanel(
-                    state = state,
-                    primary = selectedPrimary,
-                    selectedSecondary = selectedSecondary,
-                    secondaryCategories = secondaryCategories,
-                    onSecondary = onCategory,
-                    onAddSecondary = { showSecondaryDialog = true },
-                    onNote = onNote,
-                    onDate = onDate,
-                    onExcluded = onExcluded,
-                )
-            }
+            EditorAttributeRow(
+                state = state,
+                onAccount = { onAccount(it.id) },
+                onTag = onTag,
+                moreExpanded = showMoreMenu,
+                onMoreExpanded = { showMoreMenu = it },
+                onDate = onDate,
+                onExcluded = onExcluded,
+            )
+            TransactionEntryPanel(
+                state = state,
+                primary = selectedPrimary,
+                selectedSecondary = selectedSecondary,
+                secondaryCategories = secondaryCategories,
+                onSecondary = onCategory,
+                onAddSecondary = { showSecondaryDialog = true },
+                onNote = onNote,
+                onDate = onDate,
+                onNoteFocusChanged = { noteFocused = it },
+            )
+            Spacer(Modifier.height(4.dp))
+        }
+        if (noteFocused) {
+            NoteInputBar(onDone = { focusManager.clearFocus() })
+        } else {
+            TransactionFooter(state, onAmountKey, onSaveAgain, onDone)
         }
     }
 
@@ -174,53 +195,44 @@ internal fun TransactionEditorScreen(
 }
 
 @Composable
-private fun TransactionTopBar(
+private fun EditorTopBar(
     state: TransactionEditorUiState,
-    selectedType: TransactionType,
-    ledgers: List<Ledger>,
-    accounts: List<Account>,
     onType: (TransactionType) -> Unit,
     onLedger: (Ledger) -> Unit,
-    onAccount: (Account) -> Unit,
+    onClose: () -> Unit,
 ) {
-    val ledgerName = ledgers.firstOrNull { it.id == state.ledgerId }?.name ?: "选择账本"
-    val selectedAccount = accounts.firstOrNull { it.id == state.accountId }
-    Box(Modifier.fillMaxWidth().height(56.dp)) {
+    val ledgerName = state.ledgers.firstOrNull { it.id == state.ledgerId }?.name ?: "选择账本"
+    Row(
+        Modifier.fillMaxWidth().height(52.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         EditorMenuButton(
-            values = ledgers,
+            values = state.ledgers,
             valueLabel = Ledger::name,
             onSelected = onLedger,
             contentDescription = ledgerName,
-            modifier = Modifier.align(Alignment.CenterStart),
         ) {
             Icon(
                 Icons.AutoMirrored.Filled.MenuBook,
                 contentDescription = null,
-                modifier = Modifier.size(25.dp),
+                modifier = Modifier.size(22.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
         }
         TransactionModeSwitch(
-            selected = selectedType,
+            selected = state.type,
             onSelected = onType,
-            modifier = Modifier.align(Alignment.Center).width(190.dp),
+            modifier = Modifier.weight(1f),
         )
-        EditorMenuButton(
-            values = accounts,
-            valueLabel = Account::name,
-            onSelected = onAccount,
-            contentDescription = selectedAccount?.name ?: "选择账户",
-            modifier = Modifier.align(Alignment.CenterEnd),
+        Surface(
+            onClick = onClose,
+            modifier = Modifier.size(40.dp).semantics { contentDescription = "关闭" },
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceVariant,
         ) {
-            if (selectedAccount == null) {
-                Icon(
-                    Icons.Default.AccountBalanceWallet,
-                    contentDescription = null,
-                    modifier = Modifier.size(25.dp),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            } else {
-                SvgIcon(selectedAccount.iconKey, Modifier.size(25.dp), tint = MaterialTheme.colorScheme.primary)
+            Box(contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(20.dp))
             }
         }
     }
@@ -239,7 +251,7 @@ private fun <T> EditorMenuButton(
     Box(modifier) {
         Surface(
             onClick = { expanded = true },
-            modifier = Modifier.size(48.dp).semantics { this.contentDescription = contentDescription },
+            modifier = Modifier.size(40.dp).semantics { this.contentDescription = contentDescription },
             shape = CircleShape,
             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
         ) {
@@ -256,119 +268,321 @@ private fun <T> EditorMenuButton(
     }
 }
 
+/** 收支切换用语义色：支出走 error、收入走 tertiary，和列表、统计口径一致。 */
 @Composable
 private fun TransactionModeSwitch(
     selected: TransactionType,
     onSelected: (TransactionType) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        TransactionType.entries.forEach { type ->
-            FilterChip(
-                selected = type == selected,
-                onClick = { onSelected(type) },
-                label = { Text(if (type == TransactionType.EXPENSE) "支出" else "收入") },
-                modifier = Modifier.weight(1f),
+    Surface(
+        modifier = modifier.height(40.dp),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+    ) {
+        Row(Modifier.padding(3.dp)) {
+            TransactionType.entries.forEach { type ->
+                val isSelected = type == selected
+                val container = when {
+                    !isSelected -> Color.Transparent
+                    type == TransactionType.EXPENSE -> MaterialTheme.colorScheme.errorContainer
+                    else -> MaterialTheme.colorScheme.tertiaryContainer
+                }
+                val content = when {
+                    !isSelected -> MaterialTheme.colorScheme.onSurfaceVariant
+                    type == TransactionType.EXPENSE -> MaterialTheme.colorScheme.onErrorContainer
+                    else -> MaterialTheme.colorScheme.onTertiaryContainer
+                }
+                Surface(
+                    onClick = { onSelected(type) },
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    shape = CircleShape,
+                    color = container,
+                    contentColor = content,
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            if (type == TransactionType.EXPENSE) "支出" else "收入",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** 账户、标签和「更多」（时间 / 不计入统计）单独一行，把录入面板压到三行。 */
+@Composable
+private fun EditorAttributeRow(
+    state: TransactionEditorUiState,
+    onAccount: (Account) -> Unit,
+    onTag: (String) -> Unit,
+    moreExpanded: Boolean,
+    onMoreExpanded: (Boolean) -> Unit,
+    onDate: (kotlinx.datetime.Instant) -> Unit,
+    onExcluded: (Boolean) -> Unit,
+) {
+    val context = LocalContext.current
+    val dateTime = state.occurredAt.toLocalDateTime(ChinaTimeZone)
+    val selectedAccount = state.accounts.firstOrNull { it.id == state.accountId }
+    var accountExpanded by remember { mutableStateOf(false) }
+    var tagExpanded by remember { mutableStateOf(false) }
+    Row(
+        Modifier.fillMaxWidth().height(38.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Box {
+            EditorChip(
+                label = selectedAccount?.name ?: "选择账户",
+                onClick = { accountExpanded = true },
+                leading = {
+                    if (selectedAccount == null) {
+                        Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, modifier = Modifier.size(15.dp))
+                    } else {
+                        SvgIcon(selectedAccount.iconKey, Modifier.size(15.dp))
+                    }
+                },
             )
+            DropdownMenu(expanded = accountExpanded, onDismissRequest = { accountExpanded = false }) {
+                state.accounts.forEach { account ->
+                    DropdownMenuItem(
+                        text = { Text(account.name) },
+                        onClick = { accountExpanded = false; onAccount(account) },
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        if (state.tags.isNotEmpty()) {
+            Box {
+                EditorChip(
+                    label = if (state.selectedTagIds.isEmpty()) "标签" else "标签 ${state.selectedTagIds.size}",
+                    onClick = { tagExpanded = true },
+                    selected = state.selectedTagIds.isNotEmpty(),
+                )
+                DropdownMenu(expanded = tagExpanded, onDismissRequest = { tagExpanded = false }) {
+                    state.tags.forEach { tag ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    tag.name,
+                                    fontWeight = if (tag.id in state.selectedTagIds) FontWeight.Bold else FontWeight.Normal,
+                                )
+                            },
+                            onClick = { onTag(tag.id) },
+                        )
+                    }
+                }
+            }
+        }
+        Box {
+            EditorChip(label = "⋯", onClick = { onMoreExpanded(true) })
+            DropdownMenu(expanded = moreExpanded, onDismissRequest = { onMoreExpanded(false) }) {
+                DropdownMenuItem(
+                    text = { Text("时间 ${dateTime.hour.twoDigits()}:${dateTime.minute.twoDigits()}") },
+                    onClick = {
+                        onMoreExpanded(false)
+                        TimePickerDialog(
+                            context,
+                            { _, hour, minute ->
+                                onDate(LocalDateTime(dateTime.date, LocalTime(hour, minute)).toInstant(ChinaTimeZone))
+                            },
+                            dateTime.hour,
+                            dateTime.minute,
+                            true,
+                        ).show()
+                    },
+                )
+                DropdownMenuItem(
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("不计入统计", modifier = Modifier.weight(1f))
+                            Spacer(Modifier.width(8.dp))
+                            Switch(checked = state.isExcluded, onCheckedChange = null)
+                        }
+                    },
+                    onClick = { onExcluded(!state.isExcluded) },
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun ReorderableCategoryGrid(
+private fun EditorChip(
+    label: String,
+    onClick: () -> Unit,
+    selected: Boolean = false,
+    leading: (@Composable () -> Unit)? = null,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.height(34.dp),
+        shape = CircleShape,
+        color = if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        Row(
+            Modifier.padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+            leading?.invoke()
+            Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+/**
+ * 一级分类固定 3 行 5 列一页，超出横向翻页，高度恒定，不会再把下面的录入面板挤没。
+ * 长按仍可拖动排序：[detectDragGesturesAfterLongPress] 只在长按后消费手势，
+ * 普通横滑交给 pager；拖拽期间关掉 pager 的手势，避免翻页抢走正在进行的拖动。
+ */
+@Composable
+private fun PagedCategoryGrid(
     categories: List<Category>,
     selectedId: String?,
     onSelected: (String?) -> Unit,
     onReordered: (List<String>) -> Unit,
+    resetSignal: Any?,
 ) {
     val columns = 5
+    val rowsPerPage = 3
+    val perPage = columns * rowsPerPage
     val density = LocalDensity.current
     val haptics = LocalHapticFeedback.current
-    val cellHeight = 86.dp
+    val cellHeight = 72.dp
     val cellHeightPx = with(density) { cellHeight.toPx() }
     var width by remember { mutableIntStateOf(0) }
-    var ordered by remember(categories) { mutableStateOf(categories) }
+    // 乐观重排：成功时上游会推新顺序回来；失败时 error 变化触发这里回滚到数据库里的顺序。
+    var ordered by remember(categories, resetSignal) { mutableStateOf(categories) }
     var draggedId by remember { mutableStateOf<String?>(null) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var changed by remember { mutableStateOf(false) }
-    val rows = ceil(ordered.size / columns.toFloat()).toInt().coerceAtLeast(1)
-    Box(
-        modifier = Modifier.fillMaxWidth().height(cellHeight * rows.toFloat()).onSizeChanged { width = it.width },
-    ) {
-        if (width > 0) {
-            val cellWidthPx = width.toFloat() / columns
-            val cellWidth = with(density) { cellWidthPx.toDp() }
-            fun position(index: Int) = IntOffset(
-                x = ((index % columns) * cellWidthPx).roundToInt(),
-                y = ((index / columns) * cellHeightPx).roundToInt(),
-            )
-            ordered.forEachIndexed { index, category ->
-                key(category.id) {
-                    val target = position(index)
-                    val animatedTarget by animateIntOffsetAsState(target, spring(), label = "category-position")
-                    val dragging = draggedId == category.id
-                    val scale by animateFloatAsState(if (dragging) 1.08f else 1f, spring(), label = "category-scale")
-                    CategoryTile(
-                        category = category,
-                        selected = selectedId == category.id,
-                        dragging = dragging,
-                        onClick = { onSelected(category.id) },
-                        modifier = Modifier
-                            .offset {
-                                if (dragging) {
-                                    IntOffset(target.x + dragOffset.x.roundToInt(), target.y + dragOffset.y.roundToInt())
-                                } else animatedTarget
-                            }
-                            .width(cellWidth)
-                            .height(cellHeight)
-                            .padding(3.dp)
-                            .zIndex(if (dragging) 2f else 0f)
-                            .graphicsLayer {
-                                scaleX = scale
-                                scaleY = scale
-                                shadowElevation = if (dragging) 4.dp.toPx() else 0f
-                            }
-                            .pointerInput(category.id, width) {
-                                detectDragGesturesAfterLongPress(
-                                    onDragStart = {
-                                        draggedId = category.id
-                                        dragOffset = Offset.Zero
-                                        changed = false
-                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+    val pageCount = ceil(ordered.size / perPage.toFloat()).toInt().coerceAtLeast(1)
+    val pagerState = rememberPagerState(pageCount = { pageCount })
+
+    Column(Modifier.fillMaxWidth()) {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxWidth().height(cellHeight * rowsPerPage.toFloat()),
+            userScrollEnabled = draggedId == null,
+            verticalAlignment = Alignment.Top,
+        ) { page ->
+            val pageItems = ordered.drop(page * perPage).take(perPage)
+            val pageRows = ceil(pageItems.size / columns.toFloat()).toInt().coerceAtLeast(1)
+            Box(Modifier.fillMaxSize().onSizeChanged { width = it.width }) {
+                if (width > 0) {
+                    val cellWidthPx = width.toFloat() / columns
+                    val cellWidth = with(density) { cellWidthPx.toDp() }
+                    fun position(index: Int) = IntOffset(
+                        x = ((index % columns) * cellWidthPx).roundToInt(),
+                        y = ((index / columns) * cellHeightPx).roundToInt(),
+                    )
+                    pageItems.forEachIndexed { indexInPage, category ->
+                        key(category.id) {
+                            val target = position(indexInPage)
+                            val animatedTarget by animateIntOffsetAsState(target, spring(), label = "category-position")
+                            val dragging = draggedId == category.id
+                            val scale by animateFloatAsState(if (dragging) 1.08f else 1f, spring(), label = "category-scale")
+                            CategoryTile(
+                                category = category,
+                                selected = selectedId == category.id,
+                                dragging = dragging,
+                                onClick = { onSelected(category.id) },
+                                modifier = Modifier
+                                    .offset {
+                                        if (dragging) {
+                                            IntOffset(target.x + dragOffset.x.roundToInt(), target.y + dragOffset.y.roundToInt())
+                                        } else animatedTarget
+                                    }
+                                    .width(cellWidth)
+                                    .height(cellHeight)
+                                    .padding(2.dp)
+                                    .zIndex(if (dragging) 2f else 0f)
+                                    .graphicsLayer {
+                                        scaleX = scale
+                                        scaleY = scale
+                                        shadowElevation = if (dragging) 4.dp.toPx() else 0f
+                                    }
+                                    .pointerInput(category.id, width, page) {
+                                        detectDragGesturesAfterLongPress(
+                                            onDragStart = {
+                                                draggedId = category.id
+                                                dragOffset = Offset.Zero
+                                                changed = false
+                                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            },
+                                            onDragCancel = {
+                                                ordered = categories
+                                                draggedId = null
+                                                dragOffset = Offset.Zero
+                                                changed = false
+                                            },
+                                            onDragEnd = {
+                                                if (changed) onReordered(ordered.map(Category::id))
+                                                draggedId = null
+                                                dragOffset = Offset.Zero
+                                                changed = false
+                                            },
+                                            onDrag = { change, amount ->
+                                                change.consume()
+                                                val pageOffset = page * perPage
+                                                val currentIndex = ordered.indexOfFirst { it.id == category.id }
+                                                if (currentIndex < 0) return@detectDragGesturesAfterLongPress
+                                                val currentInPage = currentIndex - pageOffset
+                                                if (currentInPage !in pageItems.indices) return@detectDragGesturesAfterLongPress
+                                                dragOffset += amount
+                                                val oldBase = position(currentInPage)
+                                                val centerX = oldBase.x + dragOffset.x + cellWidthPx / 2f
+                                                val centerY = oldBase.y + dragOffset.y + cellHeightPx / 2f
+                                                val column = (centerX / cellWidthPx).toInt().coerceIn(0, columns - 1)
+                                                val row = (centerY / cellHeightPx).toInt().coerceIn(0, pageRows - 1)
+                                                // 只在当前页内重排，跨页拖动不处理
+                                                val targetInPage = (row * columns + column).coerceIn(0, pageItems.lastIndex)
+                                                if (targetInPage != currentInPage) {
+                                                    ordered = ordered.toMutableList()
+                                                        .apply { add(targetInPage + pageOffset, removeAt(currentIndex)) }
+                                                    val newBase = position(targetInPage)
+                                                    dragOffset += Offset(
+                                                        (oldBase.x - newBase.x).toFloat(),
+                                                        (oldBase.y - newBase.y).toFloat(),
+                                                    )
+                                                    changed = true
+                                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                }
+                                            },
+                                        )
                                     },
-                                    onDragCancel = {
-                                        ordered = categories
-                                        draggedId = null
-                                        dragOffset = Offset.Zero
-                                        changed = false
-                                    },
-                                    onDragEnd = {
-                                        if (changed) onReordered(ordered.map(Category::id))
-                                        draggedId = null
-                                        dragOffset = Offset.Zero
-                                        changed = false
-                                    },
-                                    onDrag = { change, amount ->
-                                        change.consume()
-                                        val currentIndex = ordered.indexOfFirst { it.id == category.id }
-                                        if (currentIndex < 0) return@detectDragGesturesAfterLongPress
-                                        dragOffset += amount
-                                        val oldBase = position(currentIndex)
-                                        val centerX = oldBase.x + dragOffset.x + cellWidthPx / 2f
-                                        val centerY = oldBase.y + dragOffset.y + cellHeightPx / 2f
-                                        val column = (centerX / cellWidthPx).toInt().coerceIn(0, columns - 1)
-                                        val row = (centerY / cellHeightPx).toInt().coerceIn(0, rows - 1)
-                                        val targetIndex = (row * columns + column).coerceIn(0, ordered.lastIndex)
-                                        if (targetIndex != currentIndex) {
-                                            ordered = ordered.toMutableList().apply { add(targetIndex, removeAt(currentIndex)) }
-                                            val newBase = position(targetIndex)
-                                            dragOffset += Offset((oldBase.x - newBase.x).toFloat(), (oldBase.y - newBase.y).toFloat())
-                                            changed = true
-                                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        }
-                                    },
-                                )
-                            },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        if (pageCount > 1) {
+            Row(
+                Modifier.fillMaxWidth().height(16.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                repeat(pageCount) { page ->
+                    val active = pagerState.currentPage == page
+                    Box(
+                        Modifier
+                            .padding(horizontal = 3.dp)
+                            .size(if (active) 7.dp else 5.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (active) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.outlineVariant
+                                },
+                            ),
                     )
                 }
             }
@@ -386,27 +600,35 @@ internal fun CategoryTile(
 ) {
     Surface(
         modifier = modifier,
-        shape = MaterialTheme.shapes.large,
+        shape = MaterialTheme.shapes.medium,
         color = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.75f) else Color.Transparent,
-        border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+        border = if (selected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null,
         tonalElevation = if (dragging) 8.dp else 0.dp,
         onClick = onClick,
     ) {
         Box(contentAlignment = Alignment.Center) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterVertically),
+                verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
             ) {
-                SvgIcon(
-                    categoryIconKey(category.iconKey),
-                    Modifier.size(40.dp),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
+                Surface(
+                    modifier = Modifier.size(40.dp),
+                    shape = CircleShape,
+                    color = if (selected) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant,
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        SvgIcon(
+                            categoryIconKey(category.iconKey),
+                            Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
                 Text(
                     category.name,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                 )
             }
@@ -414,173 +636,178 @@ internal fun CategoryTile(
     }
 }
 
+/**
+ * 录入面板常驻：金额只画在这里，以前要选完一级分类才出现，
+ * 导致没选分类时按数字完全没有反馈。
+ */
 @Composable
 private fun TransactionEntryPanel(
     state: TransactionEditorUiState,
-    primary: Category,
+    primary: Category?,
     selectedSecondary: Category?,
     secondaryCategories: List<Category>,
     onSecondary: (String?) -> Unit,
     onAddSecondary: () -> Unit,
     onNote: (String) -> Unit,
     onDate: (kotlinx.datetime.Instant) -> Unit,
-    onExcluded: (Boolean) -> Unit,
+    onNoteFocusChanged: (Boolean) -> Unit,
 ) {
+    val context = LocalContext.current
+    val dateTime = state.occurredAt.toLocalDateTime(ChinaTimeZone)
+    val amountColor = if (state.type == TransactionType.EXPENSE) {
+        MaterialTheme.colorScheme.error
+    } else {
+        MaterialTheme.colorScheme.tertiary
+    }
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    modifier = Modifier.size(36.dp),
-                    shape = MaterialTheme.shapes.small,
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        SvgIcon(categoryIconKey(primary.iconKey), Modifier.size(24.dp), tint = MaterialTheme.colorScheme.primary)
+                if (primary != null) {
+                    Surface(
+                        modifier = Modifier.size(28.dp),
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            SvgIcon(categoryIconKey(primary.iconKey), Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                        }
                     }
+                    Spacer(Modifier.width(6.dp))
                 }
+                Text(
+                    text = primary?.let { p -> selectedSecondary?.let { "${p.name} - ${it.name}" } ?: p.name } ?: "先选择分类",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = if (primary == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
                 Spacer(Modifier.width(8.dp))
-                Text(primary.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                selectedSecondary?.let {
-                    Text(" - ${it.name}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
-                }
-                Spacer(Modifier.weight(1f))
                 Text(
                     "¥${state.amountInput.ifBlank { "0" }}",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = amountColor,
+                    maxLines = 1,
                 )
             }
-            Row(
-                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                secondaryCategories.forEach { category ->
-                    FilterChip(
-                        selected = category.id == selectedSecondary?.id,
-                        onClick = { onSecondary(category.id) },
-                        label = { Text(category.name, maxLines = 1) },
-                    )
-                }
-                Surface(onClick = onAddSecondary, shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer) {
-                    Icon(Icons.Default.Add, contentDescription = "新建二级分类", modifier = Modifier.padding(10.dp).size(18.dp))
+            state.error?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
+            if (primary != null) {
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    secondaryCategories.forEach { category ->
+                        FilterChip(
+                            selected = category.id == selectedSecondary?.id,
+                            onClick = { onSecondary(if (category.id == selectedSecondary?.id) primary.id else category.id) },
+                            label = { Text(category.name, maxLines = 1) },
+                        )
+                    }
+                    Surface(onClick = onAddSecondary, shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer) {
+                        Icon(Icons.Default.Add, contentDescription = "新建二级分类", modifier = Modifier.padding(8.dp).size(16.dp))
+                    }
                 }
             }
-            CompactEntryDetails(state, onNote, onDate, onExcluded)
-        }
-    }
-}
-
-@Composable
-private fun CompactTagRow(
-    tags: List<com.omniflow.core.domain.model.Tag>,
-    selectedIds: Set<String>,
-    onSelected: (String) -> Unit,
-) {
-    Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text("标签", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        tags.forEach { tag ->
-            FilterChip(
-                selected = tag.id in selectedIds,
-                onClick = { onSelected(tag.id) },
-                label = { Text(tag.name, maxLines = 1) },
-            )
-        }
-    }
-}
-
-@Composable
-private fun CompactEntryDetails(
-    state: TransactionEditorUiState,
-    onNote: (String) -> Unit,
-    onDate: (kotlinx.datetime.Instant) -> Unit,
-    onExcluded: (Boolean) -> Unit,
-) {
-    val context = LocalContext.current
-    val dateTime = state.occurredAt.toLocalDateTime(ChinaTimeZone)
-    val today = Clock.System.now().toLocalDateTime(ChinaTimeZone).date
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            Surface(
-                modifier = Modifier.weight(1f).height(38.dp),
-                color = Color.Transparent,
-                shape = MaterialTheme.shapes.small,
-            ) {
-                Row(Modifier.padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.EditNote,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Box(Modifier.weight(1f)) {
-                        if (state.note.isBlank()) {
-                            Text("备注", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+            Row(Modifier.fillMaxWidth().height(38.dp), verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    modifier = Modifier.weight(1f).height(34.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = MaterialTheme.shapes.small,
+                ) {
+                    Row(Modifier.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.EditNote,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Box(Modifier.weight(1f)) {
+                            if (state.note.isBlank()) {
+                                Text("备注", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                            }
+                            BasicTextField(
+                                value = state.note,
+                                onValueChange = onNote,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .onFocusChanged { onNoteFocusChanged(it.isFocused) },
+                                singleLine = true,
+                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                textStyle = TextStyle(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                                ),
+                            )
                         }
-                        BasicTextField(
-                            value = state.note,
-                            onValueChange = onNote,
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = MaterialTheme.typography.bodySmall.fontSize),
+                    }
+                }
+                Spacer(Modifier.width(6.dp))
+                Surface(
+                    onClick = {
+                        DatePickerDialog(
+                            context,
+                            { _, year, month, day ->
+                                onDate(LocalDateTime(LocalDate(year, month + 1, day), dateTime.time).toInstant(ChinaTimeZone))
+                            },
+                            dateTime.year,
+                            dateTime.monthNumber - 1,
+                            dateTime.dayOfMonth,
+                        ).show()
+                    },
+                    modifier = Modifier.height(34.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = MaterialTheme.shapes.small,
+                ) {
+                    Row(
+                        Modifier.padding(horizontal = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(Icons.Default.CalendarMonth, contentDescription = "选择日期", modifier = Modifier.size(16.dp))
+                        // 始终显示日期，以前当天只剩一个光秃秃的图标，看不出会记到哪天
+                        Text(
+                            "${dateTime.monthNumber}月${dateTime.dayOfMonth}日",
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
                         )
                     }
                 }
             }
-            Surface(
-                onClick = {
-                    TimePickerDialog(
-                        context,
-                        { _, hour, minute ->
-                            onDate(LocalDateTime(dateTime.date, LocalTime(hour, minute)).toInstant(ChinaTimeZone))
-                        },
-                        dateTime.hour,
-                        dateTime.minute,
-                        true,
-                    ).show()
-                },
-                modifier = Modifier.height(38.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = MaterialTheme.shapes.small,
-            ) {
-                Box(Modifier.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
-                    Text("${dateTime.hour.twoDigits()}:${dateTime.minute.twoDigits()}", fontWeight = FontWeight.Bold)
-                }
-            }
         }
-        Row(Modifier.fillMaxWidth().height(38.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = {
-                DatePickerDialog(
-                    context,
-                    { _, year, month, day ->
-                        onDate(LocalDateTime(LocalDate(year, month + 1, day), dateTime.time).toInstant(ChinaTimeZone))
-                    },
-                    dateTime.year,
-                    dateTime.monthNumber - 1,
-                    dateTime.dayOfMonth,
-                ).show()
-            }) {
-                Icon(Icons.Default.CalendarMonth, contentDescription = "选择日期", modifier = Modifier.size(18.dp))
-                if (dateTime.date != today) {
-                    Spacer(Modifier.width(5.dp))
-                    Text("${dateTime.monthNumber.twoDigits()}-${dateTime.dayOfMonth.twoDigits()}")
-                }
-            }
-            Spacer(Modifier.weight(1f))
-            Text("不计入统计", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.width(6.dp))
-            Switch(checked = state.isExcluded, onCheckedChange = onExcluded)
+    }
+}
+
+/** 备注聚焦时替换数字键盘的确认条。 */
+@Composable
+private fun NoteInputBar(onDone: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        tonalElevation = 2.dp,
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                "输入备注后点完成回到数字键盘",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onDone) { Text("完成") }
         }
     }
 }
@@ -620,10 +847,11 @@ private fun TransactionFooter(
 ) {
     Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceContainer, tonalElevation = 2.dp) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(3.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 6.dp, vertical = 6.dp),
         ) {
-            state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
             Keypad(
                 state.isSaving,
                 onAmountKey,
@@ -648,7 +876,7 @@ private fun Keypad(
         listOf(".", "0", "退格", "完成"),
     )
     rows.forEachIndexed { rowIndex, row ->
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             row.forEach { key ->
                 val isDone = key == "完成"
                 val isAction = rowIndex == 2 && key == "再记"
@@ -666,7 +894,7 @@ private fun Keypad(
                         else -> { { onKey(key) } }
                     },
                     enabled = !isSaving,
-                    modifier = Modifier.weight(1f).height(54.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
                     shape = MaterialTheme.shapes.medium,
                     color = color,
                     contentColor = contentColor,
@@ -674,14 +902,14 @@ private fun Keypad(
                     Box(contentAlignment = Alignment.Center) {
                         Text(
                             if (isDone && isSaving) "保存中" else key,
-                            style = if (isAction || key == "退格") MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineSmall,
+                            style = if (isAction || key == "退格") MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                         )
                     }
                 }
             }
         }
-        if (rowIndex != rows.lastIndex) Spacer(Modifier.height(3.dp))
+        if (rowIndex != rows.lastIndex) Spacer(Modifier.height(4.dp))
     }
 }
 

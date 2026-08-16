@@ -248,7 +248,7 @@ internal fun SearchScreen(
                 }
             }
         }
-        item { Spacer(Modifier.height(24.dp)) }
+        item { Spacer(Modifier.height(88.dp)) }
     }
 }
 

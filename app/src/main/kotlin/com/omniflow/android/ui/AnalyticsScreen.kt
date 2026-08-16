@@ -163,7 +163,7 @@ internal fun AnalyticsScreen(
                 }
             }
         }
-        item { Spacer(Modifier.height(24.dp)) }
+        item { Spacer(Modifier.height(88.dp)) }
     }
     state.statementTable?.let { StatementTableSheet(it, onStatementTable, onDismissStatementTable) }
 }
