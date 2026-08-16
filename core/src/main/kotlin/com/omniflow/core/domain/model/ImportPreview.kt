@@ -45,12 +45,13 @@ data class ImportPreviewState(
     val progress: Float = 1f,
 ) {
     val importableItems: List<ImportPreviewItem> get() = items.filterNot(ImportPreviewItem::isSkipped)
-    val expenseTotal: Money get() = importableItems
-        .filter { it.type == TransactionType.EXPENSE }
-        .fold(Money.Zero) { total, item -> total + item.raw.amount }
-    val incomeTotal: Money get() = importableItems
-        .filter { it.type == TransactionType.INCOME }
-        .fold(Money.Zero) { total, item -> total + item.raw.amount }
+    // 不计收支的条目不进收支汇总，和首页统计口径保持一致。
+    val expenseTotal: Money get() = importableItems.countableTotal(TransactionType.EXPENSE)
+    val incomeTotal: Money get() = importableItems.countableTotal(TransactionType.INCOME)
+    val pendingCount: Int get() = importableItems.count {
+        it.requiresTypeSelection || it.requiresCategorySelection
+    }
+    val skippedCount: Int get() = items.count(ImportPreviewItem::isSkipped)
     val isReadyToCommit: Boolean get() = phase == ImportPreviewPhase.READY && importableItems.none {
         it.requiresTypeSelection || it.requiresCategorySelection || it.accountId == null
     }

@@ -47,6 +47,7 @@ object SpreadsheetBillParser {
                     ),
                     externalId = value(row, header, "交易单号"),
                     sourceCategory = value(row, header, "交易类型"),
+                    counterparty = value(row, header, "交易对方"),
                 )
             }
     }
@@ -75,6 +76,7 @@ object SpreadsheetBillParser {
                     ),
                     externalId = null,
                     sourceCategory = null,
+                    counterparty = value(row, header, "摘要"),
                 )
             }
     }

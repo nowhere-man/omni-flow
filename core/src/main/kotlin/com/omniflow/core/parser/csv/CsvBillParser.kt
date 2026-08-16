@@ -37,6 +37,7 @@ class CsvBillParser {
                 ),
                 externalId = table.value(row, "交易订单号"),
                 sourceCategory = table.value(row, "交易分类"),
+                counterparty = table.value(row, "交易对方"),
             )
         }
     }
@@ -59,6 +60,7 @@ class CsvBillParser {
                 ),
                 externalId = table.value(row, "交易订单号"),
                 sourceCategory = table.value(row, "交易分类"),
+                counterparty = table.value(row, "商户名称"),
             )
         }
     }
@@ -79,6 +81,7 @@ class CsvBillParser {
                 note = joinNote(table.value(row, "订单标题"), table.value(row, "备注")),
                 externalId = table.value(row, "交易单号"),
                 sourceCategory = null,
+                counterparty = table.value(row, "订单标题"),
             )
         }
     }

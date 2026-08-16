@@ -101,37 +101,51 @@ class SqlDelightImportSessionRepository(
         )
     }
 
-    override suspend fun updateCategory(sessionId: ImportSessionId, itemId: String, categoryId: String?) {
-        val row = database.importSessionQueries.previewItem(itemId, sessionId).executeAsOneOrNull()
-            ?: error("导入预览项不存在")
-        val updated = decode(row.id, row.payload, row.is_skipped != 0L).copy(
-            categoryId = categoryId,
-            categoryOrigin = ImportCategoryOrigin.USER,
-        )
-        database.importSessionQueries.updateImportPreviewItem(
-            payload = encode(updated),
-            is_skipped = if (updated.isSkipped) 1L else 0L,
-            updated_at = now().toEpochMilliseconds(),
-            id = updated.id,
-            session_id = sessionId,
-        )
+    override suspend fun updateCategories(
+        sessionId: ImportSessionId,
+        itemIds: Set<String>,
+        categoryId: String?,
+    ) {
+        val timestamp = now().toEpochMilliseconds()
+        database.transaction {
+            itemIds.forEach { itemId ->
+                val row = database.importSessionQueries.previewItem(itemId, sessionId).executeAsOneOrNull()
+                    ?: error("导入预览项不存在")
+                val updated = decode(row.id, row.payload, row.is_skipped != 0L).copy(
+                    categoryId = categoryId,
+                    categoryOrigin = ImportCategoryOrigin.USER,
+                )
+                database.importSessionQueries.updateImportPreviewItem(
+                    payload = encode(updated),
+                    is_skipped = if (updated.isSkipped) 1L else 0L,
+                    updated_at = timestamp,
+                    id = updated.id,
+                    session_id = sessionId,
+                )
+            }
+        }
     }
 
-    override suspend fun updateSkipped(sessionId: ImportSessionId, itemId: String, isSkipped: Boolean) {
-        val row = database.importSessionQueries.previewItem(itemId, sessionId).executeAsOneOrNull()
-            ?: error("导入预览项不存在")
-        val existing = decode(row.id, row.payload, row.is_skipped != 0L)
-        require(existing.duplicateStatus != ImportDuplicateStatus.CONFIRMED || isSkipped) {
-            "已确认重复的明细不能入账"
+    override suspend fun updateSkipped(sessionId: ImportSessionId, itemIds: Set<String>, isSkipped: Boolean) {
+        val timestamp = now().toEpochMilliseconds()
+        database.transaction {
+            itemIds.forEach { itemId ->
+                val row = database.importSessionQueries.previewItem(itemId, sessionId).executeAsOneOrNull()
+                    ?: error("导入预览项不存在")
+                val existing = decode(row.id, row.payload, row.is_skipped != 0L)
+                require(existing.duplicateStatus != ImportDuplicateStatus.CONFIRMED || isSkipped) {
+                    "已确认重复的明细不能入账"
+                }
+                val updated = existing.copy(isSkipped = isSkipped)
+                database.importSessionQueries.updateImportPreviewItem(
+                    payload = encode(updated),
+                    is_skipped = if (updated.isSkipped) 1L else 0L,
+                    updated_at = timestamp,
+                    id = updated.id,
+                    session_id = sessionId,
+                )
+            }
         }
-        val updated = existing.copy(isSkipped = isSkipped)
-        database.importSessionQueries.updateImportPreviewItem(
-            payload = encode(updated),
-            is_skipped = if (updated.isSkipped) 1L else 0L,
-            updated_at = now().toEpochMilliseconds(),
-            id = updated.id,
-            session_id = sessionId,
-        )
     }
 
     override suspend fun delete(sessionId: ImportSessionId) {
@@ -151,6 +165,7 @@ class SqlDelightImportSessionRepository(
         item.raw.note?.let { put("rawNote", JsonPrimitive(it)) }
         item.raw.externalId?.let { put("externalId", JsonPrimitive(it)) }
         item.raw.sourceCategory?.let { put("sourceCategory", JsonPrimitive(it)) }
+        item.raw.counterparty?.let { put("counterparty", JsonPrimitive(it)) }
         item.raw.sourceLedgerName?.let { put("sourceLedgerName", JsonPrimitive(it)) }
         put("rawTags", JsonArray(item.raw.tags.map(::JsonPrimitive)))
         item.type?.let { put("type", JsonPrimitive(it.name)) }
@@ -181,6 +196,7 @@ class SqlDelightImportSessionRepository(
                 note = text("rawNote"),
                 externalId = text("externalId"),
                 sourceCategory = text("sourceCategory"),
+                counterparty = text("counterparty"),
                 sourceLedgerName = text("sourceLedgerName"),
                 tags = textList("rawTags"),
             ),

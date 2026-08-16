@@ -100,8 +100,8 @@ interface ImportSessionRepository {
     )
     suspend fun state(sessionId: ImportSessionId): ImportPreviewSession?
     suspend fun updateItem(sessionId: ImportSessionId, edit: ImportPreviewEdit)
-    suspend fun updateCategory(sessionId: ImportSessionId, itemId: String, categoryId: CategoryId?)
-    suspend fun updateSkipped(sessionId: ImportSessionId, itemId: String, isSkipped: Boolean)
+    suspend fun updateCategories(sessionId: ImportSessionId, itemIds: Set<String>, categoryId: CategoryId?)
+    suspend fun updateSkipped(sessionId: ImportSessionId, itemIds: Set<String>, isSkipped: Boolean)
     suspend fun delete(sessionId: ImportSessionId)
 }
 

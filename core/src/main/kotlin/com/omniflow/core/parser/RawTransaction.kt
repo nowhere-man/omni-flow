@@ -14,6 +14,7 @@ data class RawTransaction(
     val note: String?,
     val externalId: String?,
     val sourceCategory: String?,
+    val counterparty: String? = null,
     val sourceLedgerName: String? = null,
     val tags: List<String> = emptyList(),
 )

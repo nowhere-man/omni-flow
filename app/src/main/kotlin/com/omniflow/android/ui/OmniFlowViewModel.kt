@@ -21,6 +21,7 @@ import com.omniflow.core.domain.model.LedgerScope
 import com.omniflow.core.domain.model.Money
 import com.omniflow.core.domain.model.ImportCategoryBatchEdit
 import com.omniflow.core.domain.model.ImportExcludeBatchEdit
+import com.omniflow.core.domain.model.ImportGroupMode
 import com.omniflow.core.domain.model.ImportPreviewEdit
 import com.omniflow.core.domain.model.ImportPreviewState
 import com.omniflow.core.domain.model.ImportRequest
@@ -166,7 +167,8 @@ data class MoreUiState(
     val syncState: SyncState = SyncState(),
     val backups: List<RemoteBackupMeta> = emptyList(),
     val importPreview: ImportPreviewState? = null,
-    val selectedImportItemIds: Set<String> = emptySet(),
+    val importGroupMode: ImportGroupMode = ImportGroupMode.SOURCE,
+    val importFilter: ImportFilter = ImportFilter.IMPORTABLE,
     val importFileName: String? = null,
     val importFormat: ImportFormat? = null,
     val importMessage: String? = null,
@@ -956,7 +958,6 @@ class OmniFlowViewModel(
                     _moreUiState.value = _moreUiState.value.copy(
                         importPreview = preview,
                         importFormat = preview.format,
-                        selectedImportItemIds = preview.items.mapTo(mutableSetOf()) { it.id },
                         isImporting = preview.phase != com.omniflow.core.domain.model.ImportPreviewPhase.READY,
                     )
                 }.onFailure { error ->
@@ -964,22 +965,6 @@ class OmniFlowViewModel(
                 }
             }
         }
-    }
-
-    fun toggleImportItem(id: String) {
-        val selected = _moreUiState.value.selectedImportItemIds.toMutableSet()
-        if (!selected.add(id)) selected.remove(id)
-        _moreUiState.value = _moreUiState.value.copy(selectedImportItemIds = selected)
-    }
-
-    fun selectAllImportItems(selected: Boolean) {
-        val ids = if (selected) _moreUiState.value.importPreview?.items.orEmpty().mapTo(mutableSetOf()) { it.id } else emptySet()
-        _moreUiState.value = _moreUiState.value.copy(selectedImportItemIds = ids)
-    }
-
-    fun invertImportSelection() {
-        val all = _moreUiState.value.importPreview?.items.orEmpty().mapTo(mutableSetOf()) { it.id }
-        _moreUiState.value = _moreUiState.value.copy(selectedImportItemIds = all - _moreUiState.value.selectedImportItemIds)
     }
 
     fun editImportItem(
@@ -1012,28 +997,44 @@ class OmniFlowViewModel(
         }
     }
 
-    fun setSelectedImportCategory(categoryId: String?) {
-        val state = _moreUiState.value
-        val preview = state.importPreview ?: return
+    /** 整组或单条改分类；导入时唯一需要用户决策的字段就是分类。 */
+    fun setImportCategory(itemIds: Set<String>, categoryId: String?) {
+        val preview = _moreUiState.value.importPreview ?: return
+        if (itemIds.isEmpty()) return
         viewModelScope.launch {
             sharedApp.imports.editCategories(
                 preview.sessionId,
-                ImportCategoryBatchEdit(state.selectedImportItemIds, categoryId),
+                ImportCategoryBatchEdit(itemIds, categoryId),
             ).onSuccess { updated -> _moreUiState.value = _moreUiState.value.copy(importPreview = updated) }
                 .onFailure { error -> _moreUiState.value = _moreUiState.value.copy(error = error.message) }
         }
     }
 
-    fun setSelectedImportSkipped(skipped: Boolean) {
-        val state = _moreUiState.value
-        val preview = state.importPreview ?: return
+    /** 整组或单条切换是否入账。 */
+    fun setImportSkipped(itemIds: Set<String>, skipped: Boolean) {
+        val preview = _moreUiState.value.importPreview ?: return
+        if (itemIds.isEmpty()) return
         viewModelScope.launch {
             sharedApp.imports.editSkipped(
                 preview.sessionId,
-                ImportExcludeBatchEdit(state.selectedImportItemIds, skipped),
+                ImportExcludeBatchEdit(itemIds, skipped),
             ).onSuccess { updated -> _moreUiState.value = _moreUiState.value.copy(importPreview = updated) }
                 .onFailure { error -> _moreUiState.value = _moreUiState.value.copy(error = error.message) }
         }
+    }
+
+    fun setImportGroupMode(mode: ImportGroupMode) {
+        _moreUiState.value = _moreUiState.value.copy(importGroupMode = mode)
+    }
+
+    fun setImportFilter(filter: ImportFilter) {
+        _moreUiState.value = _moreUiState.value.copy(importFilter = filter)
+    }
+
+    fun cancelImport() {
+        val preview = _moreUiState.value.importPreview ?: return
+        _moreUiState.value = _moreUiState.value.copy(importPreview = null, importMessage = null)
+        viewModelScope.launch { sharedApp.imports.cancel(preview.sessionId) }
     }
 
     fun commitImport() {
@@ -1043,7 +1044,6 @@ class OmniFlowViewModel(
             sharedApp.imports.commit(preview.sessionId).onSuccess { result ->
                 _moreUiState.value = _moreUiState.value.copy(
                     importPreview = null,
-                    selectedImportItemIds = emptySet(),
                     isImporting = false,
                     importMessage = "已导入 ${result.importedCount} 条，跳过 ${result.excludedCount} 条",
                 )

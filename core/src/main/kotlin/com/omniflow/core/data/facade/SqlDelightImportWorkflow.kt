@@ -4,6 +4,7 @@ import com.omniflow.core.domain.facade.ImportWorkflow
 import com.omniflow.core.domain.model.Account
 import com.omniflow.core.domain.model.AccountType
 import com.omniflow.core.domain.model.ImportCategoryBatchEdit
+import com.omniflow.core.domain.model.ImportCategoryDefaults
 import com.omniflow.core.domain.model.ImportCategoryOrigin
 import com.omniflow.core.domain.model.ImportCommitResult
 import com.omniflow.core.domain.model.ImportDuplicateStatus
@@ -18,6 +19,7 @@ import com.omniflow.core.domain.model.LedgerId
 import com.omniflow.core.domain.model.Rule
 import com.omniflow.core.domain.model.RuleActionType
 import com.omniflow.core.domain.model.Transaction
+import com.omniflow.core.domain.model.TransactionType
 import com.omniflow.core.domain.repository.AccountRepository
 import com.omniflow.core.domain.repository.CategoryMemoryEntry
 import com.omniflow.core.domain.repository.CategoryMemoryRepository
@@ -94,10 +96,7 @@ class SqlDelightImportWorkflow(
         edit: ImportCategoryBatchEdit,
     ): Result<ImportPreviewState> = withContext(Dispatchers.Default) {
         runCatching {
-            val session = sessions.state(sessionId) ?: error("导入会话不存在或已结束")
-            session.items.filter { it.id in edit.itemIds }.forEach { item ->
-                sessions.updateCategory(sessionId, item.id, edit.categoryId)
-            }
+            sessions.updateCategories(sessionId, edit.itemIds, edit.categoryId)
             toState(sessions.state(sessionId) ?: error("导入会话不存在或已结束"))
         }
     }
@@ -107,10 +106,7 @@ class SqlDelightImportWorkflow(
         edit: ImportExcludeBatchEdit,
     ): Result<ImportPreviewState> = withContext(Dispatchers.Default) {
         runCatching {
-            val session = sessions.state(sessionId) ?: error("导入会话不存在或已结束")
-            session.items.filter { it.id in edit.itemIds }.forEach { item ->
-                sessions.updateSkipped(sessionId, item.id, edit.isSkipped)
-            }
+            sessions.updateSkipped(sessionId, edit.itemIds, edit.isSkipped)
             toState(sessions.state(sessionId) ?: error("导入会话不存在或已结束"))
         }
     }
@@ -187,19 +183,28 @@ class SqlDelightImportWorkflow(
             } else {
                 null
             }
+            // 「不计收支 / 中性交易」默认不导入：余额宝转出、信用卡还款、零钱提现这类占比很高
+            // （支付宝样例 107 条里 37 条），逐条要求选收支类型只会把「确认入账」堵死。
+            // 兜底给一个收支类型，用户从「不计收支」分组里加回来时才不会又卡在 requiresTypeSelection。
+            val isNeutral = item.raw.type == null && item.raw.isExcluded
+            val resolvedType = item.type ?: if (isNeutral) TransactionType.EXPENSE else null
             val selectedCategory = (ruleCategory ?: memoryCategory)
-                ?.takeIf { candidate -> activeCategories.any { it.id == candidate && it.type == item.type } }
+                ?.takeIf { candidate -> activeCategories.any { it.id == candidate && it.type == resolvedType } }
+                ?: ImportCategoryDefaults.defaultCategoryId(item.raw, resolvedType, activeCategories)
             enrichedItems += item.copy(
+                type = resolvedType,
                 accountId = resolveAccount(item.raw, activeAccounts),
                 categoryId = selectedCategory,
                 categoryOrigin = when {
-                    ruleCategory != null && selectedCategory != null -> ImportCategoryOrigin.RULE
-                    memoryCategory != null && selectedCategory != null -> ImportCategoryOrigin.MEMORY
+                    selectedCategory == null -> ImportCategoryOrigin.NONE
+                    ruleCategory != null -> ImportCategoryOrigin.RULE
+                    memoryCategory != null -> ImportCategoryOrigin.MEMORY
                     else -> ImportCategoryOrigin.NONE
                 },
                 isExcluded = item.isExcluded || matchedRule?.actionType == RuleActionType.SET_EXCLUDED,
                 isSkipped = matchedRule?.actionType == RuleActionType.EXCLUDE ||
-                    duplicateStatus != ImportDuplicateStatus.NONE,
+                    duplicateStatus != ImportDuplicateStatus.NONE ||
+                    isNeutral,
                 duplicateStatus = duplicateStatus,
             )
         }
@@ -274,7 +279,17 @@ class SqlDelightImportWorkflow(
         else -> false
     }
 
-    private fun memoryKey(raw: RawTransaction): String = "${raw.format.transactionSource?.name.orEmpty()}:${normalize(raw.note)}"
+    /**
+     * 分类记忆的键。以前用完整备注，而备注是「交易对方 | 商品说明 | 备注」拼出来的，
+     * 几乎条条唯一，记忆基本命中不了。改成优先用来源分类（支付宝/京东的「交易分类」），
+     * 其次用交易对方（微信/美团/建行），都没有才退回备注。
+     */
+    private fun memoryKey(raw: RawTransaction): String {
+        val source = raw.format.transactionSource?.name.orEmpty()
+        raw.sourceCategory?.trim()?.takeIf(String::isNotEmpty)?.let { return "$source:cat:${normalize(it)}" }
+        raw.counterparty?.trim()?.takeIf(String::isNotEmpty)?.let { return "$source:party:${normalize(it)}" }
+        return "$source:note:${normalize(raw.note)}"
+    }
 
     private fun normalize(value: String?): String = value.orEmpty().lowercase().filterNot(Char::isWhitespace)
 

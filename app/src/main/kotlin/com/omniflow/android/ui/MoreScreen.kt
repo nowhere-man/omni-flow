@@ -47,7 +47,6 @@ import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -78,8 +77,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.omniflow.core.domain.model.AppearanceMode
 import com.omniflow.core.domain.model.DateRange
-import com.omniflow.core.domain.model.ImportDuplicateStatus
-import com.omniflow.core.domain.model.ImportPreviewItem
 import com.omniflow.core.domain.model.ImportPreviewPhase
 import com.omniflow.core.domain.model.Ledger
 import com.omniflow.core.domain.model.Money
@@ -494,15 +491,25 @@ private fun ImportPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
             }
         }
     }
-    LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item {
+    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (state.importPreview?.phase == ImportPreviewPhase.READY) {
+            ImportPreviewSection(
+                preview = state.importPreview,
+                state = state,
+                viewModel = viewModel,
+                modifier = Modifier.weight(1f),
+            )
+            return@Column
+        }
+        Column(
+            Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             ValueMenu(
                 label = state.ledgers.firstOrNull { it.id == ledgerId }?.name ?: "先选择账本",
                 values = state.ledgers,
                 valueLabel = Ledger::name,
             ) { ledgerId = it.id; viewModel.selectMoreLedger(it.id) }
-        }
-        item {
             NullableValueMenu(
                 label = selectedFormat?.label ?: "自动识别来源",
                 allLabel = "自动识别来源",
@@ -511,143 +518,28 @@ private fun ImportPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
                 onAll = { selectedFormat = null },
                 onSelected = { selectedFormat = it },
             )
-        }
-        item {
+            if (state.accounts.isEmpty()) {
+                Text("请先在「账户」里创建至少一个账户，导入的交易需要落到账户上。", color = MaterialTheme.colorScheme.error)
+            }
             Button(
                 onClick = { fileLauncher.launch("*/*") },
-                enabled = ledgerId != null && !state.isImporting,
+                enabled = ledgerId != null && state.accounts.isNotEmpty() && !state.isImporting,
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("选择账单文件") }
-        }
-        if (state.isImporting) item { LinearProgressIndicator(modifier = Modifier.fillMaxWidth()) }
-        state.importPreview?.let { preview ->
-            item {
+            state.importPreview?.let { preview ->
                 Text(
                     when (preview.phase) {
                         ImportPreviewPhase.DETECTING -> "正在识别格式"
                         ImportPreviewPhase.PARSING -> "正在解析账单"
                         ImportPreviewPhase.ENRICHING -> "正在应用规则、记忆和去重"
-                        ImportPreviewPhase.READY -> "预览 ${preview.items.size} 条"
+                        ImportPreviewPhase.READY -> "准备就绪"
                     },
                     fontWeight = FontWeight.SemiBold,
                 )
             }
-            if (preview.phase == ImportPreviewPhase.READY) {
-                item {
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("将导入 ${preview.importableItems.size} 条")
-                            Text("收入 ${preview.incomeTotal.asRmb()} · 支出 ${preview.expenseTotal.asRmb()}")
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                TextButton(onClick = { viewModel.selectAllImportItems(true) }) { Text("全选") }
-                                TextButton(onClick = viewModel::invertImportSelection) { Text("反选") }
-                                TextButton(onClick = { viewModel.setSelectedImportSkipped(true) }) { Text("批量排除") }
-                            }
-                            NullableValueMenu(
-                                label = "批量设置分类",
-                                allLabel = "清空分类",
-                                values = state.categories,
-                                valueLabel = { it.name },
-                                onAll = { viewModel.setSelectedImportCategory(null) },
-                                onSelected = { viewModel.setSelectedImportCategory(it.id) },
-                            )
-                        }
-                    }
-                }
-                items(preview.items, key = { it.id }) { item -> ImportPreviewCard(item, state, viewModel) }
-                item {
-                    Button(
-                        onClick = viewModel::commitImport,
-                        enabled = preview.isReadyToCommit && !state.isImporting,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text("确认入账") }
-                }
-            }
-        }
-        state.importMessage?.let { item { Text(it, color = MaterialTheme.colorScheme.primary) } }
-        state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
-        item { Spacer(Modifier.height(24.dp)) }
-    }
-}
-
-@Composable
-private fun ImportPreviewCard(item: ImportPreviewItem, state: MoreUiState, viewModel: OmniFlowViewModel) {
-    Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.small) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(item.id in state.selectedImportItemIds, { viewModel.toggleImportItem(item.id) })
-                Column(Modifier.weight(1f)) {
-                    Text(item.note ?: "无备注", fontWeight = FontWeight.Medium)
-                    Text("${item.raw.occurredAt} · ${item.raw.amount.asRmb()}", style = MaterialTheme.typography.bodySmall)
-                }
-                Switch(item.isSkipped, { skipped ->
-                    viewModel.editImportItem(item.id, item.type, item.categoryId, item.accountId, skipped)
-                }, enabled = item.duplicateStatus != ImportDuplicateStatus.CONFIRMED)
-            }
-            if (item.duplicateStatus != ImportDuplicateStatus.NONE) {
-                Text(if (item.duplicateStatus == ImportDuplicateStatus.CONFIRMED) "重复交易" else "疑似重复", color = MaterialTheme.colorScheme.error)
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(
-                    selected = item.type == TransactionType.EXPENSE,
-                    onClick = { viewModel.editImportItem(item.id, TransactionType.EXPENSE, item.categoryId, item.accountId, item.isSkipped) },
-                    label = { Text("支出") },
-                )
-                FilterChip(
-                    selected = item.type == TransactionType.INCOME,
-                    onClick = { viewModel.editImportItem(item.id, TransactionType.INCOME, item.categoryId, item.accountId, item.isSkipped) },
-                    label = { Text("收入") },
-                )
-            }
-            ValueMenu(
-                label = state.categories.firstOrNull { it.id == item.categoryId }?.name ?: "选择分类",
-                values = state.categories.filter { item.type == null || it.type == item.type },
-                valueLabel = { it.name },
-            ) { category -> viewModel.editImportItem(item.id, item.type, category.id, item.accountId, item.isSkipped) }
-            ValueMenu(
-                label = state.accounts.firstOrNull { it.id == item.accountId }?.name ?: "选择账户",
-                values = state.accounts,
-                valueLabel = { it.name },
-            ) { account -> viewModel.editImportItem(item.id, item.type, item.categoryId, account.id, item.isSkipped) }
-            OutlinedTextField(
-                value = item.note.orEmpty(),
-                onValueChange = { note ->
-                    viewModel.editImportItem(item.id, item.type, item.categoryId, item.accountId, item.isSkipped, note = note)
-                },
-                label = { Text("备注") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = item.tags.joinToString(","),
-                onValueChange = { tags ->
-                    viewModel.editImportItem(
-                        item.id,
-                        item.type,
-                        item.categoryId,
-                        item.accountId,
-                        item.isSkipped,
-                        tags = tags.split(',').map(String::trim).filter(String::isNotEmpty),
-                    )
-                },
-                label = { Text("标签（逗号分隔）") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("不计入收支", modifier = Modifier.weight(1f))
-                Switch(
-                    checked = item.isExcluded,
-                    onCheckedChange = { excluded ->
-                        viewModel.editImportItem(
-                            item.id,
-                            item.type,
-                            item.categoryId,
-                            item.accountId,
-                            item.isSkipped,
-                            isExcluded = excluded,
-                        )
-                    },
-                )
-            }
+            if (state.isImporting) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            state.importMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+            state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
     }
 }

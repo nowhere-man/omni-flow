@@ -377,12 +377,12 @@ private fun ReorderableCategoryGrid(
 }
 
 @Composable
-private fun CategoryTile(
+internal fun CategoryTile(
     category: Category,
     selected: Boolean,
-    dragging: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    dragging: Boolean = false,
 ) {
     Surface(
         modifier = modifier,
