@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -59,7 +60,7 @@ internal fun TransactionRow(
                 title,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                fontWeight = FontWeight.Medium,
+                style = OmniText.titleRow,
                 color = if (titleMuted) {
                     MaterialTheme.colorScheme.onSurfaceVariant
                 } else {
@@ -69,8 +70,8 @@ internal fun TransactionRow(
             subtitle?.takeIf(String::isNotBlank)?.let {
                 Text(
                     it,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
-                    style = MaterialTheme.typography.bodySmall,
+                    color = mutedContent().copy(alpha = alpha),
+                    style = OmniText.caption,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -81,8 +82,8 @@ internal fun TransactionRow(
             timeText?.let {
                 Text(
                     it,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
-                    style = MaterialTheme.typography.bodySmall,
+                    color = mutedContent().copy(alpha = alpha),
+                    style = OmniText.caption,
                 )
             }
         }
@@ -168,16 +169,34 @@ internal fun AmountText(amount: Money, type: TransactionType?, dimmed: Boolean =
     Text(
         "$sign${amount.asRmb()}",
         color = amountColor(type).copy(alpha = alpha),
-        fontWeight = FontWeight.SemiBold,
+        style = OmniText.amountPrimary,
+        maxLines = 1,
     )
 }
 
+/** 明细里支出用中性色，只有收入上色；日历格子和图表另外走 [expenseColor]。 */
 @Composable
 internal fun amountColor(type: TransactionType?): Color = when (type) {
-    TransactionType.EXPENSE -> MaterialTheme.colorScheme.error
-    TransactionType.INCOME -> MaterialTheme.colorScheme.tertiary
+    TransactionType.EXPENSE -> MaterialTheme.colorScheme.onSurface
+    TransactionType.INCOME -> incomeColor()
     null -> MaterialTheme.colorScheme.onSurfaceVariant
 }
+
+// 收支语义色固定，不跟随主题色，也不用 error/tertiary——那两个会随主题色漂移，
+// 结果日历、首页汇总和明细列表的收支颜色对不上。避开纯红纯绿，深浅模式各一套。
+private val IncomeLight = Color(0xFF4E9367)
+private val IncomeDark = Color(0xFF7FC49A)
+private val ExpenseLight = Color(0xFFC2635C)
+private val ExpenseDark = Color(0xFFE09A94)
+
+@Composable
+internal fun incomeColor(): Color = if (isDarkColorScheme()) IncomeDark else IncomeLight
+
+@Composable
+internal fun expenseColor(): Color = if (isDarkColorScheme()) ExpenseDark else ExpenseLight
+
+@Composable
+private fun isDarkColorScheme(): Boolean = MaterialTheme.colorScheme.surface.luminance() < 0.5f
 
 @Composable
 internal fun CategoryIcon(iconKey: String?, dimmed: Boolean = false) {

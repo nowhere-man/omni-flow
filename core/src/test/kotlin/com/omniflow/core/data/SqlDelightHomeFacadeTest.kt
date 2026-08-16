@@ -2,7 +2,6 @@ package com.omniflow.core.data
 
 import com.omniflow.core.data.facade.SqlDelightHomeFacade
 import com.omniflow.core.data.local.createJvmDatabase
-import com.omniflow.core.domain.model.CalendarTransactionFilter
 import com.omniflow.core.domain.model.DateRange
 import com.omniflow.core.domain.model.HomeQuery
 import com.omniflow.core.domain.model.LedgerScope
@@ -17,7 +16,7 @@ import kotlin.test.assertEquals
 
 class SqlDelightHomeFacadeTest {
     @Test
-    fun calendarFilterDoesNotChangeMonthSummaryOrDetailGroups() = runBlocking {
+    fun calendarDayCarriesBothIncomeAndExpenseTotals() = runBlocking {
         val database = createJvmDatabase()
         seed(database)
         val facade = SqlDelightHomeFacade(database)
@@ -30,15 +29,15 @@ class SqlDelightHomeFacadeTest {
             HomeQuery(
                 scope = LedgerScope.All,
                 month = month,
-                calendarFilter = CalendarTransactionFilter.EXPENSE,
             ),
         ).first().getOrThrow()
 
         assertEquals(Money(500), state.summary.expenseTotal)
         assertEquals(Money(800), state.summary.incomeTotal)
         assertEquals(2, state.groups.single().items.size)
+        // 日历格子现在同时展示当天收入和支出，不再按筛选只留一个方向
         assertEquals(Money(500), state.calendar.single().expenseTotal)
-        assertEquals(Money.Zero, state.calendar.single().incomeTotal)
+        assertEquals(Money(800), state.calendar.single().incomeTotal)
     }
 
     @Test
@@ -97,7 +96,6 @@ class SqlDelightHomeFacadeTest {
             HomeQuery(
                 scope = LedgerScope.All,
                 month = DateRange(Instant.fromEpochMilliseconds(1_000), Instant.fromEpochMilliseconds(4_000)),
-                calendarFilter = CalendarTransactionFilter.ALL,
             ),
         ).first().getOrThrow()
 

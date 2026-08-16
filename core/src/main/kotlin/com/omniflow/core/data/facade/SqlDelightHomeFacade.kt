@@ -6,7 +6,6 @@ import com.omniflow.core.db.OmniFlowDatabase
 import com.omniflow.core.db.TransactionRowsInRange
 import com.omniflow.core.domain.facade.HomeFacade
 import com.omniflow.core.domain.model.CalendarDaySummary
-import com.omniflow.core.domain.model.CalendarTransactionFilter
 import com.omniflow.core.domain.model.DateRange
 import com.omniflow.core.domain.model.DayTransactionGroup
 import com.omniflow.core.domain.model.HomeQuery
@@ -64,7 +63,7 @@ class SqlDelightHomeFacade(
             scope = query.scope,
             month = query.month,
             summary = summary(query.month, query.scope),
-            calendar = calendar(items, query.calendarFilter),
+            calendar = calendar(items),
             groups = groups(items),
         )
     }
@@ -80,11 +79,9 @@ class SqlDelightHomeFacade(
 
     private fun calendar(
         items: List<TransactionListItem>,
-        filter: CalendarTransactionFilter,
     ): List<CalendarDaySummary> = items
         .asSequence()
         .filterNot(TransactionListItem::isExcluded)
-        .filter { filter == CalendarTransactionFilter.ALL || it.type.name == filter.name }
         .groupBy { it.occurredAt.toLocalDateTime(TimeZone.currentSystemDefault()).date }
         .map { (date, entries) ->
             CalendarDaySummary(

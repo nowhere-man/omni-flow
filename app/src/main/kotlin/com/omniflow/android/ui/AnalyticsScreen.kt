@@ -108,7 +108,15 @@ internal fun AnalyticsScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item { Spacer(Modifier.height(8.dp)); LedgerScopeMenu(state.scope, state.ledgers, onScope) }
-        item { AnalyticsRangeSwitch(state.rangeMode, onRangeMode) }
+        item {
+            OmniSegmented(
+                options = AnalyticsRangeMode.entries,
+                selected = state.rangeMode,
+                label = { it.label },
+                onSelected = onRangeMode,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
         if (state.rangeMode == AnalyticsRangeMode.CUSTOM) {
             item { CustomRangeControls(state.range, onCustomRange) }
         } else {

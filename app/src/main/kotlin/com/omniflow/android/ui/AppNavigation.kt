@@ -58,6 +58,10 @@ sealed interface OmniRoute : NavKey {
     @Serializable data object MoreAssets : OmniRoute
     @Serializable data object MoreCategories : OmniRoute
     @Serializable data object MoreTags : OmniRoute
+
+    @Serializable data class LedgerDetail(val id: String) : OmniRoute
+    @Serializable data class AccountDetail(val id: String) : OmniRoute
+    @Serializable data class CategoryDetail(val id: String) : OmniRoute
 }
 
 internal val TopLevelRoutes = setOf<NavKey>(

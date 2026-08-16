@@ -5,8 +5,6 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
-enum class CalendarTransactionFilter { ALL, INCOME, EXPENSE }
-
 data class DateRange(
     val startInclusive: Instant,
     val endExclusive: Instant,
@@ -15,7 +13,6 @@ data class DateRange(
 data class HomeQuery(
     val scope: LedgerScope,
     val month: DateRange,
-    val calendarFilter: CalendarTransactionFilter = CalendarTransactionFilter.ALL,
 )
 
 data class TransactionDetailQuery(
@@ -88,24 +85,6 @@ data class CalendarDaySummary(
     val expenseTotal: Money,
     val incomeTotal: Money,
 )
-
-data class CalendarDisplayAmount(
-    val amount: Money,
-    val isIncome: Boolean,
-)
-
-fun CalendarDaySummary.displayAmount(filter: CalendarTransactionFilter): CalendarDisplayAmount? {
-    val display = when (filter) {
-        CalendarTransactionFilter.INCOME -> CalendarDisplayAmount(incomeTotal, isIncome = true)
-        CalendarTransactionFilter.EXPENSE -> CalendarDisplayAmount(expenseTotal, isIncome = false)
-        CalendarTransactionFilter.ALL -> if (incomeTotal >= expenseTotal) {
-            CalendarDisplayAmount(incomeTotal - expenseTotal, isIncome = true)
-        } else {
-            CalendarDisplayAmount(expenseTotal - incomeTotal, isIncome = false)
-        }
-    }
-    return display.takeUnless { it.amount == Money.Zero }
-}
 
 fun Money.calendarAmountText(): String {
     val absoluteMinor = kotlin.math.abs(minor)

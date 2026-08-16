@@ -11,7 +11,6 @@ import com.omniflow.core.domain.model.AnalyticsDashboardState
 import com.omniflow.core.domain.model.AnalyticsQuery
 import com.omniflow.core.domain.model.AppPreferences
 import com.omniflow.core.domain.model.AppearanceMode
-import com.omniflow.core.domain.model.CalendarTransactionFilter
 import com.omniflow.core.domain.model.Category
 import com.omniflow.core.domain.model.DateRange
 import com.omniflow.core.domain.model.HomeQuery
@@ -46,7 +45,9 @@ import com.omniflow.core.domain.model.Transaction
 import com.omniflow.core.domain.model.TransactionDetailDisplayMode
 import com.omniflow.core.domain.model.TransactionDetailQuery
 import com.omniflow.core.domain.model.TransactionDetailState
+import com.omniflow.core.domain.model.TransactionListItem
 import com.omniflow.core.domain.model.TransactionSearchQuery
+import com.omniflow.core.domain.model.TransactionSummary
 import com.omniflow.core.domain.model.TransactionType
 import com.omniflow.core.domain.usecase.CreateTransactionCommand
 import com.omniflow.core.parser.ImportFormat
@@ -79,7 +80,6 @@ data class HomeUiState(
     val error: String? = null,
     val displayMode: TransactionDetailDisplayMode = TransactionDetailDisplayMode.LIST,
     val appearanceMode: AppearanceMode = AppearanceMode.SYSTEM,
-    val calendarFilter: CalendarTransactionFilter = CalendarTransactionFilter.ALL,
 )
 
 data class RangeDetailUiState(
@@ -153,6 +153,18 @@ data class TransactionEditorUiState(
     val completed: Boolean = false,
 )
 
+enum class EntityDetailKind { LEDGER, ACCOUNT, CATEGORY }
+
+data class EntityDetailUiState(
+    val kind: EntityDetailKind = EntityDetailKind.LEDGER,
+    val entityId: String = "",
+    val summary: TransactionSummary = TransactionSummary(Money.Zero, Money.Zero),
+    val count: Int = 0,
+    val items: List<TransactionListItem> = emptyList(),
+    val isLoading: Boolean = true,
+    val error: String? = null,
+)
+
 data class MoreUiState(
     val accountSummary: AccountSummary = AccountSummary(Money.Zero, Money.Zero),
     val ledgers: List<Ledger> = emptyList(),
@@ -196,6 +208,8 @@ class OmniFlowViewModel(
         _transactionRecordDetailUiState.asStateFlow()
     private val _transactionUiState = MutableStateFlow(TransactionEditorUiState())
     val transactionUiState: StateFlow<TransactionEditorUiState> = _transactionUiState.asStateFlow()
+    private val _entityDetailUiState = MutableStateFlow(EntityDetailUiState())
+    val entityDetailUiState: StateFlow<EntityDetailUiState> = _entityDetailUiState.asStateFlow()
     private val _moreUiState = MutableStateFlow(MoreUiState())
     val moreUiState: StateFlow<MoreUiState> = _moreUiState.asStateFlow()
 
@@ -214,6 +228,7 @@ class OmniFlowViewModel(
     private var moreTagsJob: Job? = null
     private var moreRulesJob: Job? = null
     private var importJob: Job? = null
+    private var entityDetailJob: Job? = null
 
     init {
         viewModelScope.launch { sharedApp.initialize() }
@@ -300,11 +315,6 @@ class OmniFlowViewModel(
     fun nextMonth() = updateHomeMonth(1)
     fun selectHomeMonth(date: LocalDate) {
         homeQuery = homeQuery.copy(month = monthRange(date))
-        observeHome()
-    }
-    fun setCalendarFilter(filter: CalendarTransactionFilter) {
-        homeQuery = homeQuery.copy(calendarFilter = filter)
-        _homeUiState.value = _homeUiState.value.copy(calendarFilter = filter)
         observeHome()
     }
     fun toggleLedgerMenu() {
@@ -521,8 +531,7 @@ class OmniFlowViewModel(
         )
     }
 
-    private fun updateSearch(query: TransactionSearchQuery, debounceMillis: Long = 0) {
-        _searchUiState.value = _searchUiState.value.copy(query = query)
+    private fun updateSearch(query: TransactionSearchQuery, debounceMillis: Long = 0) {        _searchUiState.value = _searchUiState.value.copy(query = query)
         searchJob?.cancel()
         if (!query.hasFilters) {
             _searchUiState.value = _searchUiState.value.copy(result = null, isLoading = false, error = null)
@@ -537,6 +546,41 @@ class OmniFlowViewModel(
                 _searchUiState.value = _searchUiState.value.copy(isLoading = false, error = error.message)
             }
         }
+    }
+
+    /**
+     * 账本 / 账户 / 分类详情。全部走已有的 search 用例，core 不需要新增查询能力。
+     */
+    fun showEntityDetail(kind: EntityDetailKind, id: String) {
+        entityDetailJob?.cancel()
+        val query = when (kind) {
+            EntityDetailKind.LEDGER -> TransactionSearchQuery(scope = LedgerScope.Single(id))
+            EntityDetailKind.ACCOUNT -> TransactionSearchQuery(accountId = id)
+            EntityDetailKind.CATEGORY -> TransactionSearchQuery(primaryCategoryId = id)
+        }
+        _entityDetailUiState.value = EntityDetailUiState(kind = kind, entityId = id, isLoading = true)
+        entityDetailJob = viewModelScope.launch {
+            sharedApp.search(query).onSuccess { result ->
+                _entityDetailUiState.value = _entityDetailUiState.value.copy(
+                    summary = result.summary,
+                    count = result.items.size,
+                    items = result.items.map { it.transaction },
+                    isLoading = false,
+                )
+            }.onFailure { error ->
+                _entityDetailUiState.value = _entityDetailUiState.value.copy(isLoading = false, error = error.message)
+            }
+        }
+    }
+
+    /** 详情页「查看全部」：把筛选条件推到搜索页再跳过去。 */
+    fun openSearchFor(kind: EntityDetailKind, id: String) {
+        val query = when (kind) {
+            EntityDetailKind.LEDGER -> TransactionSearchQuery(scope = LedgerScope.Single(id))
+            EntityDetailKind.ACCOUNT -> TransactionSearchQuery(accountId = id)
+            EntityDetailKind.CATEGORY -> TransactionSearchQuery(primaryCategoryId = id)
+        }
+        updateSearch(query)
     }
 
     fun showTransactionRecordDetail(transactionId: String) {
@@ -914,14 +958,11 @@ class OmniFlowViewModel(
 
     fun deleteRule(id: String) = mutate { sharedApp.deleteRule(id) }
 
-    fun moveRule(id: String, offset: Int) = mutate {
-        val ordered = _moreUiState.value.rules.sortedBy(Rule::priority).map(Rule::id).toMutableList()
-        val from = ordered.indexOf(id)
-        val to = from + offset
-        if (from !in ordered.indices || to !in ordered.indices) Result.success(Unit) else {
-            ordered.add(to, ordered.removeAt(from))
-            sharedApp.reorderRules(_moreUiState.value.selectedLedgerId ?: return@mutate Result.failure(IllegalStateException("请先选择账本")), ordered)
-        }
+    /** 规则页长按拖拽后一次性落库。 */
+    fun reorderRules(ruleIds: List<String>) = mutate {
+        val ledgerId = _moreUiState.value.selectedLedgerId
+            ?: return@mutate Result.failure(IllegalStateException("请先选择账本"))
+        sharedApp.reorderRules(ledgerId, ruleIds)
     }
 
     fun saveReminder(

@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.Button
@@ -97,17 +98,17 @@ import kotlinx.coroutines.withContext
 
 internal enum class MorePage(val label: String, val icon: ImageVector) {
     HOME("更多", Icons.Default.Settings),
-    SETTINGS("设置", Icons.Default.Settings),
-    DATA("数据管理", Icons.Default.CloudSync),
-    IMPORT("导入", Icons.Default.FileUpload),
-    EXPORT("导出", Icons.Default.FileDownload),
+    SETTINGS("通用设置", Icons.Default.Tune),
+    DATA("数据同步", Icons.Default.CloudSync),
+    IMPORT("导入账单", Icons.Default.FileUpload),
+    EXPORT("导出数据", Icons.Default.FileDownload),
     RULES("规则", Icons.AutoMirrored.Filled.Rule),
     REMINDERS("提醒", Icons.Default.Notifications),
     LEDGERS("账本", Icons.Default.AccountBalance),
     ACCOUNTS("账户", Icons.Default.Wallet),
     ASSETS("资产", Icons.Default.Savings),
-    CATEGORIES("分类管理", Icons.Default.Category),
-    TAGS("标签管理", Icons.AutoMirrored.Filled.Label),
+    CATEGORIES("分类", Icons.Default.Category),
+    TAGS("标签", Icons.AutoMirrored.Filled.Label),
 }
 
 @Composable
@@ -118,6 +119,9 @@ internal fun MoreScreen(
     onPage: (MorePage) -> Unit,
     onBack: () -> Unit,
     onRequestNotificationPermission: () -> Unit,
+    onOpenLedger: (String) -> Unit,
+    onOpenAccount: (String) -> Unit,
+    onOpenCategory: (String) -> Unit,
     dynamicColorEnabled: Boolean,
     onDynamicColorChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -138,8 +142,8 @@ internal fun MoreScreen(
                 viewModel,
                 dynamicColorEnabled = dynamicColorEnabled,
                 onDynamicColorChanged = onDynamicColorChanged,
-            ) { onPage(MorePage.DATA) }
-            MorePage.DATA -> DataManagementPage(state, viewModel, onPage = onPage)
+            )
+            MorePage.DATA -> DataManagementPage(state, viewModel)
             MorePage.IMPORT -> ImportPage(state, viewModel)
             MorePage.EXPORT -> ExportPage(state, viewModel)
             MorePage.RULES,
@@ -154,6 +158,9 @@ internal fun MoreScreen(
                 viewModel,
                 onPage = onPage,
                 onRequestNotificationPermission = onRequestNotificationPermission,
+                onOpenLedger = onOpenLedger,
+                onOpenAccount = onOpenAccount,
+                onOpenCategory = onOpenCategory,
             )
         }
     }
@@ -174,8 +181,8 @@ private fun MoreHome(state: MoreUiState, onPage: (MorePage) -> Unit) {
                 shape = MaterialTheme.shapes.small,
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("净资产", style = MaterialTheme.typography.labelLarge)
-                    Text(state.accountSummary.netAssets.asRmb(), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
+                    Text("净资产", style = OmniText.caption)
+                    Text(state.accountSummary.netAssets.asRmb(), style = OmniText.amountHero)
                     Text("资产 ${state.accountSummary.assets.asRmb()} · 负债 ${state.accountSummary.liabilities.asRmb()}")
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.CloudSync, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -185,9 +192,11 @@ private fun MoreHome(state: MoreUiState, onPage: (MorePage) -> Unit) {
                 }
             }
         }
-        item { MoreSection("数据", listOf(MorePage.DATA, MorePage.IMPORT, MorePage.EXPORT, MorePage.SETTINGS), state, onPage) }
-        item { MoreSection("账本与账户", listOf(MorePage.LEDGERS, MorePage.ACCOUNTS, MorePage.ASSETS, MorePage.CATEGORIES, MorePage.TAGS), state, onPage) }
+        item { MoreSection("账本与账户", listOf(MorePage.LEDGERS, MorePage.ACCOUNTS, MorePage.ASSETS), state, onPage) }
+        item { MoreSection("分类与标签", listOf(MorePage.CATEGORIES, MorePage.TAGS), state, onPage) }
         item { MoreSection("自动化", listOf(MorePage.RULES, MorePage.REMINDERS), state, onPage) }
+        item { MoreSection("数据", listOf(MorePage.IMPORT, MorePage.EXPORT, MorePage.DATA), state, onPage) }
+        item { MoreSection("通用", listOf(MorePage.SETTINGS), state, onPage) }
         state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
         item { Spacer(Modifier.height(24.dp)) }
     }
@@ -204,8 +213,8 @@ private fun MoreSection(
         Text(
             title,
             modifier = Modifier.padding(start = 8.dp),
-            color = MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.titleMedium,
+            color = mutedContent(),
+            style = OmniText.caption,
             fontWeight = FontWeight.SemiBold,
         )
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -243,18 +252,19 @@ private fun GroupedOptionRow(
             Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // 图标改中性：主题色留给选中态和图表，列表图标跟着变会喧宾夺主
             Icon(
                 icon,
                 contentDescription = null,
-                modifier = Modifier.size(28.dp),
-                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp),
+                tint = mutedContent(),
             )
             Column(
                 Modifier.weight(1f).padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
-                Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(title, style = OmniText.titleRow)
+                Text(subtitle, style = OmniText.caption, color = mutedContent())
                 content?.invoke()
             }
             trailing?.invoke()
@@ -262,7 +272,7 @@ private fun GroupedOptionRow(
     }
 }
 
-private fun groupedOptionShape(index: Int, size: Int): Shape = when {
+internal fun groupedOptionShape(index: Int, size: Int): Shape = when {
     size == 1 -> RoundedCornerShape(24.dp)
     index == 0 -> RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 4.dp, bottomEnd = 4.dp)
     index == size - 1 -> RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
@@ -272,14 +282,14 @@ private fun groupedOptionShape(index: Int, size: Int): Shape = when {
 private fun MorePage.description(state: MoreUiState): String = when (this) {
     MorePage.HOME -> ""
     MorePage.DATA -> syncLabel(state)
-    MorePage.IMPORT -> "从账单文件批量导入交易"
+    MorePage.IMPORT -> "从支付宝、微信等账单文件批量导入"
     MorePage.EXPORT -> "导出青子记账兼容数据"
-    MorePage.SETTINGS -> "应用锁、显示模式与主题色"
-    MorePage.LEDGERS -> "管理账本与默认账本"
-    MorePage.ACCOUNTS -> "管理账户、余额与卡片信息"
-    MorePage.ASSETS -> "查看净资产和账户分布"
-    MorePage.CATEGORIES -> "维护收支分类与图标"
-    MorePage.TAGS -> "维护账本标签"
+    MorePage.SETTINGS -> "外观、主题色与应用锁"
+    MorePage.LEDGERS -> "账本封面、默认账本与收支概览"
+    MorePage.ACCOUNTS -> "账户余额、卡片信息与流水"
+    MorePage.ASSETS -> "净资产构成与负债"
+    MorePage.CATEGORIES -> "收支分类、图标与排序"
+    MorePage.TAGS -> "账本标签"
     MorePage.RULES -> "自动分类和排除规则"
     MorePage.REMINDERS -> "还款与订阅提醒"
 }
@@ -290,7 +300,6 @@ private fun SettingsPage(
     viewModel: OmniFlowViewModel,
     dynamicColorEnabled: Boolean,
     onDynamicColorChanged: (Boolean) -> Unit,
-    onData: () -> Unit,
 ) {
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -299,14 +308,14 @@ private fun SettingsPage(
                     title = "应用锁",
                     subtitle = "启动或回到前台时验证设备凭据",
                     icon = Icons.Default.Lock,
-                    shape = groupedOptionShape(0, 5),
+                    shape = groupedOptionShape(0, 4),
                     trailing = { Switch(state.preferences.appLockEnabled, viewModel::setAppLockEnabled) },
                 )
                 GroupedOptionRow(
                     title = "界面外观",
                     subtitle = "跟随系统、浅色或深色",
                     icon = Icons.Default.DarkMode,
-                    shape = groupedOptionShape(1, 5),
+                    shape = groupedOptionShape(1, 4),
                     content = {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             AppearanceMode.entries.forEach { mode ->
@@ -324,7 +333,7 @@ private fun SettingsPage(
                     title = "主题色",
                     subtitle = "选择按钮和导航的全局强调色",
                     icon = Icons.Default.Palette,
-                    shape = groupedOptionShape(2, 5),
+                    shape = groupedOptionShape(2, 4),
                     content = {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             items(ThemeColor.entries, key = { it.name }) { color ->
@@ -361,16 +370,8 @@ private fun SettingsPage(
                     title = "动态取色",
                     subtitle = "使用 Android 系统壁纸生成 Material 3 配色（Android 12+）",
                     icon = Icons.Default.Palette,
-                    shape = groupedOptionShape(3, 5),
+                    shape = groupedOptionShape(3, 4),
                     trailing = { Switch(dynamicColorEnabled, onDynamicColorChanged) },
-                )
-                GroupedOptionRow(
-                    title = "数据管理",
-                    subtitle = "备份、恢复、导入与导出",
-                    icon = Icons.Default.Storage,
-                    shape = groupedOptionShape(4, 5),
-                    onClick = onData,
-                    trailing = { Icon(Icons.Default.ChevronRight, contentDescription = "数据管理") },
                 )
             }
         }
@@ -390,7 +391,6 @@ private fun themeColorLabel(color: ThemeColor): String = when (color) {
 private fun DataManagementPage(
     state: MoreUiState,
     viewModel: OmniFlowViewModel,
-    onPage: (MorePage) -> Unit,
 ) {
     val context = LocalContext.current
     val secure = remember { context.getSharedPreferences("webdav", Context.MODE_PRIVATE) }
@@ -428,31 +428,11 @@ private fun DataManagementPage(
             Card(Modifier.fillMaxWidth()) {
                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(backup.createdAt.toString(), fontWeight = FontWeight.Medium)
-                        Text(backup.backupId, style = MaterialTheme.typography.bodySmall)
+                        Text(backup.createdAt.backupTimeText(), fontWeight = FontWeight.Medium)
+                        Text(backup.backupId, style = MaterialTheme.typography.bodySmall, maxLines = 1)
                     }
                     TextButton(onClick = { pendingRestore = backup }) { Text("恢复") }
                 }
-            }
-        }
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                GroupedOptionRow(
-                    title = "导入账单",
-                    subtitle = "从支付宝、微信等账单文件导入",
-                    icon = Icons.Default.FileUpload,
-                    shape = groupedOptionShape(0, 2),
-                    onClick = { onPage(MorePage.IMPORT) },
-                    trailing = { Icon(Icons.Default.ChevronRight, contentDescription = "导入账单") },
-                )
-                GroupedOptionRow(
-                    title = "导出数据",
-                    subtitle = "生成兼容青子记账的数据文件",
-                    icon = Icons.Default.FileDownload,
-                    shape = groupedOptionShape(1, 2),
-                    onClick = { onPage(MorePage.EXPORT) },
-                    trailing = { Icon(Icons.Default.ChevronRight, contentDescription = "导出数据") },
-                )
             }
         }
         state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }

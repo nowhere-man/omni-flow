@@ -95,13 +95,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import com.omniflow.core.domain.model.CalendarDaySummary
 import com.omniflow.core.domain.model.AppearanceMode
-import com.omniflow.core.domain.model.CalendarTransactionFilter
 import com.omniflow.core.domain.model.calendarAmountText
-import com.omniflow.core.domain.model.displayAmount
 import com.omniflow.core.domain.model.hourMinuteText
 import com.omniflow.core.domain.model.DayTransactionGroup
 import com.omniflow.core.domain.model.LedgerScope
@@ -161,6 +160,7 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
     val transactionState by viewModel.transactionUiState.collectAsStateWithLifecycle()
     val transactionRecordDetailState by viewModel.transactionRecordDetailUiState.collectAsStateWithLifecycle()
     val moreState by viewModel.moreUiState.collectAsStateWithLifecycle()
+    val entityDetailState by viewModel.entityDetailUiState.collectAsStateWithLifecycle()
     val navigationState = rememberOmniNavigationState()
     val pagerState = rememberPagerState(
         initialPage = navigationState.topLevelRoute.toMainDestination().ordinal,
@@ -297,7 +297,6 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
                     state = homeState,
                     onPreviousMonth = viewModel::previousMonth,
                     onNextMonth = viewModel::nextMonth,
-                    onCalendarFilter = viewModel::setCalendarFilter,
                     onLedgerMenu = viewModel::toggleLedgerMenu,
                     onLedgerSelected = viewModel::selectLedger,
                     onDateSelected = { date ->
@@ -408,11 +407,47 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
                             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
                         }
                     },
+                    onOpenLedger = { navigationState.navigate(OmniRoute.LedgerDetail(it)) },
+                    onOpenAccount = { navigationState.navigate(OmniRoute.AccountDetail(it)) },
+                    onOpenCategory = { navigationState.navigate(OmniRoute.CategoryDetail(it)) },
                     dynamicColorEnabled = dynamicColorEnabled.value,
                     onDynamicColorChanged = { enabled ->
                         dynamicColorEnabled.value = enabled
                         context.getSharedPreferences("android_ui", 0).edit()
                             .putBoolean("dynamic_color", enabled).apply()
+                    },
+                    modifier = Modifier.padding(padding),
+                )
+                is OmniRoute.LedgerDetail -> EntityDetailScreen(
+                    state = entityDetailState,
+                    moreState = moreState,
+                    onLoad = { viewModel.showEntityDetail(EntityDetailKind.LEDGER, key.id) },
+                    onOpenTransaction = { navigationState.navigate(OmniRoute.TransactionDetail(it)) },
+                    onSeeAll = {
+                        viewModel.openSearchFor(EntityDetailKind.LEDGER, key.id)
+                        navigationState.navigate(OmniRoute.Search)
+                    },
+                    modifier = Modifier.padding(padding),
+                )
+                is OmniRoute.AccountDetail -> EntityDetailScreen(
+                    state = entityDetailState,
+                    moreState = moreState,
+                    onLoad = { viewModel.showEntityDetail(EntityDetailKind.ACCOUNT, key.id) },
+                    onOpenTransaction = { navigationState.navigate(OmniRoute.TransactionDetail(it)) },
+                    onSeeAll = {
+                        viewModel.openSearchFor(EntityDetailKind.ACCOUNT, key.id)
+                        navigationState.navigate(OmniRoute.Search)
+                    },
+                    modifier = Modifier.padding(padding),
+                )
+                is OmniRoute.CategoryDetail -> EntityDetailScreen(
+                    state = entityDetailState,
+                    moreState = moreState,
+                    onLoad = { viewModel.showEntityDetail(EntityDetailKind.CATEGORY, key.id) },
+                    onOpenTransaction = { navigationState.navigate(OmniRoute.TransactionDetail(it)) },
+                    onSeeAll = {
+                        viewModel.openSearchFor(EntityDetailKind.CATEGORY, key.id)
+                        navigationState.navigate(OmniRoute.Search)
                     },
                     modifier = Modifier.padding(padding),
                 )
@@ -585,9 +620,9 @@ private fun omniColorScheme(
             onTertiary = Color(0xFF251A22),
             tertiaryContainer = Color(0xFF513B49),
             onTertiaryContainer = Color(0xFFFFD9E8),
-            surface = Color(0xFF141414),
-            surfaceVariant = Color(0xFF202020),
-            background = Color(0xFF101010),
+            surface = Color(0xFF17171A),
+            surfaceVariant = Color(0xFF232327),
+            background = Color(0xFF0C0C0E),
             onSurface = Color(0xFFF5F5F5),
             onSurfaceVariant = Color(0xFFB9B9B9),
             outline = Color(0xFF8F8F8F),
@@ -608,8 +643,8 @@ private fun omniColorScheme(
             tertiaryContainer = Color(0xFFF4DCE8),
             onTertiaryContainer = Color(0xFF321624),
             surface = Color.White,
-            surfaceVariant = Color(0xFFF5F5F5),
-            background = Color.White,
+            surfaceVariant = Color(0xFFECECF0),
+            background = Color(0xFFF4F4F6),
             onSurface = Color(0xFF171717),
             onSurfaceVariant = Color(0xFF656565),
             outline = Color(0xFF656565),
@@ -621,13 +656,13 @@ private fun omniColorScheme(
         onError = if (darkTheme) Color(0xFF690005) else Color.White,
         errorContainer = if (darkTheme) Color(0xFF93000A) else Color(0xFFFFDAD6),
         onErrorContainer = if (darkTheme) Color(0xFFFFDAD6) else Color(0xFF410002),
-        surfaceDim = if (darkTheme) Color(0xFF101010) else Color(0xFFE2E2E2),
-        surfaceBright = if (darkTheme) Color(0xFF3A3A3A) else Color.White,
-        surfaceContainerLowest = if (darkTheme) Color(0xFF0B0B0B) else Color.White,
-        surfaceContainerLow = if (darkTheme) Color(0xFF141414) else Color(0xFFF8F8F8),
-        surfaceContainer = if (darkTheme) Color(0xFF1E1E1E) else Color(0xFFF2F2F2),
-        surfaceContainerHigh = if (darkTheme) Color(0xFF292929) else Color(0xFFECECEC),
-        surfaceContainerHighest = if (darkTheme) Color(0xFF343434) else Color(0xFFE6E6E6),
+        surfaceDim = if (darkTheme) Color(0xFF0C0C0E) else Color(0xFFE4E4E9),
+        surfaceBright = if (darkTheme) Color(0xFF2E2E33) else Color.White,
+        surfaceContainerLowest = if (darkTheme) Color(0xFF08080A) else Color.White,
+        surfaceContainerLow = if (darkTheme) Color(0xFF141417) else Color(0xFFFAFAFC),
+        surfaceContainer = if (darkTheme) Color(0xFF17171A) else Color.White,
+        surfaceContainerHigh = if (darkTheme) Color(0xFF232327) else Color(0xFFECECF0),
+        surfaceContainerHighest = if (darkTheme) Color(0xFF2C2C31) else Color(0xFFE4E4E9),
         inverseSurface = if (darkTheme) Color(0xFFE6E1E5) else Color(0xFF303030),
         inverseOnSurface = if (darkTheme) Color(0xFF303030) else Color(0xFFF5F5F5),
         inversePrimary = if (darkTheme) primary else primaryContainer,
@@ -759,7 +794,6 @@ private fun HomeScreen(
     state: HomeUiState,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
-    onCalendarFilter: (CalendarTransactionFilter) -> Unit,
     onLedgerMenu: () -> Unit,
     onLedgerSelected: (LedgerScope) -> Unit,
     onDateSelected: (LocalDate) -> Unit,
@@ -800,9 +834,6 @@ private fun HomeScreen(
                     Spacer(Modifier.weight(1f))
                 }
                 HomeSummary(home.summary.expenseTotal, home.summary.incomeTotal, onSummary)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    CalendarFilter(state.calendarFilter, onCalendarFilter)
-                }
                 Surface(
                     shape = RoundedCornerShape(18.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant,
@@ -810,7 +841,6 @@ private fun HomeScreen(
                     CalendarMonth(
                         month = home.month.startInclusive.toLocalDateTime(ChinaTimeZone).date,
                         summaries = home.calendar,
-                        filter = state.calendarFilter,
                         onDateSelected = onDateSelected,
                         modifier = Modifier.padding(12.dp),
                     )
@@ -917,13 +947,15 @@ private fun MonthSelector(month: LocalDate, onPrevious: () -> Unit, onNext: () -
 @Composable
 private fun HomeSummary(expense: Money, income: Money, onSummary: (TransactionType?) -> Unit) {
     val net = income - expense
+    // 三张卡和日历、明细列表共用同一套收支语义色，不跟随主题色漂移
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        HomeSummaryCard("总支出", expense, MaterialTheme.colorScheme.error, { onSummary(TransactionType.EXPENSE) }, Modifier.weight(1f))
-        HomeSummaryCard("总收入", income, MaterialTheme.colorScheme.tertiary, { onSummary(TransactionType.INCOME) }, Modifier.weight(1f))
+        // 支出占绝大多数，全标红会让整屏发碎；只给收入和结余语义色
+        HomeSummaryCard("总支出", expense, MaterialTheme.colorScheme.onSurface, { onSummary(TransactionType.EXPENSE) }, Modifier.weight(1f))
+        HomeSummaryCard("总收入", income, incomeColor(), { onSummary(TransactionType.INCOME) }, Modifier.weight(1f))
         HomeSummaryCard(
             "总结余",
             net,
-            if (net.minor >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
+            if (net.minor >= 0) incomeColor() else expenseColor(),
             { onSummary(null) },
             Modifier.weight(1f),
         )
@@ -935,15 +967,17 @@ private fun HomeSummaryCard(label: String, amount: Money, color: Color, onClick:
     Card(
         onClick = onClick,
         modifier = modifier,
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.12f)),
+        shape = RoundedCornerShape(OmniRadius.medium),
+        colors = CardDefaults.cardColors(containerColor = surfaceCard()),
     ) {
-        Column(Modifier.padding(horizontal = 10.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(
+            Modifier.padding(horizontal = OmniSpace.m, vertical = OmniSpace.l),
+            verticalArrangement = Arrangement.spacedBy(OmniSpace.xs),
+        ) {
+            Text(label, style = OmniText.caption, color = mutedContent())
             Text(
                 amount.asRmb(),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
+                style = OmniText.amountPrimary,
                 color = color,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -957,48 +991,6 @@ private fun SummaryAmount(label: String, amount: Money, color: Color) {
     Column {
         Text(label, style = MaterialTheme.typography.labelMedium)
         Text(amount.asRmb(), color = color, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-    }
-}
-
-@Composable
-private fun CalendarFilter(
-    selectedFilter: CalendarTransactionFilter,
-    onSelected: (CalendarTransactionFilter) -> Unit,
-) {
-    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        CalendarTransactionFilter.entries.forEach { filter ->
-            val selected = selectedFilter == filter
-            val label = when (filter) {
-                CalendarTransactionFilter.ALL -> "全部"
-                CalendarTransactionFilter.INCOME -> "收入"
-                CalendarTransactionFilter.EXPENSE -> "支出"
-            }
-            val icon = when (filter) {
-                CalendarTransactionFilter.ALL -> Icons.AutoMirrored.Filled.List
-                CalendarTransactionFilter.INCOME -> Icons.Default.Add
-                CalendarTransactionFilter.EXPENSE -> Icons.Default.Remove
-            }
-            IconButton(
-                onClick = { onSelected(filter) },
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .background(
-                        if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                        CircleShape,
-                    ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        icon,
-                        contentDescription = label,
-                        modifier = Modifier.size(18.dp),
-                        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
     }
 }
 
@@ -1029,7 +1021,6 @@ private fun HomeEmptyState(
 private fun CalendarMonth(
     month: LocalDate,
     summaries: List<CalendarDaySummary>,
-    filter: CalendarTransactionFilter,
     onDateSelected: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1055,38 +1046,39 @@ private fun CalendarMonth(
         cells.chunked(7).forEach { week ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 week.forEach { date ->
-                    CalendarCell(date, date == today, date?.let(totals::get), filter, onDateSelected, Modifier.weight(1f))
+                    CalendarCell(date, date == today, date?.let(totals::get), onDateSelected, Modifier.weight(1f))
                 }
-                repeat(7 - week.size) { Spacer(Modifier.weight(1f).height(56.dp)) }
+                repeat(7 - week.size) { Spacer(Modifier.weight(1f).height(CalendarCellHeight)) }
             }
         }
     }
 }
+
+private val CalendarCellHeight = 64.dp
 
 @Composable
 private fun CalendarCell(
     date: LocalDate?,
     isToday: Boolean,
     summary: CalendarDaySummary?,
-    filter: CalendarTransactionFilter,
     onDateSelected: (LocalDate) -> Unit,
     modifier: Modifier,
 ) {
     if (date == null) {
-        Spacer(modifier.height(56.dp))
+        Spacer(modifier.height(CalendarCellHeight))
         return
     }
     Column(
         modifier = modifier
-            .height(56.dp)
+            .height(CalendarCellHeight)
             .clip(RoundedCornerShape(6.dp))
             .clickable { onDateSelected(date) }
-            .padding(vertical = 4.dp),
+            .padding(vertical = 3.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
             modifier = Modifier
-                .size(28.dp)
+                .size(26.dp)
                 .background(
                     if (isToday) MaterialTheme.colorScheme.primary else Color.Transparent,
                     CircleShape,
@@ -1096,19 +1088,30 @@ private fun CalendarCell(
             Text(
                 date.dayOfMonth.toString(),
                 color = if (isToday) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 fontWeight = if (isToday) FontWeight.SemiBold else FontWeight.Normal,
             )
         }
-        summary?.displayAmount(filter)?.let { display ->
-            Text(
-                "${if (display.isIncome) "+" else "−"}${display.amount.calendarAmountText()}",
-                color = if (display.isIncome) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
-                maxLines = 1,
-                style = MaterialTheme.typography.labelSmall,
-            )
+        // 收入在上、支出在下，只显示整数，超过 1000 走 x.xk；金额为 0 的那一行不占位
+        summary?.incomeTotal?.takeIf { it.minor > 0 }?.let {
+            CalendarAmount(it.calendarAmountText(), incomeColor())
+        }
+        summary?.expenseTotal?.takeIf { it.minor > 0 }?.let {
+            CalendarAmount(it.calendarAmountText(), expenseColor())
         }
     }
+}
+
+@Composable
+private fun CalendarAmount(text: String, color: Color) {
+    Text(
+        text,
+        color = color,
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Clip,
+        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, lineHeight = 11.sp),
+    )
 }
 
 @Composable

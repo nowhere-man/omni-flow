@@ -1,6 +1,9 @@
 package com.omniflow.android.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,8 +25,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -42,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.omniflow.core.domain.model.Account
 import com.omniflow.core.domain.model.AccountType
@@ -64,12 +69,15 @@ internal fun ManagementPage(
     viewModel: OmniFlowViewModel,
     onPage: (MorePage) -> Unit,
     onRequestNotificationPermission: () -> Unit,
+    onOpenLedger: (String) -> Unit,
+    onOpenAccount: (String) -> Unit,
+    onOpenCategory: (String) -> Unit,
 ) {
     when (page) {
-        MorePage.LEDGERS -> LedgerManagement(state, viewModel)
-        MorePage.ACCOUNTS -> AccountManagement(state, viewModel)
-        MorePage.ASSETS -> AssetManagement(state) { onPage(MorePage.ACCOUNTS) }
-        MorePage.CATEGORIES -> CategoryManagement(state, viewModel)
+        MorePage.LEDGERS -> LedgerManagement(state, viewModel, onOpenLedger)
+        MorePage.ACCOUNTS -> AccountManagement(state, viewModel, onOpenAccount)
+        MorePage.ASSETS -> AssetManagement(state, onOpenAccount)
+        MorePage.CATEGORIES -> CategoryManagement(state, viewModel, onOpenCategory)
         MorePage.TAGS -> TagManagement(state, viewModel)
         MorePage.RULES -> RuleManagement(state, viewModel)
         MorePage.REMINDERS -> ReminderManagement(state, viewModel, onRequestNotificationPermission)
@@ -78,67 +86,154 @@ internal fun ManagementPage(
 }
 
 @Composable
-private fun LedgerManagement(state: MoreUiState, viewModel: OmniFlowViewModel) {
+private fun LedgerManagement(state: MoreUiState, viewModel: OmniFlowViewModel, onOpen: (String) -> Unit) {
     var editing by remember { mutableStateOf<com.omniflow.core.domain.model.Ledger?>(null) }
     var showNew by remember { mutableStateOf(false) }
-    ManagementList(
-        addLabel = "新建账本",
-        onAdd = { showNew = true },
-        error = state.error,
+    var menuFor by remember { mutableStateOf<String?>(null) }
+    var confirmDelete by remember { mutableStateOf<com.omniflow.core.domain.model.Ledger?>(null) }
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        item { Button(onClick = { showNew = true }, modifier = Modifier.fillMaxWidth()) { Text("新建账本") } }
+        state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
         items(state.ledgers, key = { it.id }) { ledger ->
-            ManagementRow(
-                title = ledger.name,
-                subtitle = if (state.defaultLedgerId == ledger.id) "默认账本" else "",
-                onEdit = { editing = ledger },
-                onDelete = { viewModel.deleteLedger(ledger.id) },
+            Surface(
+                onClick = { onOpen(ledger.id) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
             ) {
-                Checkbox(
-                    checked = state.defaultLedgerId == ledger.id,
-                    onCheckedChange = { checked -> viewModel.setDefaultLedger(if (checked) ledger.id else null) },
-                )
+                Row(
+                    Modifier.fillMaxWidth().padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    LedgerCoverBox(ledger.coverKey, Modifier.size(52.dp), iconSize = 26)
+                    Spacer(Modifier.size(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                ledger.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            if (state.defaultLedgerId == ledger.id) {
+                                Spacer(Modifier.size(6.dp))
+                                Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.primary) {
+                                    Text(
+                                        "默认",
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                    )
+                                }
+                            }
+                        }
+                        Text(
+                            ledgerCover(ledger.coverKey).label,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Box {
+                        TextButton(onClick = { menuFor = ledger.id }) { Text("⋯") }
+                        DropdownMenu(expanded = menuFor == ledger.id, onDismissRequest = { menuFor = null }) {
+                            DropdownMenuItem(text = { Text("编辑") }, onClick = { menuFor = null; editing = ledger })
+                            if (state.defaultLedgerId != ledger.id) {
+                                DropdownMenuItem(
+                                    text = { Text("设为默认账本") },
+                                    onClick = { menuFor = null; viewModel.setDefaultLedger(ledger.id) },
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text("删除", color = MaterialTheme.colorScheme.error) },
+                                onClick = { menuFor = null; confirmDelete = ledger },
+                            )
+                        }
+                    }
+                }
             }
         }
+        item { Spacer(Modifier.height(88.dp)) }
     }
     if (showNew || editing != null) {
-        LedgerDialog(editing, onDismiss = { showNew = false; editing = null }) { name, cover ->
+        LedgerSheet(editing, onDismiss = { showNew = false; editing = null }) { name, cover ->
             viewModel.saveLedger(editing?.id, name, cover)
             showNew = false
             editing = null
         }
     }
+    confirmDelete?.let { ledger ->
+        AlertDialog(
+            onDismissRequest = { confirmDelete = null },
+            title = { Text("删除账本“${ledger.name}”？") },
+            text = { Text("该账本下的交易、分类、标签和规则都会一并删除，且无法撤销。") },
+            confirmButton = {
+                TextButton(onClick = { confirmDelete = null; viewModel.deleteLedger(ledger.id) }) {
+                    Text("删除", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("取消") } },
+        )
+    }
 }
 
 @Composable
-private fun LedgerDialog(
+private fun LedgerSheet(
     ledger: com.omniflow.core.domain.model.Ledger?,
     onDismiss: () -> Unit,
     onSave: (String, String?) -> Unit,
 ) {
     var name by remember(ledger) { mutableStateOf(ledger?.name.orEmpty()) }
-    var cover by remember(ledger) { mutableStateOf(ledger?.coverKey.orEmpty()) }
-    FormDialog(if (ledger == null) "新建账本" else "编辑账本", onDismiss, { onSave(name, cover.ifBlank { null }) }) {
-        OutlinedTextField(name, { name = it }, label = { Text("名称") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(cover, { cover = it }, label = { Text("封面标识（可选）") }, modifier = Modifier.fillMaxWidth())
+    var cover by remember(ledger) { mutableStateOf(ledger?.coverKey ?: LedgerCovers.first().key) }
+    ManagementSheet(
+        title = if (ledger == null) "新建账本" else "编辑账本",
+        onDismiss = onDismiss,
+        onSave = { onSave(name.trim(), cover) },
+        saveEnabled = name.isNotBlank(),
+    ) {
+        OutlinedTextField(name, { name = it }, label = { Text("账本名称") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        Text("封面", style = MaterialTheme.typography.labelLarge)
+        LedgerCoverPicker(cover) { cover = it }
     }
 }
 
 @Composable
-private fun AccountManagement(state: MoreUiState, viewModel: OmniFlowViewModel) {
+private fun AccountManagement(state: MoreUiState, viewModel: OmniFlowViewModel, onOpen: (String) -> Unit) {
     var editing by remember { mutableStateOf<Account?>(null) }
     var showNew by remember { mutableStateOf(false) }
-    ManagementList("新建账户", { showNew = true }, state.error) {
-        items(state.accounts, key = { it.id }) { account ->
-            ManagementRow(
-                title = account.name,
-                subtitle = "${account.type.label} · ${account.balance.asRmb()}",
-                onEdit = { editing = account },
-                onDelete = { viewModel.deleteAccount(account.id) },
-            )
+    val grouped = AccountType.entries.mapNotNull { type ->
+        state.accounts.filter { it.type == type }.takeIf(List<Account>::isNotEmpty)?.let { type to it }
+    }
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item { Button(onClick = { showNew = true }, modifier = Modifier.fillMaxWidth()) { Text("新建账户") } }
+        state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
+        grouped.forEach { (type, accounts) ->
+            val subtotal = accounts.fold(Money.Zero) { total, account -> total + account.balance }
+            item(key = "header-${type.name}") {
+                ManagementGroupHeader("${type.label} · ${accounts.size}", subtotal.asRmb())
+            }
+            itemsIndexed(accounts, key = { _, account -> account.id }) { index, account ->
+                AccountRow(
+                    account = account,
+                    shape = groupedOptionShape(index, accounts.size),
+                    onClick = { onOpen(account.id) },
+                    onEdit = { editing = account },
+                )
+            }
         }
+        item { Spacer(Modifier.height(88.dp)) }
     }
     if (showNew || editing != null) {
-        AccountDialog(editing, onDismiss = { showNew = false; editing = null }) { name, type, icon, card, note, balance, included ->
+        AccountSheet(editing, onDismiss = { showNew = false; editing = null }, onDelete = { id ->
+            viewModel.deleteAccount(id)
+            editing = null
+        }) { name, type, icon, card, note, balance, included ->
             viewModel.saveAccount(editing?.id, name, type, icon, card, note, balance, included)
             showNew = false
             editing = null
@@ -147,9 +242,45 @@ private fun AccountManagement(state: MoreUiState, viewModel: OmniFlowViewModel) 
 }
 
 @Composable
-private fun AccountDialog(
+private fun AccountRow(
+    account: Account,
+    shape: androidx.compose.ui.graphics.Shape,
+    onClick: () -> Unit,
+    onEdit: () -> Unit,
+) {
+    // 信用卡这类负债余额为负，用 error 语义色，和列表、统计口径一致
+    val isLiability = account.balance.minor < 0
+    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = shape, color = MaterialTheme.colorScheme.surfaceVariant) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            RoundIcon(account.iconKey)
+            Spacer(Modifier.size(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(account.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                val details = listOfNotNull(
+                    account.cardNumber?.takeLast(4)?.takeIf(String::isNotBlank)?.let { "尾号 $it" },
+                    if (!account.includeInTotalAssets) "不计入总资产" else null,
+                ).joinToString(" · ")
+                if (details.isNotBlank()) {
+                    Text(details, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                }
+            }
+            Text(
+                account.balance.asRmb(),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = if (isLiability) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+            )
+            TextButton(onClick = onEdit) { Text("编辑") }
+        }
+    }
+}
+
+@Composable
+private fun AccountSheet(
     account: Account?,
     onDismiss: () -> Unit,
+    onDelete: (String) -> Unit,
     onSave: (String, AccountType, String, String?, String?, Money, Boolean) -> Unit,
 ) {
     var name by remember(account) { mutableStateOf(account?.name.orEmpty()) }
@@ -160,218 +291,424 @@ private fun AccountDialog(
     var balance by remember(account) { mutableStateOf(account?.balance?.toDecimal().orEmpty()) }
     var included by remember(account) { mutableStateOf(account?.includeInTotalAssets ?: true) }
     var balanceError by remember(account) { mutableStateOf<String?>(null) }
-    FormDialog(if (account == null) "新建账户" else "编辑账户", onDismiss, {
-        val parsedBalance = balance.toMoneyOrNull()
-        if (parsedBalance == null) {
-            balanceError = "请输入有效余额，最多两位小数"
-        } else {
-            balanceError = null
-            onSave(name, type, icon, card.ifBlank { null }, note.ifBlank { null }, parsedBalance, included)
+    var confirmDelete by remember(account) { mutableStateOf(false) }
+    ManagementSheet(
+        title = if (account == null) "新建账户" else "编辑账户",
+        onDismiss = onDismiss,
+        onSave = {
+            val parsed = balance.toMoneyOrNull()
+            if (parsed == null) {
+                balanceError = "请输入有效余额，最多两位小数"
+            } else {
+                balanceError = null
+                onSave(name.trim(), type, icon, card.ifBlank { null }, note.ifBlank { null }, parsed, included)
+            }
+        },
+        saveEnabled = name.isNotBlank(),
+    ) {
+        OutlinedTextField(name, { name = it }, label = { Text("账户名称") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        Text("类型", style = MaterialTheme.typography.labelLarge)
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            AccountType.entries.forEach { entry ->
+                FilterChip(selected = type == entry, onClick = { type = entry }, label = { Text(entry.label) })
+            }
         }
-    }) {
-        OutlinedTextField(name, { name = it }, label = { Text("名称") }, modifier = Modifier.fillMaxWidth())
-        ValueMenu(type.label, AccountType.entries, { it.label }) { type = it }
-        ValueMenu(icon, BundledIconKeys, { it }) { icon = it }
-        OutlinedTextField(card, { card = it }, label = { Text("卡号（可选）") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(note, { note = it }, label = { Text("备注（可选）") }, modifier = Modifier.fillMaxWidth())
+        Text("图标", style = MaterialTheme.typography.labelLarge)
+        IconPickerGrid(AccountIconOptions, icon) { icon = it }
         OutlinedTextField(
             balance,
             { balance = it; balanceError = null },
             label = { Text("当前余额") },
+            singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             isError = balanceError != null,
             supportingText = { balanceError?.let { Text(it) } },
         )
+        OutlinedTextField(card, { card = it }, label = { Text("卡号（可选）") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(note, { note = it }, label = { Text("备注（可选）") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("计入总资产", modifier = Modifier.weight(1f))
+            Column(Modifier.weight(1f)) {
+                Text("计入总资产")
+                Text("关闭后该账户不参与净资产统计", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Switch(included, { included = it })
         }
+        if (account != null) {
+            TextButton(onClick = { confirmDelete = true }) {
+                Text("删除账户", color = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+    if (confirmDelete && account != null) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("删除账户“${account.name}”？") },
+            text = { Text("此操作无法撤销。") },
+            confirmButton = {
+                TextButton(onClick = { confirmDelete = false; onDelete(account.id) }) {
+                    Text("删除", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("取消") } },
+        )
     }
 }
 
 @Composable
-private fun AssetManagement(state: MoreUiState, onManageAccounts: () -> Unit) {
-    LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+private fun AssetManagement(state: MoreUiState, onOpenAccount: (String) -> Unit) {
+    val counted = state.accounts.filter { it.includeInTotalAssets }
+    val assets = counted.filter { it.balance.minor >= 0 }
+    val liabilities = counted.filter { it.balance.minor < 0 }
+    val excluded = state.accounts.filterNot { it.includeInTotalAssets }
+    val assetTotal = assets.fold(Money.Zero) { total, account -> total + account.balance }
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("净资产 ${state.accountSummary.netAssets.asRmb()}", style = MaterialTheme.typography.headlineSmall)
-                    Text("资产 ${state.accountSummary.assets.asRmb()}")
-                    Text("负债 ${state.accountSummary.liabilities.asRmb()}")
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ) {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("净资产", style = MaterialTheme.typography.labelLarge)
+                    Text(
+                        state.accountSummary.netAssets.asRmb(),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Row(Modifier.fillMaxWidth()) {
+                        Column(Modifier.weight(1f)) {
+                            Text("资产", style = MaterialTheme.typography.labelMedium)
+                            Text(state.accountSummary.assets.asRmb(), fontWeight = FontWeight.Medium)
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text("负债", style = MaterialTheme.typography.labelMedium)
+                            Text(state.accountSummary.liabilities.asRmb(), fontWeight = FontWeight.Medium)
+                        }
+                    }
                 }
             }
         }
-        item { Button(onClick = onManageAccounts, modifier = Modifier.fillMaxWidth()) { Text("管理账户") } }
-        items(state.accounts.filter { it.includeInTotalAssets }, key = { it.id }) { account ->
-            Card(Modifier.fillMaxWidth()) {
-                Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(account.name, fontWeight = FontWeight.Medium)
-                    Text(account.balance.asRmb())
+        if (assets.isNotEmpty()) {
+            item { ManagementGroupHeader("资产构成", assetTotal.asRmb()) }
+            itemsIndexed(assets, key = { _, account -> "asset-${account.id}" }) { index, account ->
+                AssetRow(
+                    account = account,
+                    share = if (assetTotal.minor > 0) account.balance.minor.toFloat() / assetTotal.minor else 0f,
+                    shape = groupedOptionShape(index, assets.size),
+                    onClick = { onOpenAccount(account.id) },
+                )
+            }
+        }
+        if (liabilities.isNotEmpty()) {
+            item { ManagementGroupHeader("负债", state.accountSummary.liabilities.asRmb()) }
+            itemsIndexed(liabilities, key = { _, account -> "liability-${account.id}" }) { index, account ->
+                AssetRow(account, 0f, groupedOptionShape(index, liabilities.size)) { onOpenAccount(account.id) }
+            }
+        }
+        if (excluded.isNotEmpty()) {
+            item { ManagementGroupHeader("不计入总资产", "${excluded.size} 个") }
+            itemsIndexed(excluded, key = { _, account -> "excluded-${account.id}" }) { index, account ->
+                AssetRow(account, 0f, groupedOptionShape(index, excluded.size)) { onOpenAccount(account.id) }
+            }
+        }
+        if (state.accounts.isEmpty()) {
+            item {
+                Text(
+                    "还没有账户，先去「账户」里创建一个",
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        item { Spacer(Modifier.height(88.dp)) }
+    }
+}
+
+@Composable
+private fun AssetRow(
+    account: Account,
+    share: Float,
+    shape: androidx.compose.ui.graphics.Shape,
+    onClick: () -> Unit,
+) {
+    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = shape, color = MaterialTheme.colorScheme.surfaceVariant) {
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RoundIcon(account.iconKey, size = 34)
+                Spacer(Modifier.size(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(account.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(account.type.label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                Text(
+                    account.balance.asRmb(),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (account.balance.minor < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            if (share > 0f) {
+                LinearProgressIndicator(
+                    progress = { share },
+                    modifier = Modifier.fillMaxWidth().height(4.dp),
+                )
             }
         }
     }
 }
 
 @Composable
-private fun CategoryManagement(state: MoreUiState, viewModel: OmniFlowViewModel) {
+private fun CategoryManagement(state: MoreUiState, viewModel: OmniFlowViewModel, onOpen: (String) -> Unit) {
     var editing by remember { mutableStateOf<Category?>(null) }
+    var newParentId by remember { mutableStateOf<String?>(null) }
     var showNew by remember { mutableStateOf(false) }
-    LedgerScopedHeader(state, viewModel)
-    ManagementList("新建分类", { showNew = true }, state.error) {
-        items(state.categories, key = { it.id }) { category ->
-            val parent = state.categories.firstOrNull { it.id == category.parentId }
-            ManagementRow(
-                title = category.name,
-                subtitle = listOfNotNull(parent?.name, category.type.label).joinToString(" · "),
-                onEdit = { editing = category },
-                onDelete = { viewModel.deleteCategory(category.id) },
-            )
+    var type by remember { mutableStateOf(TransactionType.EXPENSE) }
+    var expanded by remember { mutableStateOf<Set<String>>(emptySet()) }
+    val primaries = state.categories.filter { it.parentId == null && it.type == type }
+    Column(Modifier.fillMaxSize()) {
+        LedgerPickerBar(state.ledgers, state.selectedLedgerId) { viewModel.selectMoreLedger(it) }
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            TransactionType.entries.forEach { entry ->
+                FilterChip(
+                    selected = type == entry,
+                    onClick = { type = entry },
+                    modifier = Modifier.weight(1f),
+                    label = { Text(entry.label, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        LazyColumn(
+            Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            item {
+                Button(onClick = { newParentId = null; showNew = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text("新建一级分类")
+                }
+            }
+            state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
+            if (primaries.isEmpty()) {
+                item {
+                    Text(
+                        "该账本还没有${type.label}分类",
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            items(primaries, key = { it.id }) { primary ->
+                val children = state.categories.filter { it.parentId == primary.id }
+                CategoryCardRow(
+                    primary = primary,
+                    children = children,
+                    expanded = primary.id in expanded,
+                    onToggle = {
+                        expanded = if (primary.id in expanded) expanded - primary.id else expanded + primary.id
+                    },
+                    onOpen = { onOpen(primary.id) },
+                    onEdit = { editing = primary },
+                    onEditChild = { editing = it },
+                    onAddChild = { newParentId = primary.id; showNew = true },
+                )
+            }
+            item { Spacer(Modifier.height(88.dp)) }
         }
     }
     val ledgerId = state.selectedLedgerId
     if ((showNew || editing != null) && ledgerId != null) {
-        CategoryDialog(editing, ledgerId, state.categories, onDismiss = { showNew = false; editing = null }) { parent, name, icon, type ->
-            viewModel.saveCategory(editing?.id, ledgerId, parent, name, icon, type)
+        CategorySheet(
+            category = editing,
+            presetParentId = newParentId,
+            presetType = type,
+            ledgerId = ledgerId,
+            categories = state.categories,
+            onDismiss = { showNew = false; editing = null; newParentId = null },
+            onDelete = { id -> viewModel.deleteCategory(id); editing = null },
+        ) { parent, name, icon, categoryType ->
+            viewModel.saveCategory(editing?.id, ledgerId, parent, name, icon, categoryType)
             showNew = false
             editing = null
+            newParentId = null
         }
     }
 }
 
 @Composable
-private fun CategoryDialog(
+private fun CategoryCardRow(
+    primary: Category,
+    children: List<Category>,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    onOpen: () -> Unit,
+    onEdit: () -> Unit,
+    onEditChild: (Category) -> Unit,
+    onAddChild: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+    ) {
+        Column {
+            Row(
+                Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RoundIcon(primary.iconKey)
+                Spacer(Modifier.size(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(primary.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        if (children.isEmpty()) "暂无二级分类" else "${children.size} 个二级分类",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                TextButton(onClick = onEdit) { Text("编辑") }
+                TextButton(onClick = onToggle) { Text(if (expanded) "收起" else "展开") }
+            }
+            if (expanded) {
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    children.forEach { child ->
+                        FilterChip(selected = false, onClick = { onEditChild(child) }, label = { Text(child.name, maxLines = 1) })
+                    }
+                    TextButton(onClick = onAddChild) { Text("+ 新建") }
+                }
+                Spacer(Modifier.height(6.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategorySheet(
     category: Category?,
+    presetParentId: String?,
+    presetType: TransactionType,
     ledgerId: String,
     categories: List<Category>,
     onDismiss: () -> Unit,
+    onDelete: (String) -> Unit,
     onSave: (String?, String, String?, TransactionType) -> Unit,
 ) {
-    var type by remember(category) { mutableStateOf(category?.type ?: TransactionType.EXPENSE) }
-    var parentId by remember(category) { mutableStateOf(category?.parentId) }
+    var type by remember(category) { mutableStateOf(category?.type ?: presetType) }
+    var parentId by remember(category) { mutableStateOf(category?.parentId ?: presetParentId) }
     var name by remember(category) { mutableStateOf(category?.name.orEmpty()) }
     var icon by remember(category) { mutableStateOf(category?.iconKey ?: CategoryIconOptions.first().key) }
-    var showIconPicker by remember(category) { mutableStateOf(false) }
+    var confirmDelete by remember(category) { mutableStateOf(false) }
     val parents = categories.filter { it.ledgerId == ledgerId && it.parentId == null && it.type == type && it.id != category?.id }
-    FormDialog(if (category == null) "新建分类" else "编辑分类", onDismiss, {
-        onSave(parentId, name, if (parentId == null) icon else null, type)
-    }) {
+    ManagementSheet(
+        title = if (category == null) "新建分类" else "编辑分类",
+        onDismiss = onDismiss,
+        onSave = { onSave(parentId, name.trim(), if (parentId == null) icon else null, type) },
+        saveEnabled = name.isNotBlank(),
+    ) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TransactionType.entries.forEach { value ->
                 FilterChip(selected = type == value, onClick = { type = value; parentId = null }, label = { Text(value.label) })
             }
         }
         NullableValueMenu(
-            label = parents.firstOrNull { it.id == parentId }?.name ?: "一级分类",
-            allLabel = "创建一级分类",
+            label = parents.firstOrNull { it.id == parentId }?.name ?: "作为一级分类",
+            allLabel = "作为一级分类",
             values = parents,
             valueLabel = Category::name,
             onAll = { parentId = null },
             onSelected = { parentId = it.id },
         )
-        OutlinedTextField(name, { name = it }, label = { Text("名称") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(name, { name = it }, label = { Text("分类名称") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         if (parentId == null) {
-            CategoryIconButton(icon) { showIconPicker = true }
+            Text("图标", style = MaterialTheme.typography.labelLarge)
+            IconPickerGrid(CategoryIconOptions, icon) { icon = it }
+        }
+        if (category != null) {
+            TextButton(onClick = { confirmDelete = true }) {
+                Text("删除分类", color = MaterialTheme.colorScheme.error)
+            }
         }
     }
-    if (showIconPicker) {
-        CategoryIconPickerDialog(
-            selectedKey = icon,
-            onDismiss = { showIconPicker = false },
-            onSelected = {
-                icon = it
-                showIconPicker = false
+    if (confirmDelete && category != null) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("删除分类“${category.name}”？") },
+            text = { Text("已经记到这个分类下的交易不会被删除，但会失去分类。此操作无法撤销。") },
+            confirmButton = {
+                TextButton(onClick = { confirmDelete = false; onDelete(category.id) }) {
+                    Text("删除", color = MaterialTheme.colorScheme.error)
+                }
             },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("取消") } },
         )
     }
-}
-
-@Composable
-private fun CategoryIconButton(selectedKey: String, onClick: () -> Unit) {
-    val option = CategoryIconOptions.firstOrNull { it.key == selectedKey }
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(12.dp),
-    ) {
-        Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            SvgIcon(
-                categoryIconKey(selectedKey),
-                Modifier.size(36.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                Text("分类图标", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(option?.label ?: "默认图标", fontWeight = FontWeight.SemiBold)
-            }
-            Text("更换", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
-        }
-    }
-}
-
-@Composable
-private fun CategoryIconPickerDialog(
-    selectedKey: String,
-    onDismiss: () -> Unit,
-    onSelected: (String) -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("选择分类图标") },
-        text = {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(5),
-                modifier = Modifier.fillMaxWidth().height(420.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                gridItems(CategoryIconOptions, key = CategoryIconOption::key) { option ->
-                    val selected = option.key == selectedKey
-                    Surface(
-                        onClick = { onSelected(option.key) },
-                        modifier = Modifier.height(66.dp),
-                        color = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                        border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
-                        shape = RoundedCornerShape(12.dp),
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                        ) {
-                            SvgIcon(
-                                categoryIconKey(option.key),
-                                Modifier.size(34.dp),
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                            Text(
-                                option.label,
-                                style = MaterialTheme.typography.labelSmall,
-                                textAlign = TextAlign.Center,
-                                maxLines = 1,
-                            )
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("关闭") } },
-    )
 }
 
 @Composable
 private fun TagManagement(state: MoreUiState, viewModel: OmniFlowViewModel) {
     var editing by remember { mutableStateOf<Tag?>(null) }
     var showNew by remember { mutableStateOf(false) }
-    LedgerScopedHeader(state, viewModel)
-    ManagementList("新建标签", { showNew = true }, state.error) {
-        items(state.tags, key = { it.id }) { tag ->
-            ManagementRow(tag.name, "", { editing = tag }, { viewModel.deleteTag(tag.id) })
+    Column(Modifier.fillMaxSize()) {
+        LedgerPickerBar(state.ledgers, state.selectedLedgerId) { viewModel.selectMoreLedger(it) }
+        LazyColumn(
+            Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            item { Button(onClick = { showNew = true }, modifier = Modifier.fillMaxWidth()) { Text("新建标签") } }
+            state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
+            if (state.tags.isEmpty()) {
+                item {
+                    Text(
+                        "该账本还没有标签",
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            itemsIndexed(state.tags, key = { _, tag -> tag.id }) { index, tag ->
+                Surface(
+                    onClick = { editing = tag },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = groupedOptionShape(index, state.tags.size),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("#", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.size(10.dp))
+                        Text(tag.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("编辑", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+            item { Spacer(Modifier.height(88.dp)) }
         }
     }
     val ledgerId = state.selectedLedgerId
     if ((showNew || editing != null) && ledgerId != null) {
-        NameDialog(if (editing == null) "新建标签" else "编辑标签", editing?.name.orEmpty(), { showNew = false; editing = null }) { name ->
+        TagSheet(
+            tag = editing,
+            onDismiss = { showNew = false; editing = null },
+            onDelete = { id -> viewModel.deleteTag(id); editing = null },
+        ) { name ->
             viewModel.saveTag(editing?.id, ledgerId, name)
             showNew = false
             editing = null
@@ -380,24 +717,68 @@ private fun TagManagement(state: MoreUiState, viewModel: OmniFlowViewModel) {
 }
 
 @Composable
+private fun TagSheet(tag: Tag?, onDismiss: () -> Unit, onDelete: (String) -> Unit, onSave: (String) -> Unit) {
+    var name by remember(tag) { mutableStateOf(tag?.name.orEmpty()) }
+    ManagementSheet(
+        title = if (tag == null) "新建标签" else "编辑标签",
+        onDismiss = onDismiss,
+        onSave = { onSave(name.trim()) },
+        saveEnabled = name.isNotBlank(),
+    ) {
+        OutlinedTextField(name, { name = it }, label = { Text("标签名称") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        if (tag != null) {
+            TextButton(onClick = { onDelete(tag.id) }) {
+                Text("删除标签", color = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+}
+
+@Composable
 private fun RuleManagement(state: MoreUiState, viewModel: OmniFlowViewModel) {
     var editing by remember { mutableStateOf<Rule?>(null) }
     var showNew by remember { mutableStateOf(false) }
-    LedgerScopedHeader(state, viewModel)
+    var confirmDelete by remember { mutableStateOf<Rule?>(null) }
     val orderedRules = state.rules.sortedBy(Rule::priority)
-    ManagementList("新建规则", { showNew = true }, state.error) {
-        itemsIndexed(orderedRules, key = { _, rule -> rule.id }) { index, rule ->
-            ManagementRow(
-                title = "${rule.priority}. ${rule.name}",
-                subtitle = "${rule.conditionType.label}: ${rule.conditionValue} → ${rule.actionType.label}",
-                onEdit = { editing = rule },
-                onDelete = { viewModel.deleteRule(rule.id) },
-            ) {
-                Column {
-                    TextButton(onClick = { viewModel.moveRule(rule.id, -1) }, enabled = index > 0) { Text("上移") }
-                    TextButton(onClick = { viewModel.moveRule(rule.id, 1) }, enabled = index < orderedRules.lastIndex) { Text("下移") }
+    Column(Modifier.fillMaxSize()) {
+        LedgerPickerBar(state.ledgers, state.selectedLedgerId) { viewModel.selectMoreLedger(it) }
+        LazyColumn(
+            Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            item { Button(onClick = { showNew = true }, modifier = Modifier.fillMaxWidth()) { Text("新建规则") } }
+            state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
+            if (orderedRules.isEmpty()) {
+                item {
+                    Text(
+                        "还没有规则。规则会在导入账单时按顺序自动套用。",
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                        textAlign = TextAlign.Center,
+                        color = mutedContent(),
+                    )
+                }
+            } else {
+                item {
+                    Text("长按可拖动调整优先级，靠前的先生效", style = OmniText.caption, color = mutedContent())
+                }
+                item {
+                    ReorderableColumn(
+                        items = orderedRules,
+                        key = Rule::id,
+                        rowHeight = 76.dp,
+                        resetSignal = state.error,
+                        onReordered = { reordered -> viewModel.reorderRules(reordered.map(Rule::id)) },
+                    ) { rule, dragging ->
+                        RuleRow(
+                            rule = rule,
+                            dragging = dragging,
+                            onEdit = { editing = rule },
+                            onDelete = { confirmDelete = rule },
+                        )
+                    }
                 }
             }
+            item { Spacer(Modifier.height(88.dp)) }
         }
     }
     val ledgerId = state.selectedLedgerId
@@ -406,6 +787,53 @@ private fun RuleManagement(state: MoreUiState, viewModel: OmniFlowViewModel) {
             viewModel.saveRule(editing?.id, ledgerId, name, condition, conditionValue, action, actionValue, priority)
             showNew = false
             editing = null
+        }
+    }
+    confirmDelete?.let { rule ->
+        AlertDialog(
+            onDismissRequest = { confirmDelete = null },
+            title = { Text("删除规则“${rule.name}”？") },
+            text = { Text("此操作无法撤销。") },
+            confirmButton = {
+                TextButton(onClick = { confirmDelete = null; viewModel.deleteRule(rule.id) }) {
+                    Text("删除", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("取消") } },
+        )
+    }
+}
+
+@Composable
+private fun RuleRow(rule: Rule, dragging: Boolean, onEdit: () -> Unit, onDelete: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(OmniRadius.medium),
+        color = if (dragging) MaterialTheme.colorScheme.surfaceBright else surfaceInset(),
+        tonalElevation = if (dragging) 6.dp else 0.dp,
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                "${rule.priority + 1}",
+                modifier = Modifier.padding(end = 12.dp),
+                style = OmniText.titleRow,
+                color = mutedContent(),
+            )
+            Column(Modifier.weight(1f)) {
+                Text(rule.name, style = OmniText.titleRow, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    "${rule.conditionType.label}: ${rule.conditionValue} → ${rule.actionType.label}",
+                    style = OmniText.caption,
+                    color = mutedContent(),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            TextButton(onClick = onEdit) { Text("编辑") }
+            TextButton(onClick = onDelete) { Text("删除", color = MaterialTheme.colorScheme.error) }
         }
     }
 }
@@ -475,20 +903,67 @@ private fun ReminderManagement(
 ) {
     var editing by remember { mutableStateOf<Reminder?>(null) }
     var showNew by remember { mutableStateOf(false) }
-    ManagementList("新建提醒", { showNew = true }, state.error) {
-        items(state.reminders, key = { it.id }) { reminder ->
-            ManagementRow(
-                title = reminder.name,
-                subtitle = "${reminder.type.label} · ${reminder.schedule.kind.label}",
-                onEdit = { editing = reminder },
-                onDelete = { viewModel.deleteReminder(reminder.id) },
-            ) {
-                Switch(!reminder.paused, { enabled ->
-                    if (enabled) onRequestNotificationPermission()
-                    viewModel.setReminderPaused(reminder, !enabled)
-                })
+    var confirmDelete by remember { mutableStateOf<Reminder?>(null) }
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item { Button(onClick = { showNew = true }, modifier = Modifier.fillMaxWidth()) { Text("新建提醒") } }
+        state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
+        if (state.reminders.isEmpty()) {
+            item {
+                Text(
+                    "还没有提醒",
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                    textAlign = TextAlign.Center,
+                    color = mutedContent(),
+                )
             }
         }
+        itemsIndexed(state.reminders, key = { _, reminder -> reminder.id }) { index, reminder ->
+            Surface(
+                onClick = { editing = reminder },
+                modifier = Modifier.fillMaxWidth(),
+                shape = groupedOptionShape(index, state.reminders.size),
+                color = surfaceInset(),
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(reminder.name, style = OmniText.titleRow, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            "${reminder.type.label} · ${reminder.schedule.kind.label}",
+                            style = OmniText.caption,
+                            color = mutedContent(),
+                            maxLines = 1,
+                        )
+                    }
+                    Switch(!reminder.paused, { enabled ->
+                        if (enabled) onRequestNotificationPermission()
+                        viewModel.setReminderPaused(reminder, !enabled)
+                    })
+                    TextButton(onClick = { confirmDelete = reminder }) {
+                        Text("删除", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+        }
+        item { Spacer(Modifier.height(88.dp)) }
+    }
+    confirmDelete?.let { reminder ->
+        AlertDialog(
+            onDismissRequest = { confirmDelete = null },
+            title = { Text("删除提醒“${reminder.name}”？") },
+            text = { Text("此操作无法撤销。") },
+            confirmButton = {
+                TextButton(onClick = { confirmDelete = null; viewModel.deleteReminder(reminder.id) }) {
+                    Text("删除", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("取消") } },
+        )
     }
     if (showNew || editing != null) {
         ReminderDialog(editing, onDismiss = { showNew = false; editing = null }) { type, name, amount, schedule, paused ->
@@ -574,76 +1049,6 @@ private fun NumberField(label: String, value: String, onValue: (String) -> Unit)
 }
 
 @Composable
-private fun LedgerScopedHeader(state: MoreUiState, viewModel: OmniFlowViewModel) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-        ValueMenu(
-            label = state.ledgers.firstOrNull { it.id == state.selectedLedgerId }?.name ?: "选择账本",
-            values = state.ledgers,
-            valueLabel = { it.name },
-        ) { viewModel.selectMoreLedger(it.id) }
-    }
-}
-
-@Composable
-private fun ManagementList(
-    addLabel: String,
-    onAdd: () -> Unit,
-    error: String?,
-    content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit,
-) {
-    LazyColumn(
-        Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        item { Button(onClick = onAdd, modifier = Modifier.fillMaxWidth()) { Text(addLabel) } }
-        error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
-        content()
-        item { Spacer(Modifier.height(24.dp)) }
-    }
-}
-
-@Composable
-private fun ManagementRow(
-    title: String,
-    subtitle: String,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit,
-    trailing: @Composable (() -> Unit)? = null,
-) {
-    var confirmingDelete by remember { mutableStateOf(false) }
-    Card(
-        Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-    ) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
-                if (subtitle.isNotBlank()) {
-                    Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            trailing?.invoke()
-            TextButton(onClick = onEdit) { Text("编辑") }
-            TextButton(onClick = { confirmingDelete = true }) { Text("删除") }
-        }
-    }
-    if (confirmingDelete) {
-        AlertDialog(
-            onDismissRequest = { confirmingDelete = false },
-            title = { Text("确认删除“$title”？") },
-            text = { Text("此操作无法撤销。") },
-            confirmButton = {
-                TextButton(onClick = { confirmingDelete = false; onDelete() }) {
-                    Text("删除", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = { TextButton(onClick = { confirmingDelete = false }) { Text("取消") } },
-        )
-    }
-}
-
-@Composable
 private fun FormDialog(
     title: String,
     onDismiss: () -> Unit,
@@ -657,14 +1062,6 @@ private fun FormDialog(
         confirmButton = { TextButton(onClick = onSave) { Text("保存") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
     )
-}
-
-@Composable
-private fun NameDialog(title: String, initial: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
-    var name by remember(initial) { mutableStateOf(initial) }
-    FormDialog(title, onDismiss, { onSave(name) }) {
-        OutlinedTextField(name, { name = it }, label = { Text("名称") }, modifier = Modifier.fillMaxWidth())
-    }
 }
 
 private val AccountType.label: String
@@ -715,3 +1112,8 @@ private val BundledIconKeys = listOf(
     "bus", "wrench", "film", "heart-pulse", "plane", "car", "house", "smartphone",
     "shirt", "chart-line", "briefcase-business", "trophy", "gift", "play", "category",
 )
+
+/** 账户图标网格用的选项，key 沿用 [BundledIconKeys]。 */
+internal val AccountIconOptions = BundledIconKeys.map { key ->
+    CategoryIconOption(key, CategoryIconOptions.firstOrNull { it.key == key }?.label ?: key)
+}
