@@ -108,18 +108,7 @@ internal fun AnalyticsScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item { Spacer(Modifier.height(8.dp)); LedgerScopeMenu(state.scope, state.ledgers, onScope) }
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AnalyticsRangeMode.entries.forEach { mode ->
-                    FilterChip(
-                        selected = state.rangeMode == mode,
-                        onClick = { onRangeMode(mode) },
-                        label = { Text(mode.label, Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-        }
+        item { AnalyticsRangeSwitch(state.rangeMode, onRangeMode) }
         if (state.rangeMode == AnalyticsRangeMode.CUSTOM) {
             item { CustomRangeControls(state.range, onCustomRange) }
         } else {
@@ -166,6 +155,37 @@ internal fun AnalyticsScreen(
         item { Spacer(Modifier.height(88.dp)) }
     }
     state.statementTable?.let { StatementTableSheet(it, onStatementTable, onDismissStatementTable) }
+}
+
+/** 周/月/年/范围药丸分段控件，与记账页收支切换同一样式。 */
+@Composable
+private fun AnalyticsRangeSwitch(selected: AnalyticsRangeMode, onSelected: (AnalyticsRangeMode) -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier.fillMaxWidth().height(40.dp),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+    ) {
+        Row(Modifier.padding(3.dp)) {
+            AnalyticsRangeMode.entries.forEach { mode ->
+                val isSelected = mode == selected
+                Surface(
+                    onClick = { onSelected(mode) },
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    shape = CircleShape,
+                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                    contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            mode.label,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
