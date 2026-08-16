@@ -55,6 +55,10 @@ class SqlDelightBackupStore(
                 "categoryMemories" to JsonArray(queries.allCategoryMemoriesForBackup().executeAsList().map { row(
                     it.ledger_id, it.memory_key, it.category_id, it.updated_at,
                 ) }),
+                "budgets" to JsonArray(queries.allBudgetsForBackup().executeAsList().map { row(
+                    it.id, it.ledger_id, it.category_id, it.amount_minor,
+                    it.created_at, it.updated_at, it.deleted_at,
+                ) }),
                 "reminders" to JsonArray(queries.allRemindersForBackup().executeAsList().map { row(
                     it.id, it.type, it.name, it.amount_minor, it.schedule_kind, it.schedule_value,
                     it.paused, it.created_at, it.updated_at, it.deleted_at,
@@ -75,6 +79,7 @@ class SqlDelightBackupStore(
         }
         val queries = database.backupQueries
         database.transaction {
+            queries.clearBudgets()
             queries.clearTransactionTags()
             queries.clearTransactions()
             queries.clearCategoryMemories()
@@ -133,6 +138,12 @@ class SqlDelightBackupStore(
             } }
             root.rows("categoryMemories").forEach { element -> element.jsonArray.let { values ->
                 queries.restoreCategoryMemory(values.text(0), values.text(1), values.text(2), values.long(3))
+            } }
+            root.rows("budgets").forEach { element -> element.jsonArray.let { values ->
+                queries.restoreBudget(
+                    values.text(0), values.text(1), values.nullableText(2), values.long(3),
+                    values.long(4), values.long(5), values.nullableLong(6),
+                )
             } }
             root.rows("reminders").forEach { element -> element.jsonArray.let { values ->
                 queries.restoreReminder(

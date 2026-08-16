@@ -1,0 +1,30 @@
+CREATE TABLE budget (
+    id TEXT NOT NULL PRIMARY KEY,
+    ledger_id TEXT NOT NULL REFERENCES ledger(id),
+    category_id TEXT REFERENCES category(id),
+    amount_minor INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER
+);
+
+CREATE INDEX budget_ledger ON budget(ledger_id) WHERE deleted_at IS NULL;
+
+budgetsForLedger:
+SELECT * FROM budget WHERE ledger_id = :ledger_id AND deleted_at IS NULL ORDER BY category_id IS NOT NULL, created_at;
+
+allBudgetsForBackup:
+SELECT * FROM budget;
+
+insertBudget:
+INSERT INTO budget(id, ledger_id, category_id, amount_minor, created_at, updated_at, deleted_at)
+VALUES (:id, :ledger_id, :category_id, :amount_minor, :created_at, :updated_at, :deleted_at);
+
+updateBudget:
+UPDATE budget SET amount_minor = :amount_minor, updated_at = :updated_at WHERE id = :id;
+
+deleteBudget:
+UPDATE budget SET deleted_at = :deleted_at, updated_at = :updated_at WHERE id = :id;
+
+deleteAllBudgets:
+DELETE FROM budget;

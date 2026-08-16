@@ -1,0 +1,11 @@
+CREATE TABLE budget (
+    id TEXT NOT NULL PRIMARY KEY,
+    ledger_id TEXT NOT NULL REFERENCES ledger(id),
+    category_id TEXT REFERENCES category(id),
+    amount_minor INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER
+);
+
+CREATE INDEX budget_ledger ON budget(ledger_id) WHERE deleted_at IS NULL;

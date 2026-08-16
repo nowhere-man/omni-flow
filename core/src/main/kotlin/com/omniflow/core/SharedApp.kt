@@ -7,6 +7,7 @@ import com.omniflow.core.data.facade.SqlDelightHomeFacade
 import com.omniflow.core.data.facade.SqlDelightImportWorkflow
 import com.omniflow.core.data.facade.SqlDelightManagementFacade
 import com.omniflow.core.data.facade.SqlDelightQingziInteropFacade
+import com.omniflow.core.data.facade.SqlDelightBudgetFacade
 import com.omniflow.core.data.facade.SqlDelightReminderFacade
 import com.omniflow.core.data.local.createDatabase
 import com.omniflow.core.data.repository.SqlDelightAccountRepository
@@ -30,6 +31,7 @@ import com.omniflow.core.domain.facade.HomeFacade
 import com.omniflow.core.domain.facade.ImportWorkflow
 import com.omniflow.core.domain.facade.ManagementFacade
 import com.omniflow.core.domain.facade.QingziInteropFacade
+import com.omniflow.core.domain.facade.BudgetFacade
 import com.omniflow.core.domain.facade.ReminderFacade
 import com.omniflow.core.domain.facade.SyncFacade
 import com.omniflow.core.domain.model.SyncTarget
@@ -85,6 +87,7 @@ class SharedApp(
     val analytics: AnalyticsFacade = SqlDelightAnalyticsFacade(database)
     val preferences: AppPreferenceFacade = preferenceFacade
     val reminders: ReminderFacade = SqlDelightReminderFacade(database)
+    val budgets: BudgetFacade = SqlDelightBudgetFacade(database)
     val qingzi: QingziInteropFacade = SqlDelightQingziInteropFacade(database)
     val sync: SyncFacade = SqlDelightSyncEngine(
         database = database,

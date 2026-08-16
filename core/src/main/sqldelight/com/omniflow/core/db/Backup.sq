@@ -31,6 +31,12 @@ SELECT * FROM reminder ORDER BY created_at, id;
 allAppPreferencesForBackup:
 SELECT * FROM app_preference ORDER BY key;
 
+allBudgetsForBackup:
+SELECT * FROM budget ORDER BY created_at, id;
+
+clearBudgets:
+DELETE FROM budget;
+
 clearTransactionTags:
 DELETE FROM transaction_tag;
 
@@ -122,6 +128,13 @@ INSERT INTO rule(
 restoreCategoryMemory:
 INSERT INTO category_memory(ledger_id, memory_key, category_id, updated_at)
 VALUES (:ledger_id, :memory_key, :category_id, :updated_at);
+
+restoreBudget:
+INSERT INTO budget(
+    id, ledger_id, category_id, amount_minor, created_at, updated_at, deleted_at
+) VALUES (
+    :id, :ledger_id, :category_id, :amount_minor, :created_at, :updated_at, :deleted_at
+);
 
 restoreReminder:
 INSERT INTO reminder(
