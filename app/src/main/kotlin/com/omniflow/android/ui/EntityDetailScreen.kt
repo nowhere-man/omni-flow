@@ -51,16 +51,12 @@ internal fun EntityDetailScreen(
         item { EntityDetailHeader(state, moreState) }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SummaryTile("支出", state.summary.expenseTotal, MaterialTheme.colorScheme.error, Modifier.weight(1f))
-                SummaryTile("收入", state.summary.incomeTotal, MaterialTheme.colorScheme.tertiary, Modifier.weight(1f))
+                SummaryTile("支出", state.summary.expenseTotal, MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+                SummaryTile("收入", state.summary.incomeTotal, incomeColor(), Modifier.weight(1f))
                 SummaryTile(
                     "结余",
                     state.summary.netIncome,
-                    if (state.summary.netIncome.minor >= 0) {
-                        MaterialTheme.colorScheme.tertiary
-                    } else {
-                        MaterialTheme.colorScheme.error
-                    },
+                    if (state.summary.netIncome.minor >= 0) incomeColor() else expenseColor(),
                     Modifier.weight(1f),
                 )
             }
@@ -224,13 +220,12 @@ private fun EntityDetailHeader(state: EntityDetailUiState, moreState: MoreUiStat
 
 @Composable
 private fun SummaryTile(label: String, amount: Money, color: androidx.compose.ui.graphics.Color, modifier: Modifier) {
-    Surface(modifier = modifier, shape = MaterialTheme.shapes.medium, color = color.copy(alpha = 0.12f)) {
-        Column(Modifier.padding(horizontal = 10.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Surface(modifier = modifier, shape = MaterialTheme.shapes.medium, color = surfaceCard()) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(label, style = OmniText.caption, color = mutedContent())
             Text(
                 amount.asRmb(),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
+                style = OmniText.amountPrimary,
                 color = color,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

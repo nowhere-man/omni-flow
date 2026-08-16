@@ -51,6 +51,7 @@ import com.omniflow.core.domain.model.Account
 import com.omniflow.core.domain.model.DateRange
 import com.omniflow.core.domain.model.Ledger
 import com.omniflow.core.domain.model.LedgerScope
+import com.omniflow.core.domain.model.hourMinuteText
 import com.omniflow.core.domain.model.TransactionType
 import com.omniflow.core.domain.model.transactionDateTimeText
 import kotlinx.datetime.Clock
@@ -161,8 +162,8 @@ internal fun SearchScreen(
                     Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("共 ${result.items.size} 笔匹配交易", fontWeight = FontWeight.SemiBold)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("收入 ${result.summary.incomeTotal.asRmb()}", color = MaterialTheme.colorScheme.tertiary, fontWeight = FontWeight.SemiBold)
-                            Text("支出 ${result.summary.expenseTotal.asRmb()}", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
+                            Text("收入 ${result.summary.incomeTotal.asRmb()}", color = incomeColor(), fontWeight = FontWeight.SemiBold)
+                            Text("支出 ${result.summary.expenseTotal.asRmb()}", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
                         }
                         if (result.items.any { it.transaction.isExcluded }) {
                             Text(
@@ -181,68 +182,25 @@ internal fun SearchScreen(
                 )
             }
             items(result.items, key = { it.transaction.id }) { item ->
-                Card(
-                    Modifier.fillMaxWidth().clickable(role = Role.Button) { onEditTransaction(item.transaction.id) },
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(OmniRadius.medium),
+                    color = surfaceCard(),
                 ) {
-                    Row(
-                        Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Surface(
-                            modifier = Modifier.size(46.dp),
-                            shape = RoundedCornerShape(14.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                SvgIcon(
-                                    categoryIconKey(item.transaction.categoryIconKey),
-                                    Modifier.size(26.dp),
-                                    tint = MaterialTheme.colorScheme.primary,
-                                )
-                            }
-                        }
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text(item.transaction.categoryDisplayName, fontWeight = FontWeight.SemiBold)
-                            Text(
-                                "${item.transaction.ledgerName} · ${item.transaction.accountName}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Text(
-                                item.transaction.occurredAt.transactionDateTimeText(),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            item.transaction.note?.takeIf(String::isNotBlank)?.let {
-                                Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
-                            if (item.tags.isNotEmpty()) {
-                                Text(
-                                    item.tags.joinToString(" · ") { it.name },
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                            if (item.transaction.isExcluded) {
-                                Text(
-                                    "未计入收支",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                            }
-                        }
-                        Text(
-                            item.transaction.amount.asRmb(),
-                            fontWeight = FontWeight.Bold,
-                            color = if (item.transaction.type == TransactionType.EXPENSE) {
-                                MaterialTheme.colorScheme.error
-                            } else MaterialTheme.colorScheme.tertiary,
+                    Box(Modifier.padding(horizontal = 12.dp)) {
+                        TransactionRow(
+                            iconKey = item.transaction.categoryIconKey,
+                            title = item.transaction.categoryDisplayName,
+                            subtitle = listOfNotNull(
+                                item.transaction.note?.takeIf(String::isNotBlank),
+                                item.tags.takeIf { it.isNotEmpty() }?.joinToString(" ") { "#${it.name}" },
+                                item.transaction.accountName,
+                            ).joinToString(" · "),
+                            amount = item.transaction.amount,
+                            type = item.transaction.type,
+                            timeText = item.transaction.occurredAt.hourMinuteText(),
+                            dimmed = item.transaction.isExcluded,
+                            onClick = { onEditTransaction(item.transaction.id) },
                         )
                     }
                 }

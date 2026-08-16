@@ -74,6 +74,9 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.omniflow.core.domain.model.AppearanceMode
@@ -104,6 +107,7 @@ internal enum class MorePage(val label: String, val icon: ImageVector) {
     EXPORT("导出数据", Icons.Default.FileDownload),
     RULES("规则", Icons.AutoMirrored.Filled.Rule),
     REMINDERS("提醒", Icons.Default.Notifications),
+    BUDGETS("预算", Icons.Default.Savings),
     LEDGERS("账本", Icons.Default.AccountBalance),
     ACCOUNTS("账户", Icons.Default.Wallet),
     ASSETS("资产", Icons.Default.Savings),
@@ -144,6 +148,7 @@ internal fun MoreScreen(
                 onDynamicColorChanged = onDynamicColorChanged,
             )
             MorePage.DATA -> DataManagementPage(state, viewModel)
+            MorePage.BUDGETS -> BudgetPage(state, viewModel)
             MorePage.IMPORT -> ImportPage(state, viewModel)
             MorePage.EXPORT -> ExportPage(state, viewModel)
             MorePage.RULES,
@@ -194,7 +199,7 @@ private fun MoreHome(state: MoreUiState, onPage: (MorePage) -> Unit) {
         }
         item { MoreSection("账本与账户", listOf(MorePage.LEDGERS, MorePage.ACCOUNTS, MorePage.ASSETS), state, onPage) }
         item { MoreSection("分类与标签", listOf(MorePage.CATEGORIES, MorePage.TAGS), state, onPage) }
-        item { MoreSection("自动化", listOf(MorePage.RULES, MorePage.REMINDERS), state, onPage) }
+        item { MoreSection("预算与自动化", listOf(MorePage.BUDGETS, MorePage.RULES, MorePage.REMINDERS), state, onPage) }
         item { MoreSection("数据", listOf(MorePage.IMPORT, MorePage.EXPORT, MorePage.DATA), state, onPage) }
         item { MoreSection("通用", listOf(MorePage.SETTINGS), state, onPage) }
         state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
@@ -290,6 +295,7 @@ private fun MorePage.description(state: MoreUiState): String = when (this) {
     MorePage.ASSETS -> "净资产构成与负债"
     MorePage.CATEGORIES -> "收支分类、图标与排序"
     MorePage.TAGS -> "账本标签"
+    MorePage.BUDGETS -> budgetLabel(state)
     MorePage.RULES -> "自动分类和排除规则"
     MorePage.REMINDERS -> "还款与订阅提醒"
 }
@@ -378,6 +384,15 @@ private fun SettingsPage(
     }
 }
 
+private fun budgetLabel(state: MoreUiState): String {
+    val overall = state.budgets.firstOrNull { it.budget.isOverall } ?: return "设置月度预算，盯住整体开销"
+    return if (overall.isOverspent) {
+        "本月已超支 ${(-overall.remaining.minor / 100).grouped()} 元"
+    } else {
+        "本月还可用 ${(overall.remaining.minor / 100).grouped()} 元"
+    }
+}
+
 private fun themeColorLabel(color: ThemeColor): String = when (color) {
     ThemeColor.MIST_BLUE -> "雾蓝"
     ThemeColor.SAGE -> "鼠尾草"
@@ -399,6 +414,7 @@ private fun DataManagementPage(
     var password by remember { mutableStateOf(WebDavCredentials.password(context)) }
     var retention by remember(state.preferences.backupRetention) { mutableStateOf(state.preferences.backupRetention.toString()) }
     var pendingRestore by remember { mutableStateOf<com.omniflow.core.domain.model.RemoteBackupMeta?>(null) }
+    var showPassword by remember { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.small) {
@@ -406,7 +422,19 @@ private fun DataManagementPage(
                     Text("WebDAV 全量备份", fontWeight = FontWeight.SemiBold)
                     OutlinedTextField(endpoint, { endpoint = it }, label = { Text("服务器目录 URL") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(username, { username = it }, label = { Text("用户名") }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(password, { password = it }, label = { Text("密码") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(
+                        password,
+                        { password = it },
+                        label = { Text("密码") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            TextButton(onClick = { showPassword = !showPassword }) {
+                                Text(if (showPassword) "隐藏" else "显示")
+                            }
+                        },
+                    )
                     OutlinedTextField(retention, { retention = it.filter(Char::isDigit) }, label = { Text("最大备份数") })
                     Button(onClick = {
                         WebDavCredentials.save(context, endpoint, username, password)
@@ -422,6 +450,20 @@ private fun DataManagementPage(
                         OutlinedButton(onClick = viewModel::loadBackups) { Text("刷新备份") }
                     }
                 }
+            }
+        }
+        item {
+            Text("云端备份", style = OmniText.caption, color = mutedContent(), modifier = Modifier.padding(top = 4.dp))
+        }
+        if (state.backups.isEmpty()) {
+            item {
+                Text(
+                    if (state.syncState.lastBackupAt == null) "配置 WebDAV 后点「立即备份」创建第一个备份" else "还没有拉取到云端备份，试试「刷新备份」",
+                    style = OmniText.caption,
+                    color = mutedContent(),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
+                    textAlign = TextAlign.Center,
+                )
             }
         }
         items(state.backups, key = { "${it.deviceId}-${it.backupId}" }) { backup ->

@@ -44,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -110,7 +111,7 @@ private fun LedgerManagement(state: MoreUiState, viewModel: OmniFlowViewModel, o
                 ) {
                     LedgerCoverBox(ledger.coverKey, Modifier.size(52.dp), iconSize = 26)
                     Spacer(Modifier.size(14.dp))
-                    Column(Modifier.weight(1f)) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 ledger.name,
@@ -131,11 +132,27 @@ private fun LedgerManagement(state: MoreUiState, viewModel: OmniFlowViewModel, o
                                 }
                             }
                         }
+                        val stat = state.ledgerStats[ledger.id]
                         Text(
-                            ledgerCover(ledger.coverKey).label,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            "${(stat?.count ?: 0).grouped()} 条账目",
+                            style = OmniText.caption,
+                            color = mutedContent(),
                         )
+                        if (stat != null && stat.count > 0) {
+                            Text(
+                                "支出 ${stat.expense.asRmb()} · 收入 ${stat.income.asRmb()}",
+                                style = OmniText.caption,
+                                color = mutedContent(),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                "结余 ${stat.net.asRmb()}",
+                                style = OmniText.caption,
+                                color = if (stat.net.minor >= 0) incomeColor() else expenseColor(),
+                                maxLines = 1,
+                            )
+                        }
                     }
                     Box {
                         TextButton(onClick = { menuFor = ledger.id }) { Text("⋯") }
@@ -455,10 +472,14 @@ private fun AssetRow(
                     color = if (account.balance.minor < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                 )
             }
+            // share <= 0 的分组（负债、不计入总资产）直接不画轨道，否则留一条空条
             if (share > 0f) {
                 LinearProgressIndicator(
                     progress = { share },
                     modifier = Modifier.fillMaxWidth().height(4.dp),
+                    color = incomeColor(),
+                    trackColor = MaterialTheme.colorScheme.surfaceBright,
+                    strokeCap = StrokeCap.Round,
                 )
             }
         }
@@ -1099,9 +1120,9 @@ private val RuleActionType.label: String
         RuleActionType.EXCLUDE -> "排除不入账"
     }
 
-private fun Money.toDecimal(): String = java.math.BigDecimal.valueOf(minor, 2).toPlainString()
+internal fun Money.toDecimal(): String = java.math.BigDecimal.valueOf(minor, 2).toPlainString()
 
-private fun String.toMoneyOrNull(): Money? {
+internal fun String.toMoneyOrNull(): Money? {
     val value = trim().toBigDecimalOrNull() ?: return null
     if (value.scale() > 2) return null
     return runCatching { Money(value.movePointRight(2).longValueExact()) }.getOrNull()

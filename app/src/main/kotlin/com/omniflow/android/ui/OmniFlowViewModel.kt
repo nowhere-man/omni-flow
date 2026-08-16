@@ -11,6 +11,8 @@ import com.omniflow.core.domain.model.AnalyticsDashboardState
 import com.omniflow.core.domain.model.AnalyticsQuery
 import com.omniflow.core.domain.model.AppPreferences
 import com.omniflow.core.domain.model.AppearanceMode
+import com.omniflow.core.domain.model.BudgetProgress
+import com.omniflow.core.domain.model.buildBudgetProgress
 import com.omniflow.core.domain.model.Category
 import com.omniflow.core.domain.model.DateRange
 import com.omniflow.core.domain.model.HomeQuery
@@ -100,9 +102,8 @@ data class AnalyticsUiState(
         AnalyticsRangeMode.MONTH,
         Clock.System.now().toLocalDateTime(ChinaTimeZone).date,
     ),
-    val rankingType: TransactionType = TransactionType.EXPENSE,
-    val categoryType: TransactionType = TransactionType.EXPENSE,
-    val tagType: TransactionType = TransactionType.EXPENSE,
+    // 排行榜/饼图/标签以前各有一个开关，切换收入要点三次；合成页面级一个
+    val analyticsType: TransactionType = TransactionType.EXPENSE,
     val isLoading: Boolean = true,
     val error: String? = null,
 )
@@ -153,6 +154,11 @@ data class TransactionEditorUiState(
     val completed: Boolean = false,
 )
 
+/** 账本卡上的「N 条账目 / 支出 / 收入 / 结余」。 */
+data class LedgerStat(val count: Int, val expense: Money, val income: Money) {
+    val net: Money get() = income - expense
+}
+
 enum class EntityDetailKind { LEDGER, ACCOUNT, CATEGORY }
 
 data class EntityDetailUiState(
@@ -175,6 +181,8 @@ data class MoreUiState(
     val tags: List<Tag> = emptyList(),
     val rules: List<Rule> = emptyList(),
     val reminders: List<Reminder> = emptyList(),
+    val budgets: List<BudgetProgress> = emptyList(),
+    val ledgerStats: Map<String, LedgerStat> = emptyMap(),
     val preferences: AppPreferences = AppPreferences(),
     val syncState: SyncState = SyncState(),
     val backups: List<RemoteBackupMeta> = emptyList(),
@@ -227,8 +235,10 @@ class OmniFlowViewModel(
     private var moreCategoriesJob: Job? = null
     private var moreTagsJob: Job? = null
     private var moreRulesJob: Job? = null
+    private var moreBudgetsJob: Job? = null
     private var importJob: Job? = null
     private var entityDetailJob: Job? = null
+    private var ledgerStatsJob: Job? = null
 
     init {
         viewModelScope.launch { sharedApp.initialize() }
@@ -251,6 +261,7 @@ class OmniFlowViewModel(
                 val selected = previousSelection?.takeIf { id -> ledgers.any { it.id == id } }
                     ?: ledgers.firstOrNull()?.id
                 _moreUiState.value = _moreUiState.value.copy(ledgers = ledgers, selectedLedgerId = selected)
+                loadLedgerStats(ledgers.map(Ledger::id))
                 if (selected != null && selected != previousSelection) observeMoreLedger(selected)
             }
         }
@@ -279,6 +290,21 @@ class OmniFlowViewModel(
             sharedApp.reminders.observe().collect { result ->
                 _moreUiState.value = _moreUiState.value.copy(reminders = result.getOrDefault(emptyList()))
             }
+        }
+    }
+
+    private fun loadLedgerStats(ledgerIds: List<String>) {
+        ledgerStatsJob?.cancel()
+        ledgerStatsJob = viewModelScope.launch {
+            val stats = ledgerIds.associateWith { id ->
+                val result = sharedApp.search(TransactionSearchQuery(scope = LedgerScope.Single(id))).getOrNull()
+                LedgerStat(
+                    count = result?.items?.size ?: 0,
+                    expense = result?.summary?.expenseTotal ?: Money.Zero,
+                    income = result?.summary?.incomeTotal ?: Money.Zero,
+                )
+            }
+            _moreUiState.value = _moreUiState.value.copy(ledgerStats = stats)
         }
     }
 
@@ -410,16 +436,8 @@ class OmniFlowViewModel(
         _analyticsUiState.value = _analyticsUiState.value.copy(rangeMode = AnalyticsRangeMode.CUSTOM, range = range)
         observeAnalytics()
     }
-    fun setRankingType(type: TransactionType) {
-        _analyticsUiState.value = _analyticsUiState.value.copy(rankingType = type)
-        observeAnalytics()
-    }
-    fun setCategoryType(type: TransactionType) {
-        _analyticsUiState.value = _analyticsUiState.value.copy(categoryType = type)
-        observeAnalytics()
-    }
-    fun setTagType(type: TransactionType) {
-        _analyticsUiState.value = _analyticsUiState.value.copy(tagType = type)
+    fun setAnalyticsType(type: TransactionType) {
+        _analyticsUiState.value = _analyticsUiState.value.copy(analyticsType = type)
         observeAnalytics()
     }
     fun selectAnalyticsMonth(month: Int) {
@@ -454,9 +472,9 @@ class OmniFlowViewModel(
                 AnalyticsQuery(
                     scope = current.scope,
                     range = current.range,
-                    rankingType = current.rankingType,
-                    categoryShareType = current.categoryType,
-                    tagAnalysisType = current.tagType,
+                    rankingType = current.analyticsType,
+                    categoryShareType = current.analyticsType,
+                    tagAnalysisType = current.analyticsType,
                     trendGranularity = analyticsGranularity(current.rangeMode, current.range),
                 ),
             ).collect { result ->
@@ -856,6 +874,19 @@ class OmniFlowViewModel(
     }
 
     private fun observeMoreLedger(ledgerId: String) {
+        moreBudgetsJob?.cancel()
+        moreBudgetsJob = viewModelScope.launch {
+            sharedApp.budgets.observe(ledgerId).collect { result ->
+                val budgets = result.getOrDefault(emptyList())
+                _moreUiState.value = _moreUiState.value.copy(
+                    budgets = buildBudgetProgress(
+                        budgets = budgets,
+                        categories = _moreUiState.value.categories,
+                        monthTransactions = _homeUiState.value.home?.groups.orEmpty().flatMap { it.items },
+                    ),
+                )
+            }
+        }
         moreCategoriesJob?.cancel()
         moreTagsJob?.cancel()
         moreRulesJob?.cancel()
@@ -982,6 +1013,14 @@ class OmniFlowViewModel(
     }
 
     fun deleteReminder(id: String) = mutate { sharedApp.deleteReminder(id) }
+
+    fun saveBudget(id: String?, categoryId: String?, amount: Money) = mutate {
+        val ledgerId = _moreUiState.value.selectedLedgerId
+            ?: return@mutate Result.failure(IllegalStateException("请先选择账本"))
+        sharedApp.budgets.save(id, ledgerId, categoryId, amount)
+    }
+
+    fun deleteBudget(id: String) = mutate { sharedApp.budgets.delete(id) }
 
     fun importFile(ledgerId: String, fileName: String, bytes: ByteArray, selectedFormat: ImportFormat? = null) {
         importJob?.cancel()
