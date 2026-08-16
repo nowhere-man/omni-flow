@@ -1,6 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 108 108" role="img" aria-labelledby="title">
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 512 512" role="img" aria-labelledby="title">
   <title id="title">OmniFlow app icon</title>
-  <rect width="108" height="108" fill="#FFFFFF"/>
-  <path fill="#08090B" d="M17 27H43L65 47H86L96 54L86 61H65L43 81H17L43 54L17 27Z"/>
-  <path fill="#FFFFFF" d="M36 38H45L62 54L45 70H36L53 54L36 38Z"/>
+  <rect width="512" height="512" fill="#FFFFFF"/>
+  <path d="M256 382c-2-93 14-166 72-224 24-24 52-39 84-46 1 42-7 78-26 108-37 58-83 91-130 96" fill="none" stroke="#4AAE98" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M256 382c-5-73-34-124-88-154-23-13-47-20-72-21 5 40 20 73 47 98 34 31 72 48 113 50" fill="none" stroke="#E88473" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M256 382V230" fill="none" stroke="#E8AA5D" stroke-width="26" stroke-linecap="round"/>
 </svg>

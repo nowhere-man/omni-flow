@@ -12,27 +12,28 @@ import com.omniflow.android.ui.OmniFlowViewModelFactory
 import androidx.compose.runtime.mutableStateOf
 
 class MainActivity : FragmentActivity() {
-    private val deepLinkTransactionId = mutableStateOf<String?>(null)
+    private var deepLinkNonce = 0L
+    private val deepLinkTransaction = mutableStateOf<Pair<String, Long>?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        deepLinkTransactionId.value = intent.transactionIdOrNull()
+        intent.transactionRouteOrNull()?.let { deepLinkTransaction.value = it to ++deepLinkNonce }
         val sharedApp = (application as OmniFlowApplication).sharedApp
         setContent {
             val viewModel: OmniFlowViewModel = viewModel(factory = OmniFlowViewModelFactory(sharedApp))
-            OmniFlowApp(viewModel, deepLinkTransactionId.value)
+            OmniFlowApp(viewModel, deepLinkTransaction.value)
         }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        deepLinkTransactionId.value = intent.transactionIdOrNull()
+        intent.transactionRouteOrNull()?.let { deepLinkTransaction.value = it to ++deepLinkNonce }
     }
 }
 
-private fun Intent.transactionIdOrNull(): String? = data
+private fun Intent.transactionRouteOrNull(): String? = data
     ?.takeIf { it.scheme == "omniflow" && it.host == "transaction" }
     ?.pathSegments
-    ?.firstOrNull()
+    ?.singleOrNull()

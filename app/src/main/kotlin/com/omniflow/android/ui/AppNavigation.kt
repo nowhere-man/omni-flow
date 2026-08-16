@@ -37,6 +37,27 @@ sealed interface OmniRoute : NavKey {
 
     @Serializable
     data object TransactionEditor : OmniRoute
+
+    @Serializable
+    data class TransactionDetail(val id: String) : OmniRoute
+
+    @Serializable
+    data class DateDetail(val date: String) : OmniRoute
+
+    @Serializable
+    data class SummaryDetail(val type: String? = null) : OmniRoute
+
+    @Serializable data object MoreSettings : OmniRoute
+    @Serializable data object MoreData : OmniRoute
+    @Serializable data object MoreImport : OmniRoute
+    @Serializable data object MoreExport : OmniRoute
+    @Serializable data object MoreRules : OmniRoute
+    @Serializable data object MoreReminders : OmniRoute
+    @Serializable data object MoreLedgers : OmniRoute
+    @Serializable data object MoreAccounts : OmniRoute
+    @Serializable data object MoreAssets : OmniRoute
+    @Serializable data object MoreCategories : OmniRoute
+    @Serializable data object MoreTags : OmniRoute
 }
 
 internal val TopLevelRoutes = setOf<NavKey>(
@@ -94,3 +115,34 @@ internal class OmniNavigationState(
 
 internal fun Modifier.readableContentWidth(maxWidth: Dp = 1040.dp): Modifier =
     widthIn(max = maxWidth).fillMaxWidth().wrapContentWidth(Alignment.CenterHorizontally)
+
+internal fun MorePage.toRoute(): OmniRoute = when (this) {
+    MorePage.HOME -> OmniRoute.More
+    MorePage.SETTINGS -> OmniRoute.MoreSettings
+    MorePage.DATA -> OmniRoute.MoreData
+    MorePage.IMPORT -> OmniRoute.MoreImport
+    MorePage.EXPORT -> OmniRoute.MoreExport
+    MorePage.RULES -> OmniRoute.MoreRules
+    MorePage.REMINDERS -> OmniRoute.MoreReminders
+    MorePage.LEDGERS -> OmniRoute.MoreLedgers
+    MorePage.ACCOUNTS -> OmniRoute.MoreAccounts
+    MorePage.ASSETS -> OmniRoute.MoreAssets
+    MorePage.CATEGORIES -> OmniRoute.MoreCategories
+    MorePage.TAGS -> OmniRoute.MoreTags
+}
+
+internal fun OmniRoute.morePage(): MorePage? = when (this) {
+    OmniRoute.More -> MorePage.HOME
+    OmniRoute.MoreSettings -> MorePage.SETTINGS
+    OmniRoute.MoreData -> MorePage.DATA
+    OmniRoute.MoreImport -> MorePage.IMPORT
+    OmniRoute.MoreExport -> MorePage.EXPORT
+    OmniRoute.MoreRules -> MorePage.RULES
+    OmniRoute.MoreReminders -> MorePage.REMINDERS
+    OmniRoute.MoreLedgers -> MorePage.LEDGERS
+    OmniRoute.MoreAccounts -> MorePage.ACCOUNTS
+    OmniRoute.MoreAssets -> MorePage.ASSETS
+    OmniRoute.MoreCategories -> MorePage.CATEGORIES
+    OmniRoute.MoreTags -> MorePage.TAGS
+    else -> null
+}

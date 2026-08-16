@@ -175,14 +175,14 @@ private fun SummaryComparisonCard(dashboard: AnalyticsDashboardState) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             if (maxWidth < 420.dp) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    SummaryLine("总支出", dashboard.summary.expenseTotal, dashboard.previousSummary.expenseTotal, ExpenseColor)
-                    SummaryLine("总收入", dashboard.summary.incomeTotal, dashboard.previousSummary.incomeTotal, IncomeColor)
+                    SummaryLine("总支出", dashboard.summary.expenseTotal, dashboard.previousSummary.expenseTotal, MaterialTheme.colorScheme.error)
+                    SummaryLine("总收入", dashboard.summary.incomeTotal, dashboard.previousSummary.incomeTotal, MaterialTheme.colorScheme.tertiary)
                     SummaryLine("总结余", dashboard.summary.netIncome, dashboard.previousSummary.netIncome, MaterialTheme.colorScheme.primary)
                 }
             } else {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SummaryValue("总支出", dashboard.summary.expenseTotal, dashboard.previousSummary.expenseTotal, ExpenseColor, Modifier.weight(1f))
-                    SummaryValue("总收入", dashboard.summary.incomeTotal, dashboard.previousSummary.incomeTotal, IncomeColor, Modifier.weight(1f))
+                    SummaryValue("总支出", dashboard.summary.expenseTotal, dashboard.previousSummary.expenseTotal, MaterialTheme.colorScheme.error, Modifier.weight(1f))
+                    SummaryValue("总收入", dashboard.summary.incomeTotal, dashboard.previousSummary.incomeTotal, MaterialTheme.colorScheme.tertiary, Modifier.weight(1f))
                     SummaryValue("总结余", dashboard.summary.netIncome, dashboard.previousSummary.netIncome, MaterialTheme.colorScheme.primary, Modifier.weight(1f))
                 }
             }
@@ -243,8 +243,8 @@ private fun TrendCard(dashboard: AnalyticsDashboardState) {
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Row(Modifier.height(96.dp), horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.Bottom) {
-                            Bar(point.income.minor, maximum, IncomeColor)
-                            Bar(point.expense.minor, maximum, ExpenseColor)
+                            Bar(point.income.minor, maximum, MaterialTheme.colorScheme.tertiary)
+                            Bar(point.expense.minor, maximum, MaterialTheme.colorScheme.error)
                         }
                         Text(
                             point.label.takeLast(if (dashboard.query.trendGranularity.name == "MONTH") 2 else 5),
@@ -257,9 +257,9 @@ private fun TrendCard(dashboard: AnalyticsDashboardState) {
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                BarLegend(IncomeColor, "收入")
+                BarLegend(MaterialTheme.colorScheme.tertiary, "收入")
                 Spacer(Modifier.width(16.dp))
-                BarLegend(ExpenseColor, "支出")
+                BarLegend(MaterialTheme.colorScheme.error, "支出")
             }
             selected?.let { selectedStart ->
                 dashboard.trend.points.firstOrNull { it.start == selectedStart }?.let { point ->
@@ -307,9 +307,9 @@ private fun YearBars(
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-            BarLegend(IncomeColor, "收入")
+            BarLegend(MaterialTheme.colorScheme.tertiary, "收入")
             Spacer(Modifier.width(16.dp))
-            BarLegend(ExpenseColor, "支出")
+            BarLegend(MaterialTheme.colorScheme.error, "支出")
         }
         TextButton(onClick = { onStatementTable(dashboard.yearStatement.year) }, modifier = Modifier.fillMaxWidth()) {
             Text("查看账单表格")
@@ -335,17 +335,17 @@ private fun MonthBars(
         if (layout == BarLayout.DIVERGING) {
             Column(Modifier.height(126.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
-                    Bar(month.income.minor, maximum, IncomeColor)
+                    Bar(month.income.minor, maximum, MaterialTheme.colorScheme.tertiary)
                 }
                 Box(Modifier.height(1.dp).fillMaxWidth().background(MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)))
                 Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-                    Bar(month.expense.minor, maximum, ExpenseColor)
+                    Bar(month.expense.minor, maximum, MaterialTheme.colorScheme.error)
                 }
             }
         } else {
             Row(Modifier.height(126.dp), horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.Bottom) {
-                Bar(month.income.minor, maximum, IncomeColor)
-                Bar(month.expense.minor, maximum, ExpenseColor)
+                    Bar(month.income.minor, maximum, MaterialTheme.colorScheme.tertiary)
+                    Bar(month.expense.minor, maximum, MaterialTheme.colorScheme.error)
             }
         }
         Text(
@@ -408,7 +408,7 @@ private fun RankingCard(
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    Text(item.amount.asRmb(), fontWeight = FontWeight.Bold, color = if (selected == TransactionType.EXPENSE) ExpenseColor else IncomeColor)
+                    Text(item.amount.asRmb(), fontWeight = FontWeight.Bold, color = if (selected == TransactionType.EXPENSE) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary)
                 }
             }
         }
@@ -667,8 +667,8 @@ private fun StatementChart(months: List<StatementMonth>, filter: StatementFilter
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Row(Modifier.height(96.dp), horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.Bottom) {
-                    if (filter != StatementFilter.EXPENSE) Bar(month.income.minor, maximum, IncomeColor)
-                    if (filter != StatementFilter.INCOME) Bar(month.expense.minor, maximum, ExpenseColor)
+                    if (filter != StatementFilter.EXPENSE) Bar(month.income.minor, maximum, MaterialTheme.colorScheme.tertiary)
+                    if (filter != StatementFilter.INCOME) Bar(month.expense.minor, maximum, MaterialTheme.colorScheme.error)
                 }
                 Text("${month.month}月", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -692,16 +692,16 @@ private fun StatementRow(label: String, income: Money, expense: Money, filter: S
     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(label, Modifier.width(46.dp), fontWeight = if (emphasized) FontWeight.Bold else FontWeight.SemiBold)
         if (filter != StatementFilter.EXPENSE) {
-            Text(income.asRmb(), Modifier.weight(1f), textAlign = TextAlign.End, color = IncomeColor, fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Normal)
+            Text(income.asRmb(), Modifier.weight(1f), textAlign = TextAlign.End, color = MaterialTheme.colorScheme.tertiary, fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Normal)
         }
         if (filter != StatementFilter.INCOME) {
-            Text(expense.asRmb(), Modifier.weight(1f), textAlign = TextAlign.End, color = ExpenseColor, fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Normal)
+            Text(expense.asRmb(), Modifier.weight(1f), textAlign = TextAlign.End, color = MaterialTheme.colorScheme.error, fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Normal)
         }
         Text(
             net.asRmb(),
             Modifier.weight(1f),
             textAlign = TextAlign.End,
-            color = if (net.minor < 0) ExpenseColor else IncomeColor,
+            color = if (net.minor < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary,
             fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Normal,
         )
     }

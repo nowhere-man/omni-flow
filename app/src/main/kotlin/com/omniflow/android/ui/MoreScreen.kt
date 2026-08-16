@@ -4,7 +4,6 @@ import android.content.Context
 import android.app.DatePickerDialog
 import android.net.Uri
 import android.provider.OpenableColumns
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -67,8 +66,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.listSaver
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -120,45 +117,32 @@ internal enum class MorePage(val label: String, val icon: ImageVector) {
 internal fun MoreScreen(
     state: MoreUiState,
     viewModel: OmniFlowViewModel,
-    initialPage: MorePage = MorePage.HOME,
+    page: MorePage,
+    onPage: (MorePage) -> Unit,
+    onBack: () -> Unit,
     onRequestNotificationPermission: () -> Unit,
     dynamicColorEnabled: Boolean,
     onDynamicColorChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val pageStackSaver = listSaver<List<MorePage>, String>(
-        save = { stack -> stack.map(MorePage::name) },
-        restore = { names -> names.map(MorePage::valueOf) },
-    )
-    var pageStack by rememberSaveable(initialPage, stateSaver = pageStackSaver) {
-        mutableStateOf(if (initialPage == MorePage.HOME) listOf(MorePage.HOME) else listOf(MorePage.HOME, initialPage))
-    }
-    val page = pageStack.last()
-    fun navigate(next: MorePage) {
-        if (next != page) pageStack = pageStack + next
-    }
-    fun navigateBack() {
-        if (pageStack.size > 1) pageStack = pageStack.dropLast(1)
-    }
-    BackHandler(enabled = page != MorePage.HOME, onBack = ::navigateBack)
     Column(modifier.fillMaxSize()) {
         if (page != MorePage.HOME) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = ::navigateBack) {
+                IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                 }
                 Text(page.label, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             }
         }
         when (page) {
-            MorePage.HOME -> MoreHome(state, onPage = ::navigate)
+            MorePage.HOME -> MoreHome(state, onPage = onPage)
             MorePage.SETTINGS -> SettingsPage(
                 state,
                 viewModel,
                 dynamicColorEnabled = dynamicColorEnabled,
                 onDynamicColorChanged = onDynamicColorChanged,
-            ) { navigate(MorePage.DATA) }
-            MorePage.DATA -> DataManagementPage(state, viewModel, onPage = ::navigate)
+            ) { onPage(MorePage.DATA) }
+            MorePage.DATA -> DataManagementPage(state, viewModel, onPage = onPage)
             MorePage.IMPORT -> ImportPage(state, viewModel)
             MorePage.EXPORT -> ExportPage(state, viewModel)
             MorePage.RULES,
@@ -171,7 +155,7 @@ internal fun MoreScreen(
                 page,
                 state,
                 viewModel,
-                onPage = ::navigate,
+                onPage = onPage,
                 onRequestNotificationPermission = onRequestNotificationPermission,
             )
         }
@@ -190,7 +174,7 @@ private fun MoreHome(state: MoreUiState, onPage: (MorePage) -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = RoundedCornerShape(8.dp),
+                shape = MaterialTheme.shapes.small,
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("净资产", style = MaterialTheme.typography.labelLarge)
@@ -420,7 +404,7 @@ private fun DataManagementPage(
     var pendingRestore by remember { mutableStateOf<com.omniflow.core.domain.model.RemoteBackupMeta?>(null) }
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
+            Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.small) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("WebDAV 全量备份", fontWeight = FontWeight.SemiBold)
                     OutlinedTextField(endpoint, { endpoint = it }, label = { Text("服务器目录 URL") }, modifier = Modifier.fillMaxWidth())
@@ -588,7 +572,7 @@ private fun ImportPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
 
 @Composable
 private fun ImportPreviewCard(item: ImportPreviewItem, state: MoreUiState, viewModel: OmniFlowViewModel) {
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
+    Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.small) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(item.id in state.selectedImportItemIds, { viewModel.toggleImportItem(item.id) })
@@ -688,7 +672,7 @@ private fun ExportPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
         }
     }
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
+        Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.small) {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("青子记账兼容 JSON", fontWeight = FontWeight.SemiBold)
                 Text("默认导出全部有效交易，也可按日期范围增量导出。")

@@ -85,9 +85,7 @@ data class RangeDetailUiState(
     val detail: TransactionDetailState? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
-) {
-    val isVisible: Boolean get() = isLoading || detail != null || error != null
-}
+)
 
 enum class AnalyticsRangeMode { WEEK, MONTH, YEAR, CUSTOM }
 
@@ -131,7 +129,6 @@ data class TransactionRecordDetailUiState(
     val isDeleting: Boolean = false,
     val error: String? = null,
 ) {
-    val isVisible: Boolean get() = isLoading || transaction != null || error != null
     val categoryDisplayName: String get() = secondaryCategoryName?.let { "$primaryCategoryName - $it" } ?: primaryCategoryName
 }
 
@@ -567,12 +564,13 @@ class OmniFlowViewModel(
         _transactionRecordDetailUiState.value = TransactionRecordDetailUiState()
     }
 
-    fun deleteTransactionRecordDetail() {
+    fun deleteTransactionRecordDetail(onDeleted: () -> Unit = {}) {
         val transaction = _transactionRecordDetailUiState.value.transaction ?: return
         _transactionRecordDetailUiState.value = _transactionRecordDetailUiState.value.copy(isDeleting = true, error = null)
         viewModelScope.launch {
             sharedApp.deleteTransaction(transaction.id).onSuccess {
                 dismissTransactionRecordDetail()
+                onDeleted()
             }.onFailure { error ->
                 _transactionRecordDetailUiState.value = _transactionRecordDetailUiState.value.copy(
                     isDeleting = false,

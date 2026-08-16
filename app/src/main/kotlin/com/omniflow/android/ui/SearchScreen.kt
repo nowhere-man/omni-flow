@@ -161,8 +161,8 @@ internal fun SearchScreen(
                     Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("共 ${result.items.size} 笔匹配交易", fontWeight = FontWeight.SemiBold)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("收入 ${result.summary.incomeTotal.asRmb()}", color = IncomeColor, fontWeight = FontWeight.SemiBold)
-                            Text("支出 ${result.summary.expenseTotal.asRmb()}", color = ExpenseColor, fontWeight = FontWeight.SemiBold)
+                            Text("收入 ${result.summary.incomeTotal.asRmb()}", color = MaterialTheme.colorScheme.tertiary, fontWeight = FontWeight.SemiBold)
+                            Text("支出 ${result.summary.expenseTotal.asRmb()}", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
                         }
                         if (result.items.any { it.transaction.isExcluded }) {
                             Text(
@@ -241,8 +241,8 @@ internal fun SearchScreen(
                             item.transaction.amount.asRmb(),
                             fontWeight = FontWeight.Bold,
                             color = if (item.transaction.type == TransactionType.EXPENSE) {
-                                ExpenseColor
-                            } else IncomeColor,
+                                MaterialTheme.colorScheme.error
+                            } else MaterialTheme.colorScheme.tertiary,
                         )
                     }
                 }
@@ -371,8 +371,8 @@ private fun SearchTypeSelector(selected: TransactionType?, onSelected: (Transact
                             fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
                             color = when {
                                 !active -> MaterialTheme.colorScheme.onSurfaceVariant
-                                type == TransactionType.EXPENSE -> ExpenseColor
-                                else -> IncomeColor
+                                type == TransactionType.EXPENSE -> MaterialTheme.colorScheme.error
+                                else -> MaterialTheme.colorScheme.tertiary
                             },
                         )
                     }

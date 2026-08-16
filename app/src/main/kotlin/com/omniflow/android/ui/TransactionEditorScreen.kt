@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
@@ -263,27 +262,14 @@ private fun TransactionModeSwitch(
     onSelected: (TransactionType) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
-        modifier = modifier,
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(18.dp),
-    ) {
-        Row(Modifier.padding(3.dp)) {
-            TransactionType.entries.forEach { type ->
-                val isSelected = type == selected
-                Text(
-                    if (type == TransactionType.EXPENSE) "支出" else "收入",
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(15.dp))
-                        .background(if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent)
-                        .clickable { onSelected(type) }
-                        .padding(vertical = 10.dp),
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                )
-            }
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        TransactionType.entries.forEach { type ->
+            FilterChip(
+                selected = type == selected,
+                onClick = { onSelected(type) },
+                label = { Text(if (type == TransactionType.EXPENSE) "支出" else "收入") },
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }
@@ -340,7 +326,7 @@ private fun ReorderableCategoryGrid(
                             .graphicsLayer {
                                 scaleX = scale
                                 scaleY = scale
-                                shadowElevation = if (dragging) 14.dp.toPx() else 0f
+                                shadowElevation = if (dragging) 4.dp.toPx() else 0f
                             }
                             .pointerInput(category.id, width) {
                                 detectDragGesturesAfterLongPress(
@@ -400,7 +386,7 @@ private fun CategoryTile(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(18.dp),
+        shape = MaterialTheme.shapes.large,
         color = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.75f) else Color.Transparent,
         border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
         tonalElevation = if (dragging) 8.dp else 0.dp,
@@ -442,7 +428,7 @@ private fun TransactionEntryPanel(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
@@ -450,7 +436,7 @@ private fun TransactionEntryPanel(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Surface(
                     modifier = Modifier.size(36.dp),
-                    shape = RoundedCornerShape(11.dp),
+                    shape = MaterialTheme.shapes.small,
                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -528,7 +514,7 @@ private fun CompactEntryDetails(
             Surface(
                 modifier = Modifier.weight(1f).height(38.dp),
                 color = Color.Transparent,
-                shape = RoundedCornerShape(10.dp),
+                shape = MaterialTheme.shapes.small,
             ) {
                 Row(Modifier.padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -566,7 +552,7 @@ private fun CompactEntryDetails(
                 },
                 modifier = Modifier.height(38.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(10.dp),
+                shape = MaterialTheme.shapes.small,
             ) {
                 Box(Modifier.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
                     Text("${dateTime.hour.twoDigits()}:${dateTime.minute.twoDigits()}", fontWeight = FontWeight.Bold)
@@ -632,7 +618,7 @@ private fun TransactionFooter(
     onSaveAgain: () -> Unit,
     onDone: () -> Unit,
 ) {
-    Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface, shadowElevation = 10.dp) {
+    Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceContainer, tonalElevation = 2.dp) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(3.dp),
@@ -681,7 +667,7 @@ private fun Keypad(
                     },
                     enabled = !isSaving,
                     modifier = Modifier.weight(1f).height(54.dp),
-                    shape = RoundedCornerShape(15.dp),
+                    shape = MaterialTheme.shapes.medium,
                     color = color,
                     contentColor = contentColor,
                 ) {

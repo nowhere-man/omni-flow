@@ -1,6 +1,5 @@
 package com.omniflow.android.ui
 
-import androidx.compose.ui.graphics.Color
 import com.omniflow.core.domain.model.DateRange
 import com.omniflow.core.domain.model.Money
 import java.time.LocalDate as JavaLocalDate
@@ -9,9 +8,6 @@ import java.util.Locale
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toLocalDateTime
-
-internal val ExpenseColor = Color(0xFFE87970)
-internal val IncomeColor = Color(0xFF55B6A7)
 
 internal fun Money.asRmb(): String {
     val absolute = kotlin.math.abs(minor)

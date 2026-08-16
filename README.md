@@ -2,7 +2,7 @@
   <img src="assets/branding/omniflow-icon.png#gh-light-mode-only" alt="OmniFlow App 图标（浅色模式）" width="112" />
   <img src="assets/branding/omniflow-icon-dark.png#gh-dark-mode-only" alt="OmniFlow App 图标（深色模式）" width="112" />
   <h1>OmniFlow</h1>
-  <p>一款原生多端记账 App，让账单自动流入账本 </p>
+  <p>一款 Android 原生记账 App，让账单自动流入账本 </p>
   <p>
     <img src="https://img.shields.io/badge/Platform-Android-brightgreen.svg" alt="Platform" />
     <a href="https://github.com/nowhere-man/OmniFlow/releases/latest"><img src="https://img.shields.io/github/v/release/nowhere-man/OmniFlow?label=release&color=orange" alt="Latest release" /></a>
