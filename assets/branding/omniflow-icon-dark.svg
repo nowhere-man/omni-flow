@@ -1,7 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 512 512" role="img" aria-labelledby="title">
-  <title id="title">OmniFlow dark app icon</title>
-  <rect width="512" height="512" fill="#08090B"/>
-  <path d="M256 382c-2-93 14-166 72-224 24-24 52-39 84-46 1 42-7 78-26 108-37 58-83 91-130 96" fill="none" stroke="#4AAE98" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M256 382c-5-73-34-124-88-154-23-13-47-20-72-21 5 40 20 73 47 98 34 31 72 48 113 50" fill="none" stroke="#E88473" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M256 382V230" fill="none" stroke="#E8AA5D" stroke-width="26" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">OmniFlow app icon</title>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#18C7D5" />
+      <stop offset=".5" stop-color="#36C878" />
+      <stop offset="1" stop-color="#7457E7" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#background)" />
+  <path d="M256 340C212 300 153 294 112 326C148 369 211 378 256 354C301 378 364 369 400 326C359 294 300 300 256 340Z" fill="#FFFFFF" opacity=".72" />
+  <path d="M256 326C204 316 150 274 126 216C187 214 234 250 256 304Z" fill="#FFFFFF" opacity=".82" />
+  <path d="M256 326C308 316 362 274 386 216C325 214 278 250 256 304Z" fill="#FFFFFF" opacity=".82" />
+  <path d="M256 136C210 184 210 254 256 312C302 254 302 184 256 136Z" fill="#FFFFFF" opacity=".94" />
 </svg>
