@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -76,6 +78,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
@@ -111,6 +114,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toLocalDateTime
 import java.time.LocalDate as JavaLocalDate
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -124,6 +128,7 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.fragment.app.FragmentActivity
 import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.omniflow.android.ReminderScheduler
@@ -153,7 +158,11 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
     val transactionRecordDetailState by viewModel.transactionRecordDetailUiState.collectAsStateWithLifecycle()
     val moreState by viewModel.moreUiState.collectAsStateWithLifecycle()
     val navigationState = rememberOmniNavigationState()
-    val destination = navigationState.topLevelRoute.toMainDestination()
+    val pagerState = rememberPagerState(
+        initialPage = navigationState.topLevelRoute.toMainDestination().ordinal,
+        pageCount = { MainDestination.entries.size },
+    )
+    val destination = MainDestination.entries[pagerState.targetPage]
     val isEditor = navigationState.currentRoute == OmniRoute.TransactionEditor
     var showDiscardDialog by remember { mutableStateOf(false) }
     var notificationPermissionRequested by rememberSaveable { mutableStateOf(false) }
@@ -183,6 +192,15 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
             navigationState.goBack()
             viewModel.consumeTransactionCompletion()
         }
+    }
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.settledPage }.collect { page ->
+            navigationState.topLevelRoute = MainDestination.entries[page].route
+        }
+    }
+    LaunchedEffect(navigationState.topLevelRoute) {
+        val target = navigationState.topLevelRoute.toMainDestination().ordinal
+        if (pagerState.currentPage != target) pagerState.animateScrollToPage(target)
     }
     fun handleBack() {
         if (isEditor) {
@@ -244,27 +262,11 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
                 }
             },
         ) { padding ->
-            Row(Modifier.fillMaxSize()) {
-                if (useNavigationRail) {
-                    PrimaryNavigationRail(
-                        destination = destination,
-                        onDestination = {
-                            navigationState.navigate(it.route)
-                        },
-                        onAdd = {
-                            viewModel.startNewTransaction()
-                            navigationState.navigate(OmniRoute.TransactionEditor)
-                        },
-                    )
-                }
-                NavDisplay(
-                    backStack = navigationState.currentBackStack,
-                    entryDecorators = listOf(
-                        rememberSaveableStateHolderNavEntryDecorator(rememberSaveableStateHolder()),
-                    ),
-                    onBack = ::handleBack,
-                    modifier = Modifier.weight(1f),
-                    entryProvider = { key -> NavEntry(key) {
+            // nav3 的 NavDisplay 只在自己的 backStack 深度 > 1 时才注册返回处理器，
+            // 停在某个 tab 根部时返回键会直接落到 Activity 默认行为把应用关掉。
+            // 这里补一个互斥的兜底：根部时交给 handleBack，非首页 tab 滑回首页，首页再按一次才退出。
+            BackHandler(enabled = navigationState.currentBackStack.size == 1) { handleBack() }
+            val entryProvider: (NavKey) -> NavEntry<NavKey> = { key -> NavEntry(key) {
             when (key) {
                 OmniRoute.Home -> HomeScreen(
                     state = homeState,
@@ -435,8 +437,36 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
                     )
                 }
             }
-                    } },
-                )
+            } }
+            Row(Modifier.fillMaxSize()) {
+                if (useNavigationRail) {
+                    PrimaryNavigationRail(
+                        destination = destination,
+                        onDestination = {
+                            navigationState.navigate(it.route)
+                        },
+                        onAdd = {
+                            viewModel.startNewTransaction()
+                            navigationState.navigate(OmniRoute.TransactionEditor)
+                        },
+                    )
+                }
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.Top,
+                    userScrollEnabled = navigationState.currentBackStack.size == 1,
+                    key = { MainDestination.entries[it].name },
+                ) { page ->
+                    NavDisplay(
+                        backStack = navigationState.backStacks.getValue(MainDestination.entries[page].route),
+                        entryDecorators = listOf(
+                            rememberSaveableStateHolderNavEntryDecorator(rememberSaveableStateHolder()),
+                        ),
+                        onBack = ::handleBack,
+                        entryProvider = entryProvider,
+                    )
+                }
             }
         }
         if (showDiscardDialog) {
@@ -643,7 +673,7 @@ private fun PrimaryNavigationRail(
 private fun AppLockGate(enabled: Boolean, content: @Composable () -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    var locked by rememberSaveable(enabled) { mutableStateOf(enabled) }
+    var locked by rememberSaveable { mutableStateOf(enabled) }
     var authInProgress by remember { mutableStateOf(false) }
     var authError by remember { mutableStateOf<String?>(null) }
     val activity = context as? FragmentActivity
@@ -696,8 +726,8 @@ private fun AppLockGate(enabled: Boolean, content: @Composable () -> Unit) {
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
+    LaunchedEffect(enabled) { locked = enabled }
     LaunchedEffect(enabled, locked) {
-        if (!enabled) locked = false
         if (enabled && locked && !authInProgress) requestUnlock()
     }
     if (enabled && locked) {
@@ -1134,82 +1164,29 @@ private fun TransactionItems(
 
 @Composable
 private fun TransactionListRow(item: TransactionListItem, onEdit: (String) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().clickable { onEdit(item.id) }.padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CategoryIcon(item.categoryIconKey)
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(item.categoryDisplayName, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
-            item.note?.takeIf(String::isNotBlank)?.let {
-                Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall, maxLines = 2)
-            }
-        }
-        Column(horizontalAlignment = Alignment.End) {
-            AmountText(item)
-            Text(item.occurredAt.hourMinuteText(), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-        }
-    }
-}
-
-@Composable
-private fun TransactionCard(item: TransactionListItem, modifier: Modifier = Modifier, onEdit: (String) -> Unit) {
-    Card(
-        modifier = modifier.clickable { onEdit(item.id) },
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                CategoryIcon(item.categoryIconKey)
-                Spacer(Modifier.weight(1f))
-                AmountText(item)
-            }
-            Text(item.categoryDisplayName, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                val note = item.note?.takeIf(String::isNotBlank)
-                if (note != null) {
-                    Text(
-                        note,
-                        modifier = Modifier.weight(1f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                } else {
-                    Spacer(Modifier.weight(1f))
-                }
-                Text(
-                    item.occurredAt.hourMinuteText(),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AmountText(item: TransactionListItem) {
-    val sign = if (item.type == TransactionType.EXPENSE) "-" else "+"
-    Text(
-        "$sign${item.amount.asRmb()}",
-        color = if (item.type == TransactionType.EXPENSE) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary,
-        fontWeight = FontWeight.SemiBold,
+    TransactionRow(
+        iconKey = item.categoryIconKey,
+        title = item.categoryDisplayName,
+        subtitle = item.note,
+        amount = item.amount,
+        type = item.type,
+        timeText = item.occurredAt.hourMinuteText(),
+        onClick = { onEdit(item.id) },
     )
 }
 
 @Composable
-private fun CategoryIcon(iconKey: String?) {
-    Surface(
-        modifier = Modifier.size(36.dp),
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.secondaryContainer,
-    ) {
-        SvgIcon(iconKey ?: "category", Modifier.padding(8.dp))
-    }
+private fun TransactionCard(item: TransactionListItem, modifier: Modifier = Modifier, onEdit: (String) -> Unit) {
+    TransactionTile(
+        iconKey = item.categoryIconKey,
+        title = item.categoryDisplayName,
+        subtitle = item.note,
+        amount = item.amount,
+        type = item.type,
+        timeText = item.occurredAt.hourMinuteText(),
+        modifier = modifier,
+        onClick = { onEdit(item.id) },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
