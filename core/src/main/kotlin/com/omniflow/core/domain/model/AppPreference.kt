@@ -27,7 +27,7 @@ enum class SyncTarget { ICLOUD, WEBDAV }
 data class AppPreferences(
     val homeLedgerScope: LedgerScope = LedgerScope.All,
     val analyticsLedgerScope: LedgerScope = LedgerScope.All,
-    val transactionDetailDisplayMode: TransactionDetailDisplayMode = TransactionDetailDisplayMode.LIST,
+    val transactionDetailDisplayMode: TransactionDetailDisplayMode = TransactionDetailDisplayMode.CARD,
     val appearanceMode: AppearanceMode = AppearanceMode.SYSTEM,
     val themeColor: ThemeColor = ThemeColor.LAVENDER,
     val appLockEnabled: Boolean = false,

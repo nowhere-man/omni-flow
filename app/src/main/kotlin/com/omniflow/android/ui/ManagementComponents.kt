@@ -19,9 +19,11 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -109,11 +111,7 @@ internal fun IconPickerGrid(
                 onClick = { onSelected(option.key) },
                 modifier = Modifier.size(56.dp),
                 shape = MaterialTheme.shapes.medium,
-                color = if (selected) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surfaceVariant
-                },
+                color = if (selected) MaterialTheme.colorScheme.primaryContainer else surfaceInset(),
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     SvgIcon(
@@ -213,8 +211,8 @@ internal fun LedgerPickerBar(
         Surface(
             onClick = { expanded = true },
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.medium,
-            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = RoundedCornerShape(OmniRadius.medium),
+            color = surfaceCard(),
         ) {
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
@@ -223,20 +221,19 @@ internal fun LedgerPickerBar(
                 if (selected != null) {
                     LedgerCoverBox(selected.coverKey, Modifier.size(32.dp), iconSize = 18)
                 } else {
-                    Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, modifier = Modifier.size(24.dp))
+                    Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, modifier = Modifier.size(24.dp), tint = mutedContent())
                 }
                 Spacer(Modifier.size(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("当前账本", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("当前账本", style = OmniText.caption, color = mutedContent())
                     Text(
                         selected?.name ?: "选择账本",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Medium,
+                        style = OmniText.titleRow,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Text("切换", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Default.ExpandMore, contentDescription = null, modifier = Modifier.size(20.dp), tint = mutedContent())
             }
         }
         androidx.compose.material3.DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -258,16 +255,8 @@ internal fun ManagementGroupHeader(title: String, trailing: String? = null) {
         Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            title,
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        trailing?.let {
-            Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+        Text(title, modifier = Modifier.weight(1f), style = OmniText.caption, color = mutedContent())
+        trailing?.let { Text(it, style = OmniText.caption, color = mutedContent()) }
     }
 }
 

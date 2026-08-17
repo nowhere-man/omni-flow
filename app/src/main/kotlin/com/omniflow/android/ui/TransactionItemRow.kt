@@ -21,7 +21,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.omniflow.core.domain.model.Money
@@ -60,7 +62,7 @@ internal fun TransactionRow(
                 title,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                style = OmniText.titleRow,
+                style = OmniText.bodyRow.copy(fontWeight = FontWeight.Medium),
                 color = if (titleMuted) {
                     MaterialTheme.colorScheme.onSurfaceVariant
                 } else {
@@ -111,25 +113,29 @@ internal fun TransactionTile(
     val alpha = if (dimmed) 0.45f else 1f
     Card(
         modifier = modifier.then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(OmniRadius.small),
+        colors = CardDefaults.cardColors(containerColor = surfaceCard()),
     ) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // 高度靠内边距和行距压缩：10dp 内边距 + 6dp 行距，比原来矮 14dp
+        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                CategoryIcon(iconKey, dimmed = dimmed)
-                Spacer(Modifier.weight(1f))
-                AmountText(amount, type, dimmed = dimmed)
+                CategoryIcon(iconKey, dimmed = dimmed, size = 28)
+                Spacer(Modifier.width(4.dp))
+                // 金额和图标挤在同一行，字号按位数收，否则四位数以上就被省略号吃掉
+                AmountText(
+                    amount,
+                    type,
+                    dimmed = dimmed,
+                    style = OmniText.amountTile(amount.asPlainAmount().length + 1),
+                    modifier = Modifier.weight(1f),
+                )
             }
             Text(
                 title,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                fontWeight = FontWeight.Medium,
-                color = if (titleMuted) {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                } else {
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
-                },
+                style = OmniText.caption.copy(fontWeight = FontWeight.Medium),
+                color = if (titleMuted) mutedContent() else MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
             )
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 val note = subtitle?.takeIf(String::isNotBlank)
@@ -139,27 +145,32 @@ internal fun TransactionTile(
                         modifier = Modifier.weight(1f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
-                        style = MaterialTheme.typography.bodySmall,
+                        color = mutedContent().copy(alpha = alpha),
+                        style = OmniText.caption,
                     )
                 } else {
                     Spacer(Modifier.weight(1f))
                 }
                 timeText?.let {
-                    Text(
-                        it,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+                    Text(it, color = mutedContent().copy(alpha = alpha), style = OmniText.caption)
                 }
             }
         }
     }
 }
 
-/** [type] 为 null 时不带正负号，用于「不计收支」这类没有收支方向的明细。 */
+/**
+ * [type] 为 null 时不带正负号，用于「不计收支」这类没有收支方向的明细。
+ * 金额不带货币符号：符号在一屏几十行里只是噪音，去掉后同宽度能多放两位数字。
+ */
 @Composable
-internal fun AmountText(amount: Money, type: TransactionType?, dimmed: Boolean = false) {
+internal fun AmountText(
+    amount: Money,
+    type: TransactionType?,
+    dimmed: Boolean = false,
+    style: TextStyle? = null,
+    modifier: Modifier = Modifier,
+) {
     val alpha = if (dimmed) 0.45f else 1f
     val sign = when (type) {
         TransactionType.EXPENSE -> "-"
@@ -167,10 +178,13 @@ internal fun AmountText(amount: Money, type: TransactionType?, dimmed: Boolean =
         null -> ""
     }
     Text(
-        "$sign${amount.asRmb()}",
+        "$sign${amount.asPlainAmount()}",
+        modifier = modifier,
         color = amountColor(type).copy(alpha = alpha),
-        style = OmniText.amountPrimary,
+        style = style ?: OmniText.amountPrimary,
         maxLines = 1,
+        textAlign = TextAlign.End,
+        overflow = TextOverflow.Ellipsis,
     )
 }
 
@@ -199,12 +213,12 @@ internal fun expenseColor(): Color = if (isDarkColorScheme()) ExpenseDark else E
 private fun isDarkColorScheme(): Boolean = MaterialTheme.colorScheme.surface.luminance() < 0.5f
 
 @Composable
-internal fun CategoryIcon(iconKey: String?, dimmed: Boolean = false) {
+internal fun CategoryIcon(iconKey: String?, dimmed: Boolean = false, size: Int = 36) {
     Surface(
-        modifier = Modifier.size(36.dp),
+        modifier = Modifier.size(size.dp),
         shape = CircleShape,
         color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = if (dimmed) 0.45f else 1f),
     ) {
-        SvgIcon(iconKey ?: "category", Modifier.padding(8.dp))
+        SvgIcon(iconKey ?: "category", Modifier.padding((size * 0.22).toInt().dp))
     }
 }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -98,7 +99,7 @@ internal fun EntityDetailScreen(
 
             else -> {
                 item {
-                    Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceVariant) {
+                    Surface(shape = RoundedCornerShape(OmniRadius.medium), color = surfaceCard()) {
                         Column(Modifier.padding(horizontal = 12.dp)) {
                             recent.forEachIndexed { index, item ->
                                 TransactionRow(
@@ -133,7 +134,7 @@ private fun EntityDetailHeader(state: EntityDetailUiState, moreState: MoreUiStat
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        color = surfaceCard(),
     ) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             when (state.kind) {
@@ -185,7 +186,7 @@ private fun EntityDetailHeader(state: EntityDetailUiState, moreState: MoreUiStat
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = if (it.balance.minor < 0) {
-                                MaterialTheme.colorScheme.error
+                                expenseColor()
                             } else {
                                 MaterialTheme.colorScheme.onSurface
                             },

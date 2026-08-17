@@ -5,10 +5,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -26,14 +24,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
-import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -91,9 +85,9 @@ internal fun AnalyticsScreen(
     onCategorySelected: (String) -> Unit,
     onTransactionSelected: (String) -> Unit,
     onMonthSelected: (Int) -> Unit,
+    onSummary: (TransactionType?) -> Unit,
     onStatementTable: (Int) -> Unit,
     onDismissStatementTable: () -> Unit,
-    onAddTransaction: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val now = Clock.System.now()
@@ -101,9 +95,9 @@ internal fun AnalyticsScreen(
         (now < state.range.startInclusive || now >= state.range.endExclusive)
     LazyColumn(
         modifier = modifier.readableContentWidth().fillMaxHeight().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        item { Spacer(Modifier.height(8.dp)); LedgerScopeMenu(state.scope, state.ledgers, onScope) }
+        item { Spacer(Modifier.height(8.dp)); LedgerScopePill(state.scope, state.ledgers, onScope) }
         item {
             OmniSegmented(
                 options = AnalyticsRangeMode.entries,
@@ -117,39 +111,43 @@ internal fun AnalyticsScreen(
             item { CustomRangeControls(state.range, onCustomRange) }
         } else {
             item {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { onShiftRange(-1) }) { Icon(Icons.Default.ArrowBackIosNew, "上一周期") }
-                    Text(
-                        state.range.displayLabel(state.rangeMode),
-                        modifier = Modifier.weight(1f),
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                    )
-                    IconButton(onClick = { onShiftRange(1) }) { Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, "下一周期") }
-                }
-                if (showCurrentRangeButton) {
-                    FilledTonalButton(onClick = onCurrentRange, modifier = Modifier.fillMaxWidth()) {
-                        Text(state.rangeMode.currentRangeLabel())
-                    }
-                }
+                RangeStepper(
+                    label = state.range.displayLabel(state.rangeMode),
+                    onPrevious = { onShiftRange(-1) },
+                    onNext = { onShiftRange(1) },
+                    onLabel = onCurrentRange.takeIf { showCurrentRangeButton },
+                )
             }
         }
         when {
-            state.isLoading && state.dashboard == null -> item { Text("加载中…", Modifier.padding(24.dp)) }
-            state.error != null && state.dashboard == null -> item { Text(state.error, color = MaterialTheme.colorScheme.error) }
+            state.isLoading && state.dashboard == null -> item {
+                Text("加载中…", Modifier.padding(24.dp), style = OmniText.caption, color = mutedContent())
+            }
+            state.error != null && state.dashboard == null -> item {
+                Text(state.error, color = MaterialTheme.colorScheme.error, style = OmniText.caption)
+            }
             state.dashboard != null -> {
                 val dashboard = state.dashboard
-                val hasTransactions = dashboard.summary.expenseTotal != Money.Zero || dashboard.summary.incomeTotal != Money.Zero
-                item { SummaryComparisonCard(dashboard) }
-                item { TrendCard(dashboard) }
+                val hasTransactions = dashboard.summary.expenseTotal != Money.Zero ||
+                    dashboard.summary.incomeTotal != Money.Zero
+                // 首页那三张卡就是这份信息最紧凑的排版，不再另画一张「收支汇总」
+                item {
+                    SummaryCardRow(
+                        expense = dashboard.summary.expenseTotal,
+                        income = dashboard.summary.incomeTotal,
+                        onExpense = { onSummary(TransactionType.EXPENSE) },
+                        onIncome = { onSummary(TransactionType.INCOME) },
+                        onNet = { onSummary(null) },
+                    )
+                }
+                // 收支趋势只在「年」下有意义：按月一根柱，一屏刚好放满十二个月
+                if (state.rangeMode == AnalyticsRangeMode.YEAR) {
+                    item { TrendCard(dashboard, now) }
+                }
                 if (state.rangeMode == AnalyticsRangeMode.MONTH) {
                     item { YearBars(dashboard, state, onMonthSelected, onStatementTable) }
                 }
-                if (!hasTransactions) {
-                    item { EmptyAnalytics(onAddTransaction) }
-                } else {
+                if (hasTransactions) {
                     // 收支开关提到页面级，一次切换三张卡一起变
                     item {
                         OmniSegmented(
@@ -160,8 +158,8 @@ internal fun AnalyticsScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
+                    item { CategoryCard(dashboard, onCategorySelected) }
                     item { RankingCard(dashboard, state.analyticsType, onTransactionSelected) }
-                    item { CategoryCard(dashboard, state.analyticsType, onCategorySelected) }
                     item { TagAnalysisCard(dashboard, state.analyticsType) }
                 }
             }
@@ -171,131 +169,68 @@ internal fun AnalyticsScreen(
     state.statementTable?.let { StatementTableSheet(it, onStatementTable, onDismissStatementTable) }
 }
 
-/** 周/月/年/范围药丸分段控件，与记账页收支切换同一样式。 */
+/**
+ * 年度收支趋势。标签写「1月」而不是「01」；本年度只画到当前月，
+ * 后面那几根空柱子会让人以为收支突然归零。
+ */
 @Composable
-private fun SummaryComparisonCard(dashboard: AnalyticsDashboardState) {
+private fun TrendCard(dashboard: AnalyticsDashboardState, now: Instant) {
+    var selected by remember(dashboard.query.range) { mutableStateOf<Instant?>(null) }
+    val points = dashboard.trend.points.filter { it.start <= now }
+    val maximum = points.maxOfOrNull { max(it.income.minor, it.expense.minor) }?.coerceAtLeast(1) ?: 1
     AnalyticsCard {
-        AnalyticsHeader("收支汇总") {}
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
-            if (maxWidth < 420.dp) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    SummaryLine("总支出", dashboard.summary.expenseTotal, dashboard.previousSummary.expenseTotal, MaterialTheme.colorScheme.onSurface)
-                    SummaryLine("总收入", dashboard.summary.incomeTotal, dashboard.previousSummary.incomeTotal, incomeColor())
-                    SummaryLine("总结余", dashboard.summary.netIncome, dashboard.previousSummary.netIncome, if (dashboard.summary.netIncome.minor >= 0) incomeColor() else expenseColor())
-                }
-            } else {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SummaryValue("总支出", dashboard.summary.expenseTotal, dashboard.previousSummary.expenseTotal, MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
-                    SummaryValue("总收入", dashboard.summary.incomeTotal, dashboard.previousSummary.incomeTotal, incomeColor(), Modifier.weight(1f))
-                    SummaryValue("总结余", dashboard.summary.netIncome, dashboard.previousSummary.netIncome, if (dashboard.summary.netIncome.minor >= 0) incomeColor() else expenseColor(), Modifier.weight(1f))
+        if (points.isEmpty()) {
+            Text("当前范围暂无趋势数据", style = OmniText.caption, color = mutedContent())
+            return@AnalyticsCard
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            points.forEach { point ->
+                val isSelected = selected == point.start
+                Column(
+                    Modifier.weight(1f)
+                        .clip(RoundedCornerShape(OmniRadius.small))
+                        .background(if (isSelected) surfaceInset() else Color.Transparent)
+                        .clickable { selected = if (isSelected) null else point.start }
+                        .semantics {
+                            contentDescription = "${point.label}，收入${point.income.asRmb()}，支出${point.expense.asRmb()}"
+                        },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Row(Modifier.height(112.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Column(Modifier.weight(1f).fillMaxHeight()) { VerticalBar(point.income.minor, maximum, incomeColor()) }
+                        Column(Modifier.weight(1f).fillMaxHeight()) { VerticalBar(point.expense.minor, maximum, expenseColor()) }
+                    }
+                    Text(
+                        point.label.monthLabel(),
+                        style = OmniText.caption,
+                        color = if (isSelected) MaterialTheme.colorScheme.onSurface else mutedContent(),
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        maxLines = 1,
+                    )
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun SummaryLine(title: String, current: Money, previous: Money, color: Color) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, Modifier.weight(1f), style = OmniText.caption, color = mutedContent())
-        Text(current.asRmb(), style = OmniText.amountPrimary, color = color, maxLines = 1)
-        Spacer(Modifier.width(12.dp))
-        ChangeBadge(current, previous)
-    }
-}
-
-@Composable
-private fun SummaryValue(title: String, current: Money, previous: Money, color: Color, modifier: Modifier = Modifier) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(title, style = OmniText.caption, color = mutedContent())
-        Text(current.asRmb(), style = OmniText.amountPrimary, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        ChangeBadge(current, previous)
-    }
-}
-
-/** 涨跌带箭头和颜色，纯灰文字看不出好坏。 */
-@Composable
-private fun ChangeBadge(current: Money, previous: Money) {
-    if (previous == Money.Zero) {
-        Text(
-            if (current == Money.Zero) "较上期持平" else "上期无数据",
-            style = OmniText.caption,
-            color = mutedContent(),
-            maxLines = 1,
-        )
-        return
-    }
-    val percent = ((current.minor - previous.minor).toDouble() / kotlin.math.abs(previous.minor) * 100).toInt()
-    val (text, color) = when {
-        percent > 0 -> "↑$percent%" to incomeColor()
-        percent < 0 -> "↓${-percent}%" to expenseColor()
-        else -> "持平" to mutedContent()
-    }
-    Text(text, style = OmniText.caption, color = color, maxLines = 1)
-}
-
-@Composable
-private fun TrendCard(dashboard: AnalyticsDashboardState) {
-    var selected by remember(dashboard.query.range, dashboard.query.trendGranularity) { mutableStateOf<Instant?>(null) }
-    val maximum = dashboard.trend.points.maxOfOrNull { max(it.income.minor, it.expense.minor) }?.coerceAtLeast(1) ?: 1
-    AnalyticsCard {
-        AnalyticsHeader("收支趋势") {}
-        if (dashboard.trend.points.isEmpty()) {
-            Text("当前范围暂无趋势数据", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else {
-            Row(
-                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                dashboard.trend.points.forEach { point ->
-                    val isSelected = selected == point.start
-                    Column(
-                        Modifier.width(48.dp)
-                            .clip(RoundedCornerShape(OmniRadius.small))
-                            .background(if (isSelected) surfaceInset() else Color.Transparent)
-                            .clickable { selected = if (isSelected) null else point.start }
-                            .semantics {
-                                contentDescription = "${point.label}，收入${point.income.asRmb()}，支出${point.expense.asRmb()}"
-                            },
-                        horizontalAlignment = Alignment.CenterHorizontally,
+        selected?.let { selectedStart ->
+            points.firstOrNull { it.start == selectedStart }?.let { point ->
+                Surface(shape = RoundedCornerShape(OmniRadius.small), color = surfaceInset()) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Row(Modifier.height(112.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Column(Modifier.weight(1f).fillMaxHeight()) { VerticalBar(point.income.minor, maximum, incomeColor()) }
-                            Column(Modifier.weight(1f).fillMaxHeight()) { VerticalBar(point.expense.minor, maximum, expenseColor()) }
-                        }
-                        Text(
-                            point.label.takeLast(if (dashboard.query.trendGranularity.name == "MONTH") 2 else 5),
-                            style = OmniText.caption,
-                            color = if (isSelected) MaterialTheme.colorScheme.onSurface else mutedContent(),
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            maxLines = 1,
-                        )
-                    }
-                }
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                BarLegend(incomeColor(), "收入")
-                Spacer(Modifier.width(16.dp))
-                BarLegend(expenseColor(), "支出")
-            }
-            selected?.let { selectedStart ->
-                dashboard.trend.points.firstOrNull { it.start == selectedStart }?.let { point ->
-                    Surface(shape = RoundedCornerShape(OmniRadius.small), color = surfaceInset()) {
-                        Row(
-                            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(point.label, Modifier.weight(1f), style = OmniText.caption, color = mutedContent())
-                            Text("收入 ${point.income.asRmb()}", style = OmniText.caption, color = incomeColor())
-                            Spacer(Modifier.width(10.dp))
-                            Text("支出 ${point.expense.asRmb()}", style = OmniText.caption, color = expenseColor())
-                        }
+                        Text(point.label.monthLabel(), Modifier.weight(1f), style = OmniText.caption, color = mutedContent())
+                        Text("收 ${point.income.asRmb()}", style = OmniText.caption, color = incomeColor())
+                        Spacer(Modifier.width(10.dp))
+                        Text("支 ${point.expense.asRmb()}", style = OmniText.caption, color = mutedContent())
                     }
                 }
             }
         }
     }
 }
+
+/** 趋势点的标签是 `2026-08` 这种，图表上只需要「8月」。 */
+private fun String.monthLabel(): String =
+    substringAfterLast('-').toIntOrNull()?.let { "${it}月" } ?: this
 
 @Composable
 private fun YearBars(
@@ -306,24 +241,19 @@ private fun YearBars(
 ) {
     var layout by remember { mutableStateOf(BarLayout.DIVERGING) }
     AnalyticsCard {
-        AnalyticsHeader("收支柱状图") {
-            OmniSegmented(
-                options = BarLayout.entries,
-                selected = layout,
-                label = { if (it == BarLayout.DIVERGING) "上下" else "并排" },
-                onSelected = { layout = it },
-                modifier = Modifier.width(140.dp),
-            )
-        }
-        Text("${dashboard.yearStatement.year} 年", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        // 卡片标题和「2026 年」都去掉：年份已经写在上面的周期切换里，重复一遍只是噪音
+        OmniSegmented(
+            options = BarLayout.entries,
+            selected = layout,
+            label = { if (it == BarLayout.DIVERGING) "上下" else "并排" },
+            onSelected = { layout = it },
+            modifier = Modifier.width(150.dp),
+        )
         val maximum = max(
             dashboard.yearStatement.months.maxOfOrNull { it.income.minor } ?: 0,
             dashboard.yearStatement.months.maxOfOrNull { it.expense.minor } ?: 0,
         ).coerceAtLeast(1)
-        Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             dashboard.yearStatement.months.forEach { month ->
                 MonthBars(
                     month = month,
@@ -332,14 +262,9 @@ private fun YearBars(
                     selected = state.rangeMode == AnalyticsRangeMode.MONTH &&
                         state.range.startInclusive.toLocalDateTime(ChinaTimeZone).monthNumber == month.month,
                     onClick = { onMonthSelected(month.month) },
-                    modifier = Modifier.width(48.dp),
+                    modifier = Modifier.weight(1f),
                 )
             }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-            BarLegend(incomeColor(), "收入")
-            Spacer(Modifier.width(16.dp))
-            BarLegend(expenseColor(), "支出")
         }
         Surface(
             onClick = { onStatementTable(dashboard.yearStatement.year) },
@@ -378,21 +303,21 @@ private fun MonthBars(
                 Column(Modifier.weight(1f).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                     VerticalBar(month.income.minor, maximum, incomeColor())
                 }
-                Box(Modifier.height(1.dp).fillMaxWidth().background(MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)))
+                Box(Modifier.height(1.dp).fillMaxWidth().background(MaterialTheme.colorScheme.outlineVariant))
                 Column(Modifier.weight(1f).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                     InvertedBar(month.expense.minor, maximum, expenseColor())
                 }
             }
         } else {
-            Row(Modifier.height(126.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(Modifier.height(126.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 Column(Modifier.weight(1f).fillMaxHeight()) { VerticalBar(month.income.minor, maximum, incomeColor()) }
                 Column(Modifier.weight(1f).fillMaxHeight()) { VerticalBar(month.expense.minor, maximum, expenseColor()) }
             }
         }
         Text(
-            "${month.month.toString().padStart(2, '0')}月",
-            style = MaterialTheme.typography.labelSmall,
-            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            "${month.month}月",
+            style = OmniText.caption,
+            color = if (selected) MaterialTheme.colorScheme.primary else mutedContent(),
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
             maxLines = 1,
         )
@@ -406,7 +331,7 @@ private fun ColumnScope.InvertedBar(value: Long, maximum: Long, color: Color) {
     Box(
         Modifier
             .weight(fraction.coerceAtLeast(0.0001f))
-            .width(14.dp)
+            .width(10.dp)
             .background(color, RoundedCornerShape(bottomStart = 4.dp, bottomEnd = 4.dp)),
     )
     Spacer(Modifier.weight((1f - fraction).coerceAtLeast(0.0001f)))
@@ -420,16 +345,9 @@ private fun ColumnScope.VerticalBar(value: Long, maximum: Long, color: Color) {
     Box(
         Modifier
             .weight(fraction.coerceAtLeast(0.0001f))
-            .width(14.dp)
-            .background(color, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 4.dp, bottomEnd = 4.dp)),
+            .width(10.dp)
+            .background(color, RoundedCornerShape(4.dp)),
     )
-}
-
-@Composable
-private fun BarLegend(color: Color, label: String) {
-    Box(Modifier.size(10.dp).background(color, CircleShape))
-    Spacer(Modifier.width(6.dp))
-    Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable
@@ -440,41 +358,47 @@ private fun RankingCard(
 ) {
     var expanded by remember(dashboard.query.range, selected) { mutableStateOf(false) }
     AnalyticsCard {
-        AnalyticsHeader("收支排行榜") {}
         val items = dashboard.ranking.take(if (expanded) 10 else 3)
         if (items.isEmpty()) {
-            Text(if (selected == TransactionType.EXPENSE) "暂无支出排行" else "暂无收入排行", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                if (selected == TransactionType.EXPENSE) "暂无支出排行" else "暂无收入排行",
+                style = OmniText.caption,
+                color = mutedContent(),
+            )
         } else {
             items.forEachIndexed { index, item ->
                 Row(
-                    Modifier.fillMaxWidth().clickable { onTransactionSelected(item.transactionId) }.padding(vertical = 8.dp),
+                    Modifier.fillMaxWidth().clickable { onTransactionSelected(item.transactionId) },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("${index + 1}.", Modifier.width(28.dp), fontWeight = FontWeight.Bold)
-                    Surface(Modifier.size(42.dp), RoundedCornerShape(13.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)) {
-                        Box(contentAlignment = Alignment.Center) { SvgIcon(categoryIconKey(item.iconKey), Modifier.size(25.dp), tint = MaterialTheme.colorScheme.primary) }
-                    }
+                    Text("${index + 1}", Modifier.width(20.dp), style = OmniText.caption, color = mutedContent())
+                    CategoryIcon(item.iconKey, size = 34)
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(item.categoryDisplayName, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            item.categoryDisplayName,
+                            style = OmniText.bodyRow.copy(fontWeight = FontWeight.Medium),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                         Text(
                             listOfNotNull(
                                 item.note?.takeIf(String::isNotBlank),
-                                item.occurredAt.toLocalDateTime(ChinaTimeZone).let { "%02d-%02d %02d:%02d".format(it.monthNumber, it.dayOfMonth, it.hour, it.minute) },
+                                item.occurredAt.toLocalDateTime(ChinaTimeZone).let { "${it.monthNumber}月${it.dayOfMonth}日" },
                             ).joinToString(" · "),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = OmniText.caption,
+                            color = mutedContent(),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    Text(item.amount.asRmb(), fontWeight = FontWeight.Bold, color = if (selected == TransactionType.EXPENSE) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary)
+                    AmountText(item.amount, selected, style = OmniText.amountTile(item.amount.asPlainAmount().length + 1))
                 }
             }
         }
         if (dashboard.ranking.size > 3) {
             TextButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth()) {
-                Text(if (expanded) "收起" else "展示更多")
+                Text(if (expanded) "收起" else "展示更多", style = OmniText.caption)
             }
         }
     }
@@ -483,58 +407,52 @@ private fun RankingCard(
 @Composable
 private fun TagAnalysisCard(dashboard: AnalyticsDashboardState, selected: TransactionType) {
     val total = if (selected == TransactionType.EXPENSE) dashboard.summary.expenseTotal else dashboard.summary.incomeTotal
+    if (dashboard.tagAnalysis.isEmpty()) return
     AnalyticsCard {
-        AnalyticsHeader("记账标签分析") {}
-        if (dashboard.tagAnalysis.isEmpty()) {
-            Text("当前范围暂无标签数据", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else {
-            dashboard.tagAnalysis.forEach { item ->
-                val fraction = if (total == Money.Zero) 0f else item.amount.minor.toFloat() / total.minor
-                Column(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(item.tagName, Modifier.weight(1f), fontWeight = FontWeight.Medium)
-                        Text("${item.transactionCount} 笔", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.width(12.dp))
-                        Text(item.amount.asRmb(), fontWeight = FontWeight.SemiBold)
-                    }
-                    LinearProgressIndicator(
-                        progress = { fraction.coerceIn(0f, 1f) },
-                        modifier = Modifier.fillMaxWidth().height(7.dp),
-                        color = MaterialTheme.colorScheme.tertiary,
-                        trackColor = MaterialTheme.colorScheme.tertiaryContainer,
-                        strokeCap = StrokeCap.Round,
-                    )
+        dashboard.tagAnalysis.forEach { item ->
+            val fraction = if (total == Money.Zero) 0f else item.amount.minor.toFloat() / total.minor
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(item.tagName, Modifier.weight(1f), style = OmniText.bodyRow)
+                    Text("${item.transactionCount} 笔", style = OmniText.caption, color = mutedContent())
+                    Spacer(Modifier.width(12.dp))
+                    Text(item.amount.asPlainAmount(), style = OmniText.bodyRow, fontWeight = FontWeight.SemiBold)
                 }
+                LinearProgressIndicator(
+                    progress = { fraction.coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth().height(6.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = surfaceInset(),
+                    strokeCap = StrokeCap.Round,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun CategoryCard(dashboard: AnalyticsDashboardState, selected: TransactionType, onCategorySelected: (String) -> Unit) {
+private fun CategoryCard(dashboard: AnalyticsDashboardState, onCategorySelected: (String) -> Unit) {
     var showSecondary by remember { mutableStateOf(false) }
     val total = dashboard.categoryBreakdowns.fold(Money.Zero) { value, item -> value + item.amount }
+    if (dashboard.categoryBreakdowns.isEmpty()) return
     AnalyticsCard {
-        AnalyticsHeader("收支饼图") {}
-        if (dashboard.categoryBreakdowns.isEmpty()) {
-            Text(if (selected == TransactionType.EXPENSE) "暂无支出分类数据" else "暂无收入分类数据", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else {
-            CategoryDonut(dashboard.categoryBreakdowns, total)
-            FilterChip(showSecondary, { showSecondary = !showSecondary }, { Text("显示二级分类占比") })
-            dashboard.categoryBreakdowns.forEachIndexed { index, item ->
-                val palette = chartPalette()
-                val color = palette[index % palette.size]
-                CategoryRow(item.primaryCategoryName, item.amount, total, item.iconKey, color) {
-                    onCategorySelected(item.primaryCategoryId)
-                }
-                if (showSecondary) {
-                    item.secondaryCategories.forEach { secondary ->
-                        CategoryRow("  ${secondary.categoryName}", secondary.amount, item.amount, secondary.iconKey, color.copy(alpha = 0.75f)) {
-                            onCategorySelected(secondary.categoryId)
-                        }
+        CategoryDonut(dashboard.categoryBreakdowns, total)
+        dashboard.categoryBreakdowns.forEachIndexed { index, item ->
+            val palette = chartPalette()
+            val color = palette[index % palette.size]
+            CategoryRow(item.primaryCategoryName, item.amount, total, item.iconKey, color) {
+                onCategorySelected(item.primaryCategoryId)
+            }
+            if (showSecondary) {
+                item.secondaryCategories.forEach { secondary ->
+                    CategoryRow("  ${secondary.categoryName}", secondary.amount, item.amount, secondary.iconKey, color.copy(alpha = 0.75f)) {
+                        onCategorySelected(secondary.categoryId)
                     }
                 }
             }
+        }
+        TextButton(onClick = { showSecondary = !showSecondary }, modifier = Modifier.fillMaxWidth()) {
+            Text(if (showSecondary) "只看一级分类" else "展开二级分类", style = OmniText.caption)
         }
     }
 }
@@ -543,21 +461,22 @@ private fun CategoryCard(dashboard: AnalyticsDashboardState, selected: Transacti
 private fun CategoryRow(label: String, amount: Money, total: Money, iconKey: String?, color: Color, onClick: () -> Unit) {
     val fraction = if (total.minor == 0L) 0f else amount.minor.toFloat() / total.minor
     Column(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onClick),
         verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            SvgIcon(categoryIconKey(iconKey), Modifier.size(24.dp), tint = color)
+            SvgIcon(categoryIconKey(iconKey), Modifier.size(22.dp), tint = color)
             Spacer(Modifier.width(8.dp))
-            Text(label, Modifier.weight(1f), fontWeight = FontWeight.Medium)
-            Text(amount.asRmb(), fontWeight = FontWeight.SemiBold)
-            Text(" ${(fraction * 100).toInt()}%", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(label, Modifier.weight(1f), style = OmniText.bodyRow, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(amount.asPlainAmount(), style = OmniText.bodyRow, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.width(6.dp))
+            Text("${(fraction * 100).toInt()}%", style = OmniText.caption, color = mutedContent())
         }
         LinearProgressIndicator(
             progress = { fraction.coerceIn(0f, 1f) },
-            modifier = Modifier.fillMaxWidth().height(7.dp),
+            modifier = Modifier.fillMaxWidth().height(6.dp),
             color = color,
-            trackColor = color.copy(alpha = 0.12f),
+            trackColor = surfaceInset(),
             strokeCap = StrokeCap.Round,
         )
     }
@@ -570,7 +489,7 @@ private fun CategoryDonut(items: List<CategoryBreakdownItem>, total: Money) {
     val description = items.joinToString("，") { item ->
         "${item.primaryCategoryName} ${(item.amount.minor * 100 / totalMinor)}%"
     }
-    Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxWidth().height(184.dp), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize().semantics { contentDescription = description }) {
             var start = -90f
             items.forEachIndexed { index, item ->
@@ -581,25 +500,16 @@ private fun CategoryDonut(items: List<CategoryBreakdownItem>, total: Money) {
                     startAngle = start + 0.75f,
                     sweepAngle = (sweep - 1.5f).coerceAtLeast(0.5f),
                     useCenter = false,
-                    style = Stroke(width = 30.dp.toPx(), cap = StrokeCap.Butt),
+                    style = Stroke(width = 28.dp.toPx(), cap = StrokeCap.Butt),
                 )
                 start += sweep
             }
         }
         // 中心显示合计，否则圆环中间是一块空白
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("合计", style = OmniText.caption, color = mutedContent())
-            Text(total.asRmb(), style = OmniText.amountPrimary, maxLines = 1)
+            Text(total.asPlainAmount(), style = OmniText.amountPrimary, maxLines = 1)
             Text("${items.size} 个分类", style = OmniText.caption, color = mutedContent())
         }
-    }
-}
-
-@Composable
-private fun AnalyticsHeader(title: String, trailing: @Composable () -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, Modifier.weight(1f), style = OmniText.titleRow)
-        trailing()
     }
 }
 
@@ -612,37 +522,6 @@ private fun AnalyticsCard(content: @Composable () -> Unit) {
     ) {
         Column(Modifier.padding(OmniSpace.l), verticalArrangement = Arrangement.spacedBy(OmniSpace.m)) {
             content()
-        }
-    }
-}
-
-@Composable
-private fun LedgerScopeMenu(scope: LedgerScope, ledgers: List<com.omniflow.core.domain.model.Ledger>, onScope: (LedgerScope) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    val label = when (scope) {
-        LedgerScope.All -> "所有账本"
-        is LedgerScope.Single -> ledgers.firstOrNull { it.id == scope.ledgerId }?.name ?: "账本"
-    }
-    Box {
-        Surface(
-            onClick = { expanded = true },
-            shape = CircleShape,
-            color = surfaceInset(),
-        ) {
-            Row(
-                Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Icon(Icons.AutoMirrored.Filled.MenuBook, null, Modifier.size(18.dp), tint = mutedContent())
-                Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
-            }
-        }
-        DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem({ Text("所有账本") }, onClick = { expanded = false; onScope(LedgerScope.All) })
-            ledgers.forEach { ledger ->
-                DropdownMenuItem({ Text(ledger.name) }, onClick = { expanded = false; onScope(LedgerScope.Single(ledger.id)) })
-            }
         }
     }
 }
@@ -673,14 +552,6 @@ private fun customRange(first: LocalDate, second: LocalDate): DateRange {
 }
 
 @Composable
-private fun EmptyAnalytics(onAdd: () -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("当前范围还没有收支", fontWeight = FontWeight.SemiBold)
-        FilledTonalButton(onClick = onAdd) { Text("新增交易") }
-    }
-}
-
-@Composable
 @OptIn(ExperimentalMaterial3Api::class)
 private fun StatementTableSheet(table: StatementTable, onYear: (Int) -> Unit, onDismiss: () -> Unit) {
     var filter by remember { mutableStateOf(StatementFilter.ALL) }
@@ -688,32 +559,25 @@ private fun StatementTableSheet(table: StatementTable, onYear: (Int) -> Unit, on
         LazyColumn(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { onYear(table.year - 1) }) { Icon(Icons.Default.ArrowBackIosNew, "上一年") }
-                    Text("${table.year} 年账单", Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                    IconButton(onClick = { onYear(table.year + 1) }) { Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, "下一年") }
+                    IconButton(onClick = { onYear(table.year - 1) }) { Icon(Icons.Default.ArrowBackIosNew, "上一年", tint = mutedContent()) }
+                    Text("${table.year} 年账单", Modifier.weight(1f), textAlign = TextAlign.Center, style = OmniText.titleRow)
+                    IconButton(onClick = { onYear(table.year + 1) }) { Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, "下一年", tint = mutedContent()) }
                 }
             }
             item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StatementFilter.entries.forEach { option ->
-                        FilterChip(
-                            selected = filter == option,
-                            onClick = { filter = option },
-                            label = {
-                                Text(
-                                    when (option) {
-                                        StatementFilter.ALL -> "全部"
-                                        StatementFilter.INCOME -> "收入"
-                                        StatementFilter.EXPENSE -> "支出"
-                                    },
-                                    Modifier.fillMaxWidth(),
-                                    textAlign = TextAlign.Center,
-                                )
-                            },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                }
+                OmniSegmented(
+                    options = StatementFilter.entries,
+                    selected = filter,
+                    label = {
+                        when (it) {
+                            StatementFilter.ALL -> "全部"
+                            StatementFilter.INCOME -> "收入"
+                            StatementFilter.EXPENSE -> "支出"
+                        }
+                    },
+                    onSelected = { filter = it },
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
             item { StatementChart(table.months, filter) }
             item { StatementHeader(filter) }
@@ -736,17 +600,17 @@ private fun StatementChart(months: List<StatementMonth>, filter: StatementFilter
         }
     }?.coerceAtLeast(1) ?: 1
     Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         months.forEach { month ->
             Column(
-                Modifier.width(44.dp).semantics {
+                Modifier.weight(1f).semantics {
                     contentDescription = "${month.month}月，收入${month.income.asRmb()}，支出${month.expense.asRmb()}，结余${month.netIncome.asRmb()}"
                 },
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Row(Modifier.height(96.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(Modifier.height(96.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                     if (filter != StatementFilter.EXPENSE) {
                         Column(Modifier.weight(1f).fillMaxHeight()) { VerticalBar(month.income.minor, maximum, incomeColor()) }
                     }
@@ -754,7 +618,7 @@ private fun StatementChart(months: List<StatementMonth>, filter: StatementFilter
                         Column(Modifier.weight(1f).fillMaxHeight()) { VerticalBar(month.expense.minor, maximum, expenseColor()) }
                     }
                 }
-                Text("${month.month}月", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("${month.month}月", style = OmniText.caption, color = mutedContent())
             }
         }
     }
@@ -763,10 +627,10 @@ private fun StatementChart(months: List<StatementMonth>, filter: StatementFilter
 @Composable
 private fun StatementHeader(filter: StatementFilter) {
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("月份", Modifier.width(46.dp), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-        if (filter != StatementFilter.EXPENSE) Text("收入", Modifier.weight(1f), textAlign = TextAlign.End, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-        if (filter != StatementFilter.INCOME) Text("支出", Modifier.weight(1f), textAlign = TextAlign.End, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-        Text("结余", Modifier.weight(1f), textAlign = TextAlign.End, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+        Text("月份", Modifier.width(46.dp), style = OmniText.caption, color = mutedContent())
+        if (filter != StatementFilter.EXPENSE) Text("收入", Modifier.weight(1f), textAlign = TextAlign.End, style = OmniText.caption, color = mutedContent())
+        if (filter != StatementFilter.INCOME) Text("支出", Modifier.weight(1f), textAlign = TextAlign.End, style = OmniText.caption, color = mutedContent())
+        Text("结余", Modifier.weight(1f), textAlign = TextAlign.End, style = OmniText.caption, color = mutedContent())
     }
 }
 
@@ -776,16 +640,16 @@ private fun StatementRow(label: String, income: Money, expense: Money, filter: S
     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(label, Modifier.width(46.dp), fontWeight = if (emphasized) FontWeight.Bold else FontWeight.SemiBold)
         if (filter != StatementFilter.EXPENSE) {
-            Text(income.asRmb(), Modifier.weight(1f), textAlign = TextAlign.End, color = MaterialTheme.colorScheme.tertiary, fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Normal)
+            Text(income.asPlainAmount(), Modifier.weight(1f), textAlign = TextAlign.End, color = incomeColor(), fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Normal)
         }
         if (filter != StatementFilter.INCOME) {
-            Text(expense.asRmb(), Modifier.weight(1f), textAlign = TextAlign.End, color = MaterialTheme.colorScheme.error, fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Normal)
+            Text(expense.asPlainAmount(), Modifier.weight(1f), textAlign = TextAlign.End, color = MaterialTheme.colorScheme.onSurface, fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Normal)
         }
         Text(
-            net.asRmb(),
+            net.asPlainAmount(),
             Modifier.weight(1f),
             textAlign = TextAlign.End,
-            color = if (net.minor < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary,
+            color = if (net.minor < 0) expenseColor() else incomeColor(),
             fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Normal,
         )
     }
@@ -796,11 +660,4 @@ private val AnalyticsRangeMode.label: String get() = when (this) {
     AnalyticsRangeMode.MONTH -> "月"
     AnalyticsRangeMode.YEAR -> "年"
     AnalyticsRangeMode.CUSTOM -> "范围"
-}
-
-private fun AnalyticsRangeMode.currentRangeLabel(): String = when (this) {
-    AnalyticsRangeMode.WEEK -> "回到本周"
-    AnalyticsRangeMode.MONTH -> "回到本月"
-    AnalyticsRangeMode.YEAR -> "回到今年"
-    AnalyticsRangeMode.CUSTOM -> ""
 }

@@ -31,7 +31,7 @@ object ImportCategoryDefaults {
     private val incomeRules = listOf(
         "工资" to listOf("工资", "薪资"),
         "红包" to listOf("微信红包", "红包"),
-        "理财" to listOf("投资理财", "理财", "收益"),
+        "理财" to listOf("投资理财", "理财", "收益", "结息", "利息"),
         "奖金" to listOf("奖金", "报销"),
     )
 

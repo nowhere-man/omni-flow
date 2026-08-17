@@ -94,7 +94,7 @@ internal fun TransactionRecordDetailSheet(
                     }
                     item {
                         Surface(
-                            shape = RoundedCornerShape(24.dp),
+                            shape = RoundedCornerShape(OmniRadius.large),
                             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
                         ) {
                             Column(
@@ -104,7 +104,7 @@ internal fun TransactionRecordDetailSheet(
                             ) {
                                 Surface(
                                     modifier = Modifier.size(64.dp),
-                                    shape = RoundedCornerShape(20.dp),
+                                    shape = RoundedCornerShape(OmniRadius.medium),
                                     color = MaterialTheme.colorScheme.surface,
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
@@ -115,14 +115,11 @@ internal fun TransactionRecordDetailSheet(
                                         )
                                     }
                                 }
-                                Text(state.categoryDisplayName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text(state.categoryDisplayName, style = OmniText.titleRow)
                                 Text(
-                                    "${if (transaction.type == TransactionType.EXPENSE) "-" else "+"}${transaction.amount.asRmb()}",
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (transaction.type == TransactionType.EXPENSE) {
-                                        MaterialTheme.colorScheme.error
-                                    } else MaterialTheme.colorScheme.tertiary,
+                                    "${if (transaction.type == TransactionType.EXPENSE) "-" else "+"}${transaction.amount.asPlainAmount()}",
+                                    style = OmniText.amountHero,
+                                    color = amountColor(transaction.type),
                                 )
                             }
                         }
@@ -154,7 +151,7 @@ internal fun TransactionRecordDetailSheet(
                                 onClick = { confirmDelete = true },
                                 modifier = Modifier.weight(1f).height(52.dp),
                                 enabled = !state.isDeleting,
-                                shape = RoundedCornerShape(16.dp),
+                                shape = RoundedCornerShape(OmniRadius.medium),
                             ) {
                                 Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                                 Spacer(Modifier.width(6.dp))
@@ -164,7 +161,7 @@ internal fun TransactionRecordDetailSheet(
                                 onClick = { onEdit(transaction.id) },
                                 modifier = Modifier.weight(2f).height(52.dp),
                                 enabled = !state.isDeleting,
-                                shape = RoundedCornerShape(16.dp),
+                                shape = RoundedCornerShape(OmniRadius.medium),
                             ) {
                                 Icon(Icons.Default.Edit, contentDescription = null)
                                 Spacer(Modifier.width(6.dp))
@@ -203,7 +200,7 @@ internal fun TransactionRecordDetailSheet(
 
 @Composable
 private fun DetailSection(content: @Composable () -> Unit) {
-    Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+    Surface(shape = RoundedCornerShape(OmniRadius.medium), color = surfaceCard()) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) { content() }
     }
 }
@@ -235,4 +232,5 @@ private fun TransactionSource.displayName(): String = when (this) {
     TransactionSource.JD -> "京东"
     TransactionSource.MEITUAN -> "美团"
     TransactionSource.CCB -> "建设银行"
+    TransactionSource.BOC -> "中国银行"
 }

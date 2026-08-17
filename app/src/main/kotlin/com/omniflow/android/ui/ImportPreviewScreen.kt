@@ -211,7 +211,7 @@ private fun ImportSummary(preview: ImportPreviewState, state: MoreUiState, viewM
     Surface(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        color = surfaceCard(),
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -368,20 +368,13 @@ private fun ImportGroupHeader(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                // 组头的收支色和首页日期分组同一套，不用会随主题漂移的 error/tertiary
                 if (group.expenseTotal.minor != 0L) {
-                    Text(
-                        "支出 ${group.expenseTotal.asCompactRmb()}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.error,
-                    )
+                    Text("支 ${group.expenseTotal.asCompactRmb()}", style = OmniText.caption, color = mutedContent())
                 }
                 if (group.incomeTotal.minor != 0L) {
                     Spacer(Modifier.width(8.dp))
-                    Text(
-                        "收入 ${group.incomeTotal.asCompactRmb()}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.tertiary,
-                    )
+                    Text("收 ${group.incomeTotal.asCompactRmb()}", style = OmniText.caption, color = incomeColor())
                 }
             }
             if (!readOnly) {

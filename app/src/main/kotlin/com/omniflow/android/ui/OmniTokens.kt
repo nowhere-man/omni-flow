@@ -73,6 +73,36 @@ object OmniText {
             fontWeight = FontWeight.Bold,
         )
 
+    /**
+     * 明细卡片里的金额。方框只有半屏宽，图标还要占一块，字号同样得跟着位数走，
+     * 否则四位数以上就被省略号吃掉。
+     */
+    @Composable
+    fun amountTile(length: Int): TextStyle = MaterialTheme.typography.titleMedium.copy(
+        fontWeight = FontWeight.Bold,
+        fontSize = when {
+            length <= 7 -> 18.sp
+            length <= 9 -> 16.sp
+            else -> 14.sp
+        },
+        lineHeight = 22.sp,
+    )
+
+    /**
+     * 三张汇总卡各占三分之一屏宽，字号得跟着位数走：
+     * 固定 22sp 时六位数就会被省略号截掉，这里按长度降到能放下 8 位。
+     */
+    @Composable
+    fun amountCard(length: Int): TextStyle = MaterialTheme.typography.titleLarge.copy(
+        fontWeight = FontWeight.Bold,
+        fontSize = when {
+            length <= 6 -> 20.sp
+            length <= 8 -> 17.sp
+            else -> 15.sp
+        },
+        lineHeight = 24.sp,
+    )
+
     /** 卡片标题、列表行标题。 */
     val titleRow: TextStyle
         @Composable get() = MaterialTheme.typography.titleMedium.copy(

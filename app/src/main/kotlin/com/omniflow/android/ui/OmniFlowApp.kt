@@ -5,10 +5,20 @@ import android.app.Activity
 import android.os.Build
 import android.os.SystemClock
 import android.widget.Toast
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -94,6 +104,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.widthIn
@@ -258,7 +269,10 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
         }
         AppLockGate(moreState.preferences.appLockEnabled) {
         BoxWithConstraints {
-        val useNavigationRail = maxWidth >= 600.dp
+            val useNavigationRail = maxWidth >= 600.dp
+            // 底部弹层的高度：屏幕高度减一个状态栏。记账页和明细弹层用同一个值，
+            // 免得一个几乎贴顶、一个只占半屏。
+            val sheetHeight = maxHeight - WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
         Scaffold(
             bottomBar = {
                 if (!useNavigationRail) {
@@ -271,7 +285,8 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
                 }
             },
             floatingActionButton = {
-                if (!useNavigationRail && !isEditor) {
+                // 记账按钮只在首页出现：统计、搜索、更多这三页没有「在这里新增一笔」的语境
+                if (!useNavigationRail && !isEditor && destination == MainDestination.HOME) {
                     FloatingActionButton(
                         onClick = {
                             viewModel.startNewTransaction()
@@ -291,13 +306,12 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
             // 停在某个 tab 根部时返回键会直接落到 Activity 默认行为把应用关掉。
             // 这里补一个互斥的兜底：根部时交给 handleBack，非首页 tab 滑回首页，首页再按一次才退出。
             BackHandler(enabled = navigationState.currentBackStack.size == 1) { handleBack() }
-            val entryProvider: (NavKey) -> NavEntry<NavKey> = { key -> NavEntry(key) {
+            val entryProvider: (NavKey) -> NavEntry<NavKey> = { key -> NavEntry(key, metadata = sheetMetadata(key)) {
             when (key) {
                 OmniRoute.Home -> HomeScreen(
                     state = homeState,
                     onPreviousMonth = viewModel::previousMonth,
                     onNextMonth = viewModel::nextMonth,
-                    onLedgerMenu = viewModel::toggleLedgerMenu,
                     onLedgerSelected = viewModel::selectLedger,
                     onDateSelected = { date ->
                         viewModel.showDate(date)
@@ -309,10 +323,6 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
                         navigationState.navigate(OmniRoute.SummaryDetail(type?.name))
                     },
                     onToggleDisplayMode = viewModel::toggleDisplayMode,
-                    onAdd = { date, ledgerId ->
-                        viewModel.startNewTransaction(date, ledgerId)
-                        navigationState.navigate(OmniRoute.TransactionEditor)
-                    },
                     onEdit = { transactionId ->
                         navigationState.navigate(OmniRoute.TransactionDetail(transactionId))
                     },
@@ -333,12 +343,12 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
                     onCategorySelected = { navigationState.navigate(OmniRoute.CategoryDetail(it)) },
                     onTransactionSelected = { id -> navigationState.navigate(OmniRoute.TransactionDetail(id)) },
                     onMonthSelected = viewModel::selectAnalyticsMonth,
+                    onSummary = { type ->
+                        viewModel.showHomeSummary(type)
+                        navigationState.navigate(OmniRoute.SummaryDetail(type?.name))
+                    },
                     onStatementTable = viewModel::loadStatementTable,
                     onDismissStatementTable = viewModel::dismissStatementTable,
-                    onAddTransaction = {
-                        viewModel.startNewTransaction()
-                        navigationState.navigate(OmniRoute.TransactionEditor)
-                    },
                     modifier = Modifier.padding(padding),
                 )
                 OmniRoute.TransactionEditor -> ModalBottomSheet(
@@ -362,7 +372,7 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
                         onAmountKey = viewModel::pressAmountKey,
                         onSaveAgain = { viewModel.saveTransaction(true) },
                         onDone = { viewModel.saveTransaction(false) },
-                        onClose = ::handleBack,
+                        sheetHeight = sheetHeight,
                     )
                 }
                 OmniRoute.Search -> SearchScreen(
@@ -377,6 +387,7 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
                     onAccount = viewModel::setSearchAccount,
                     onAmount = viewModel::setSearchAmount,
                     onDateRange = viewModel::setSearchDateRange,
+                    onSearch = viewModel::runSearch,
                     onClear = viewModel::clearSearch,
                     onEditTransaction = { transactionId ->
                         navigationState.navigate(OmniRoute.TransactionDetail(transactionId))
@@ -475,6 +486,7 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
                         state = rangeDetailState.detail,
                         isLoading = rangeDetailState.isLoading,
                         error = rangeDetailState.error,
+                        sheetHeight = sheetHeight,
                         onDismiss = {
                             viewModel.dismissDate()
                             navigationState.goBack()
@@ -493,6 +505,7 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
                         state = rangeDetailState.detail,
                         isLoading = rangeDetailState.isLoading,
                         error = rangeDetailState.error,
+                        sheetHeight = sheetHeight,
                         onDismiss = {
                             viewModel.dismissDate()
                             navigationState.goBack()
@@ -531,6 +544,8 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
                             rememberSaveableStateHolderNavEntryDecorator(rememberSaveableStateHolder()),
                         ),
                         onBack = ::handleBack,
+                        transitionSpec = { pushTransition() },
+                        popTransitionSpec = { popTransition() },
                         entryProvider = entryProvider,
                     )
                 }
@@ -555,6 +570,38 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
         }
         }
     }
+}
+
+/**
+ * 页面切换动画。nav3 默认是 700ms 的淡入淡出——时长太长，弹层关闭时还会被误认成卡顿，
+ * 换成主流的水平共享轴：新页从右侧滑入、旧页向左退出，270ms 收住。
+ */
+private const val NavTransitionMillis = 270
+
+private fun AnimatedContentTransitionScope<*>.pushTransition(): ContentTransform =
+    slideIntoContainer(SlideDirection.Left, tween(NavTransitionMillis, easing = FastOutSlowInEasing)) +
+        fadeIn(tween(NavTransitionMillis / 2)) togetherWith
+        slideOutOfContainer(SlideDirection.Left, tween(NavTransitionMillis, easing = FastOutSlowInEasing)) +
+        fadeOut(tween(NavTransitionMillis / 2))
+
+private fun AnimatedContentTransitionScope<*>.popTransition(): ContentTransform =
+    slideIntoContainer(SlideDirection.Right, tween(NavTransitionMillis, easing = FastOutSlowInEasing)) +
+        fadeIn(tween(NavTransitionMillis / 2)) togetherWith
+        slideOutOfContainer(SlideDirection.Right, tween(NavTransitionMillis, easing = FastOutSlowInEasing)) +
+        fadeOut(tween(NavTransitionMillis / 2))
+
+/**
+ * 弹层类目的地自己有进出动画，容器不能再横向滑一次，否则遮罩会跟着一起平移。
+ * 关闭时用最短的淡出，"完成"之后要立刻消失。
+ */
+private fun sheetMetadata(key: NavKey): Map<String, Any> = when (key) {
+    OmniRoute.TransactionEditor,
+    is OmniRoute.TransactionDetail,
+    is OmniRoute.DateDetail,
+    is OmniRoute.SummaryDetail,
+    -> NavDisplay.transitionSpec { fadeIn(tween(80)) togetherWith fadeOut(tween(80)) } +
+        NavDisplay.popTransitionSpec { fadeIn(tween(80)) togetherWith fadeOut(tween(80)) }
+    else -> emptyMap()
 }
 
 internal fun themePrimaryColor(themeColor: ThemeColor, darkTheme: Boolean): Color = when (themeColor) {
@@ -794,13 +841,11 @@ private fun HomeScreen(
     state: HomeUiState,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
-    onLedgerMenu: () -> Unit,
     onLedgerSelected: (LedgerScope) -> Unit,
     onDateSelected: (LocalDate) -> Unit,
     onMonthSelected: (LocalDate) -> Unit,
     onSummary: (TransactionType?) -> Unit,
     onToggleDisplayMode: () -> Unit,
-    onAdd: (LocalDate?, String?) -> Unit,
     onEdit: (String) -> Unit,
     onManageLedgers: () -> Unit,
     modifier: Modifier = Modifier,
@@ -817,36 +862,34 @@ private fun HomeScreen(
                     .padding(horizontal = 16.dp)
                     .widthIn(max = 1040.dp)
                     .wrapContentWidth(Alignment.CenterHorizontally),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Spacer(Modifier.height(8.dp))
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                        LedgerSelector(
-                            scope = home.scope,
-                            ledgers = state.ledgers,
-                            expanded = state.isLedgerMenuExpanded,
-                            onToggle = onLedgerMenu,
-                            onSelected = onLedgerSelected,
-                        )
-                    }
-                    MonthSelector(home.month.startInclusive.toLocalDateTime(ChinaTimeZone).date, onPreviousMonth, onNextMonth, onMonthSelected)
-                    Spacer(Modifier.weight(1f))
-                }
-                HomeSummary(home.summary.expenseTotal, home.summary.incomeTotal, onSummary)
-                Surface(
-                    shape = RoundedCornerShape(18.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                ) {
+                // 账本单独占一行，和统计页一致；月份切换两个箭头顶在两端
+                LedgerScopePill(home.scope, state.ledgers, onLedgerSelected)
+                RangeStepper(
+                    label = home.month.startInclusive.toLocalDateTime(ChinaTimeZone).date.yearMonthText(),
+                    onPrevious = onPreviousMonth,
+                    onNext = onNextMonth,
+                    onLabel = { onMonthSelected(Clock.System.now().toLocalDateTime(ChinaTimeZone).date) },
+                )
+                SummaryCardRow(
+                    expense = home.summary.expenseTotal,
+                    income = home.summary.incomeTotal,
+                    onExpense = { onSummary(TransactionType.EXPENSE) },
+                    onIncome = { onSummary(TransactionType.INCOME) },
+                    onNet = { onSummary(null) },
+                )
+                Surface(shape = RoundedCornerShape(OmniRadius.medium), color = surfaceCard()) {
                     CalendarMonth(
                         month = home.month.startInclusive.toLocalDateTime(ChinaTimeZone).date,
                         summaries = home.calendar,
                         onDateSelected = onDateSelected,
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("明细", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    Text("明细", style = OmniText.titleRow)
                     Spacer(Modifier.weight(1f))
                     IconButton(onClick = onToggleDisplayMode) {
                         val icon = if (state.displayMode == TransactionDetailDisplayMode.LIST) {
@@ -854,7 +897,7 @@ private fun HomeScreen(
                         } else {
                             Icons.AutoMirrored.Filled.List
                         }
-                        Icon(icon, contentDescription = "切换明细展示方式")
+                        Icon(icon, contentDescription = "切换明细展示方式", tint = mutedContent())
                     }
                 }
                 if (state.ledgers.isEmpty()) {
@@ -865,123 +908,20 @@ private fun HomeScreen(
                         onAction = onManageLedgers,
                     )
                 } else if (home.groups.isEmpty()) {
-                    HomeEmptyState(
-                        title = "本月还没有账单",
-                        message = "从第一笔交易开始，看到资金的真实流向。",
-                        actionLabel = "新增交易",
-                        onAction = { onAdd(null, (home.scope as? LedgerScope.Single)?.ledgerId) },
+                    // 本月没有账单时只留一句状态说明，右下角本来就有记账按钮，不必再放一个
+                    Text(
+                        "本月还没有账单",
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 28.dp),
+                        textAlign = TextAlign.Center,
+                        style = OmniText.caption,
+                        color = mutedContent(),
                     )
                 } else {
-                    Surface(
-                        shape = RoundedCornerShape(18.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                    ) {
-                        TransactionGroups(
-                            home.groups,
-                            state.displayMode,
-                            onEdit,
-                            modifier = Modifier.padding(12.dp),
-                        )
-                    }
+                    TransactionGroups(home.groups, state.displayMode, onEdit)
                 }
                 // 给右下角的悬浮记账按钮让位，避免压住最后一条明细
                 Spacer(Modifier.height(88.dp))
             }
-        }
-
-    }
-}
-
-@Composable
-private fun LedgerSelector(
-    scope: LedgerScope,
-    ledgers: List<com.omniflow.core.domain.model.Ledger>,
-    expanded: Boolean,
-    onToggle: () -> Unit,
-    onSelected: (LedgerScope) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(modifier) {
-        val currentLabel = when (scope) {
-            LedgerScope.All -> "所有账本"
-            is LedgerScope.Single -> ledgers.firstOrNull { it.id == scope.ledgerId }?.name ?: "账本"
-        }
-        IconButton(onClick = onToggle) {
-            Icon(
-                Icons.AutoMirrored.Filled.MenuBook,
-                contentDescription = currentLabel,
-                tint = MaterialTheme.colorScheme.primary,
-            )
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = onToggle) {
-            DropdownMenuItem(text = { Text("所有账本") }, onClick = { onSelected(LedgerScope.All) })
-            ledgers.forEach { ledger ->
-                DropdownMenuItem(text = { Text(ledger.name) }, onClick = { onSelected(LedgerScope.Single(ledger.id)) })
-            }
-        }
-    }
-}
-
-@Composable
-private fun MonthSelector(month: LocalDate, onPrevious: () -> Unit, onNext: () -> Unit, onSelected: (LocalDate) -> Unit) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(onClick = onPrevious) {
-            Icon(Icons.Default.ArrowBackIosNew, contentDescription = "上个月")
-        }
-        TextButton(onClick = { onSelected(Clock.System.now().toLocalDateTime(ChinaTimeZone).date) }) {
-            Text(
-                month.yearMonthText(),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-        IconButton(onClick = onNext) {
-            Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = "下个月")
-        }
-    }
-}
-
-@Composable
-private fun HomeSummary(expense: Money, income: Money, onSummary: (TransactionType?) -> Unit) {
-    val net = income - expense
-    // 三张卡和日历、明细列表共用同一套收支语义色，不跟随主题色漂移
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        // 支出占绝大多数，全标红会让整屏发碎；只给收入和结余语义色
-        HomeSummaryCard("总支出", expense, MaterialTheme.colorScheme.onSurface, { onSummary(TransactionType.EXPENSE) }, Modifier.weight(1f))
-        HomeSummaryCard("总收入", income, incomeColor(), { onSummary(TransactionType.INCOME) }, Modifier.weight(1f))
-        HomeSummaryCard(
-            "总结余",
-            net,
-            if (net.minor >= 0) incomeColor() else expenseColor(),
-            { onSummary(null) },
-            Modifier.weight(1f),
-        )
-    }
-}
-
-@Composable
-private fun HomeSummaryCard(label: String, amount: Money, color: Color, onClick: () -> Unit, modifier: Modifier) {
-    Card(
-        onClick = onClick,
-        modifier = modifier,
-        shape = RoundedCornerShape(OmniRadius.medium),
-        colors = CardDefaults.cardColors(containerColor = surfaceCard()),
-    ) {
-        Column(
-            Modifier.padding(horizontal = OmniSpace.m, vertical = OmniSpace.l),
-            verticalArrangement = Arrangement.spacedBy(OmniSpace.xs),
-        ) {
-            Text(label, style = OmniText.caption, color = mutedContent())
-            Text(
-                amount.asRmb(),
-                style = OmniText.amountPrimary,
-                color = color,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
         }
     }
 }
@@ -989,8 +929,8 @@ private fun HomeSummaryCard(label: String, amount: Money, color: Color, onClick:
 @Composable
 private fun SummaryAmount(label: String, amount: Money, color: Color) {
     Column {
-        Text(label, style = MaterialTheme.typography.labelMedium)
-        Text(amount.asRmb(), color = color, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(label, style = OmniText.caption, color = mutedContent())
+        Text(amount.asRmb(), color = color, style = OmniText.amountPrimary, maxLines = 1)
     }
 }
 
@@ -1031,7 +971,7 @@ private fun CalendarMonth(
     val cells = List(leading) { null } + (1..first.lengthOfMonth()).map { day ->
         LocalDate(month.year, month.monthNumber, day)
     }
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(1.dp)) {
         Row(Modifier.fillMaxWidth()) {
             listOf("日", "一", "二", "三", "四", "五", "六").forEach { weekday ->
                 Text(
@@ -1054,7 +994,7 @@ private fun CalendarMonth(
     }
 }
 
-private val CalendarCellHeight = 64.dp
+private val CalendarCellHeight = 56.dp
 
 @Composable
 private fun CalendarCell(
@@ -1073,7 +1013,7 @@ private fun CalendarCell(
             .height(CalendarCellHeight)
             .clip(RoundedCornerShape(6.dp))
             .clickable { onDateSelected(date) }
-            .padding(vertical = 3.dp),
+            .padding(vertical = 1.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
@@ -1088,8 +1028,8 @@ private fun CalendarCell(
             Text(
                 date.dayOfMonth.toString(),
                 color = if (isToday) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = if (isToday) FontWeight.SemiBold else FontWeight.Normal,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
             )
         }
         // 收入在上、支出在下，只显示整数，超过 1000 走 x.xk；金额为 0 的那一行不占位
@@ -1110,7 +1050,7 @@ private fun CalendarAmount(text: String, color: Color) {
         maxLines = 1,
         softWrap = false,
         overflow = TextOverflow.Clip,
-        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, lineHeight = 11.sp),
+        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, lineHeight = 13.sp),
     )
 }
 
@@ -1126,22 +1066,24 @@ private fun TransactionGroups(
             "暂无账单",
             modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = OmniText.caption,
+            color = mutedContent(),
         )
         return
     }
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
         groups.forEach { group ->
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(group.date.displayName(), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text(group.date.displayName(), style = OmniText.caption, color = mutedContent())
                     Spacer(Modifier.weight(1f))
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        if (group.expenseTotal != Money.Zero) {
-                            Text("支出 ${group.expenseTotal.asCompactRmb()}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
-                        }
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        // 收支语义色和日历、汇总卡同一套，不跟随主题色漂移
                         if (group.incomeTotal != Money.Zero) {
-                            Text("收入 ${group.incomeTotal.asCompactRmb()}", color = MaterialTheme.colorScheme.tertiary, style = MaterialTheme.typography.labelMedium)
+                            Text("收 ${group.incomeTotal.asCompactRmb()}", color = incomeColor(), style = OmniText.caption)
+                        }
+                        if (group.expenseTotal != Money.Zero) {
+                            Text("支 ${group.expenseTotal.asCompactRmb()}", color = mutedContent(), style = OmniText.caption)
                         }
                     }
                 }
@@ -1159,10 +1101,18 @@ private fun TransactionItems(
     modifier: Modifier = Modifier,
 ) {
     when (displayMode) {
-        TransactionDetailDisplayMode.LIST -> Column(modifier) {
-            items.forEachIndexed { index, item ->
-                TransactionListRow(item, onEdit)
-                if (index != items.lastIndex) HorizontalDivider()
+        TransactionDetailDisplayMode.LIST -> Surface(
+            modifier = modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(OmniRadius.medium),
+            color = surfaceCard(),
+        ) {
+            Column(Modifier.padding(horizontal = 12.dp)) {
+                items.forEachIndexed { index, item ->
+                    TransactionListRow(item, onEdit)
+                    if (index != items.lastIndex) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    }
+                }
             }
         }
 
@@ -1210,52 +1160,78 @@ private fun DateDetailSheet(
     state: TransactionDetailState?,
     isLoading: Boolean,
     error: String?,
+    sheetHeight: Dp,
     onDismiss: () -> Unit,
     onEdit: (String) -> Unit,
 ) {
     var displayMode by remember(state?.date?.startInclusive, state?.type) {
         mutableStateOf(TransactionDetailDisplayMode.CARD)
     }
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        when {
-            isLoading -> LoadingState()
-            error != null -> ErrorState(error)
-            state != null -> Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        state.date.detailLabel(),
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                    )
-                    IconButton(onClick = {
-                        displayMode = when (displayMode) {
-                            TransactionDetailDisplayMode.CARD -> TransactionDetailDisplayMode.LIST
-                            TransactionDetailDisplayMode.LIST -> TransactionDetailDisplayMode.CARD
-                        }
-                    }) {
-                        Icon(
-                            if (displayMode == TransactionDetailDisplayMode.CARD) Icons.AutoMirrored.Filled.List else Icons.Default.ViewModule,
-                            contentDescription = "切换卡片和列表",
-                        )
-                    }
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    if (state.type != TransactionType.INCOME) SummaryAmount("支出", state.summary.expenseTotal, MaterialTheme.colorScheme.error)
-                    if (state.type != TransactionType.EXPENSE) SummaryAmount("收入", state.summary.incomeTotal, MaterialTheme.colorScheme.tertiary)
-                }
-                Surface(
-                    shape = RoundedCornerShape(18.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        contentWindowInsets = { WindowInsets(0) },
+    ) {
+        // 高度和记账弹层一致：上方只留一个状态栏，不再一个太满一个太空
+        Column(Modifier.fillMaxWidth().height(sheetHeight)) {
+            when {
+                isLoading -> LoadingState()
+                error != null -> ErrorState(error)
+                state != null -> LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    TransactionItems(state.items, displayMode, onEdit, Modifier.padding(12.dp))
+                    item {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                state.date.detailLabel(),
+                                modifier = Modifier.weight(1f),
+                                style = OmniText.titleRow,
+                                maxLines = 1,
+                            )
+                            IconButton(onClick = {
+                                displayMode = when (displayMode) {
+                                    TransactionDetailDisplayMode.CARD -> TransactionDetailDisplayMode.LIST
+                                    TransactionDetailDisplayMode.LIST -> TransactionDetailDisplayMode.CARD
+                                }
+                            }) {
+                                Icon(
+                                    if (displayMode == TransactionDetailDisplayMode.CARD) {
+                                        Icons.AutoMirrored.Filled.List
+                                    } else {
+                                        Icons.Default.ViewModule
+                                    },
+                                    contentDescription = "切换卡片和列表",
+                                    tint = mutedContent(),
+                                )
+                            }
+                        }
+                    }
+                    item {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                            if (state.type != TransactionType.INCOME) {
+                                SummaryAmount("支出", state.summary.expenseTotal, MaterialTheme.colorScheme.onSurface)
+                            }
+                            if (state.type != TransactionType.EXPENSE) {
+                                SummaryAmount("收入", state.summary.incomeTotal, incomeColor())
+                            }
+                        }
+                    }
+                    if (state.items.isEmpty()) {
+                        item {
+                            Text(
+                                "当前范围暂无交易",
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 28.dp),
+                                textAlign = TextAlign.Center,
+                                style = OmniText.caption,
+                                color = mutedContent(),
+                            )
+                        }
+                    } else {
+                        item { TransactionItems(state.items, displayMode, onEdit) }
+                    }
+                    item { Spacer(Modifier.height(24.dp)) }
                 }
-                if (state.items.isEmpty()) Text("当前范围暂无交易")
-                Spacer(Modifier.height(20.dp))
             }
         }
     }

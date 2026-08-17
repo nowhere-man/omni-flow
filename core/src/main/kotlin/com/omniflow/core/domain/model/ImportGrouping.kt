@@ -32,7 +32,8 @@ data class ImportItemGroup(
  */
 val RawTransaction.groupingKey: String?
     get() = when (format) {
-        ImportFormat.ALIPAY, ImportFormat.JD, ImportFormat.QINGZI ->
+        // 中行的「交易名称」是工资/结息/跨行转账这类真分类，和支付宝的交易分类同一层意思
+        ImportFormat.ALIPAY, ImportFormat.JD, ImportFormat.QINGZI, ImportFormat.BOC ->
             sourceCategory?.trim()?.takeIf(String::isNotEmpty)
         ImportFormat.WECHAT, ImportFormat.MEITUAN, ImportFormat.CCB ->
             counterparty?.trim()?.takeIf(String::isNotEmpty)

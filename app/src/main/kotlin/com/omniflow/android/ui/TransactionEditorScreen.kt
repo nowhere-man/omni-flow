@@ -12,6 +12,7 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -27,6 +29,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.text.BasicTextField
@@ -80,6 +83,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
 import com.omniflow.core.domain.model.Account
@@ -110,7 +114,7 @@ internal fun TransactionEditorScreen(
     onAmountKey: (String) -> Unit,
     onSaveAgain: () -> Unit,
     onDone: () -> Unit,
-    onClose: () -> Unit,
+    sheetHeight: Dp,
     modifier: Modifier = Modifier,
 ) {
     val selectedCategory = state.categories.firstOrNull { it.id == state.categoryId }
@@ -124,33 +128,45 @@ internal fun TransactionEditorScreen(
     // 备注聚焦时让出数字键盘的位置给系统输入法，否则面板会被两块键盘一起挤没。
     var noteFocused by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+    // 矮屏放不下三行分类：先保证键盘和录入面板完整，分类降到两行分页翻
+    val categoryRows = if (sheetHeight < 700.dp) 2 else 3
 
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .height(sheetHeight)
             .imePadding(),
     ) {
         Column(
-            modifier = Modifier
-                .weight(1f, fill = false)
-                .padding(horizontal = 12.dp),
+            modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            EditorTopBar(
-                state = state,
-                onType = onType,
-                onLedger = { onLedger(it.id) },
-                onClose = onClose,
+            // 账本单独占一行，和首页、统计页一致
+            LedgerScopePill(
+                label = state.ledgers.firstOrNull { it.id == state.ledgerId }?.name ?: "选择账本",
+                ledgers = state.ledgers,
+                onAll = null,
+                onSelected = { onLedger(it.id) },
+            )
+            TransactionModeSwitch(
+                selected = state.type,
+                onSelected = onType,
+                modifier = Modifier.fillMaxWidth(),
             )
             if (primaryCategories.isEmpty()) {
-                Text("选择账本后加载分类", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("选择账本后加载分类", style = OmniText.caption, color = mutedContent())
+                Spacer(Modifier.weight(1f))
             } else {
+                // 网格拿走剩余高度但封顶在三行；富余的部分自然落在它和录入面板之间，
+                // 矮屏则由网格自己收紧，不会把键盘挤出屏幕。
                 PagedCategoryGrid(
                     categories = primaryCategories,
                     selectedId = primaryId,
                     onSelected = onCategory,
                     onReordered = onReorderPrimary,
                     resetSignal = state.error,
+                    rowsPerPage = categoryRows,
+                    modifier = Modifier.weight(1f),
                 )
             }
             EditorAttributeRow(
@@ -194,124 +210,22 @@ internal fun TransactionEditorScreen(
     }
 }
 
-@Composable
-private fun EditorTopBar(
-    state: TransactionEditorUiState,
-    onType: (TransactionType) -> Unit,
-    onLedger: (Ledger) -> Unit,
-    onClose: () -> Unit,
-) {
-    val ledgerName = state.ledgers.firstOrNull { it.id == state.ledgerId }?.name ?: "选择账本"
-    Row(
-        Modifier.fillMaxWidth().height(52.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        EditorMenuButton(
-            values = state.ledgers,
-            valueLabel = Ledger::name,
-            onSelected = onLedger,
-            contentDescription = ledgerName,
-        ) {
-            Icon(
-                Icons.AutoMirrored.Filled.MenuBook,
-                contentDescription = null,
-                modifier = Modifier.size(22.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-        }
-        TransactionModeSwitch(
-            selected = state.type,
-            onSelected = onType,
-            modifier = Modifier.weight(1f),
-        )
-        Surface(
-            onClick = onClose,
-            modifier = Modifier.size(40.dp).semantics { contentDescription = "关闭" },
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceVariant,
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(20.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun <T> EditorMenuButton(
-    values: List<T>,
-    valueLabel: (T) -> String,
-    onSelected: (T) -> Unit,
-    contentDescription: String,
-    modifier: Modifier = Modifier,
-    icon: @Composable () -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Box(modifier) {
-        Surface(
-            onClick = { expanded = true },
-            modifier = Modifier.size(40.dp).semantics { this.contentDescription = contentDescription },
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-        ) {
-            Box(contentAlignment = Alignment.Center) { icon() }
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            values.forEach { item ->
-                DropdownMenuItem(
-                    text = { Text(valueLabel(item)) },
-                    onClick = { expanded = false; onSelected(item) },
-                )
-            }
-        }
-    }
-}
-
-/** 收支切换用语义色：支出走 error、收入走 tertiary，和列表、统计口径一致。 */
+/**
+ * 收支切换。以前支出用 errorContainer、收入用 tertiaryContainer，两块高饱和色块跟整屏都不搭；
+ * 改成和统计页、搜索页同一个分段控件，选中态只靠一层更亮的表面区分。
+ */
 @Composable
 private fun TransactionModeSwitch(
     selected: TransactionType,
     onSelected: (TransactionType) -> Unit,
     modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier.height(40.dp),
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceVariant,
-    ) {
-        Row(Modifier.padding(3.dp)) {
-            TransactionType.entries.forEach { type ->
-                val isSelected = type == selected
-                val container = when {
-                    !isSelected -> Color.Transparent
-                    type == TransactionType.EXPENSE -> MaterialTheme.colorScheme.errorContainer
-                    else -> MaterialTheme.colorScheme.tertiaryContainer
-                }
-                val content = when {
-                    !isSelected -> MaterialTheme.colorScheme.onSurfaceVariant
-                    type == TransactionType.EXPENSE -> MaterialTheme.colorScheme.onErrorContainer
-                    else -> MaterialTheme.colorScheme.onTertiaryContainer
-                }
-                Surface(
-                    onClick = { onSelected(type) },
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    shape = CircleShape,
-                    color = container,
-                    contentColor = content,
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            if (type == TransactionType.EXPENSE) "支出" else "收入",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
+) = OmniSegmented(
+    options = TransactionType.entries,
+    selected = selected,
+    label = { if (it == TransactionType.EXPENSE) "支出" else "收入" },
+    onSelected = onSelected,
+    modifier = modifier,
+)
 
 /** 账户、标签和「更多」（时间 / 不计入统计）单独一行，把录入面板压到三行。 */
 @Composable
@@ -437,7 +351,7 @@ private fun EditorChip(
 }
 
 /**
- * 一级分类固定 3 行 5 列一页，超出横向翻页，高度恒定，不会再把下面的录入面板挤没。
+ * 一级分类固定 [rowsPerPage] 行 5 列一页，超出横向翻页，高度恒定，不会再把下面的录入面板挤没。
  * 长按仍可拖动排序：[detectDragGesturesAfterLongPress] 只在长按后消费手势，
  * 普通横滑交给 pager；拖拽期间关掉 pager 的手势，避免翻页抢走正在进行的拖动。
  */
@@ -448,14 +362,13 @@ private fun PagedCategoryGrid(
     onSelected: (String?) -> Unit,
     onReordered: (List<String>) -> Unit,
     resetSignal: Any?,
+    rowsPerPage: Int,
+    modifier: Modifier = Modifier,
 ) {
     val columns = 5
-    val rowsPerPage = 3
     val perPage = columns * rowsPerPage
     val density = LocalDensity.current
     val haptics = LocalHapticFeedback.current
-    val cellHeight = 72.dp
-    val cellHeightPx = with(density) { cellHeight.toPx() }
     var width by remember { mutableIntStateOf(0) }
     // 乐观重排：成功时上游会推新顺序回来；失败时 error 变化触发这里回滚到数据库里的顺序。
     var ordered by remember(categories, resetSignal) { mutableStateOf(categories) }
@@ -465,7 +378,13 @@ private fun PagedCategoryGrid(
     val pageCount = ceil(ordered.size / perPage.toFloat()).toInt().coerceAtLeast(1)
     val pagerState = rememberPagerState(pageCount = { pageCount })
 
-    Column(Modifier.fillMaxWidth()) {
+    // 格子高度按分到的空间算、封顶 72dp：矮屏自动收紧不会把键盘挤出去，
+    // 高屏用不完的部分留在网格下方，正好成为分类和录入面板之间的留白。
+    BoxWithConstraints(modifier.fillMaxWidth()) {
+        val dotsHeight = if (pageCount > 1) 16.dp else 0.dp
+        val cellHeight = ((maxHeight - dotsHeight) / rowsPerPage).coerceIn(MinCategoryCell, MaxCategoryCell)
+        val cellHeightPx = with(density) { cellHeight.toPx() }
+        Column(Modifier.fillMaxWidth()) {
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.fillMaxWidth().height(cellHeight * rowsPerPage.toFloat()),
@@ -587,6 +506,7 @@ private fun PagedCategoryGrid(
                 }
             }
         }
+        }
     }
 }
 
@@ -614,7 +534,7 @@ internal fun CategoryTile(
                 Surface(
                     modifier = Modifier.size(40.dp),
                     shape = CircleShape,
-                    color = if (selected) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant,
+                    color = if (selected) Color.Transparent else surfaceInset(),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         SvgIcon(
@@ -654,16 +574,11 @@ private fun TransactionEntryPanel(
 ) {
     val context = LocalContext.current
     val dateTime = state.occurredAt.toLocalDateTime(ChinaTimeZone)
-    val amountColor = if (state.type == TransactionType.EXPENSE) {
-        MaterialTheme.colorScheme.error
-    } else {
-        MaterialTheme.colorScheme.tertiary
-    }
+    val amountColor = amountColor(state.type)
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shape = RoundedCornerShape(OmniRadius.medium),
+        color = surfaceCard(),
     ) {
         Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -681,18 +596,16 @@ private fun TransactionEntryPanel(
                 }
                 Text(
                     text = primary?.let { p -> selectedSecondary?.let { "${p.name} - ${it.name}" } ?: p.name } ?: "先选择分类",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = if (primary == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                    style = OmniText.bodyRow.copy(fontWeight = FontWeight.Medium),
+                    color = if (primary == null) mutedContent() else MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "¥${state.amountInput.ifBlank { "0" }}",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
+                    state.amountInput.ifBlank { "0" },
+                    style = OmniText.amountPrimary,
                     color = amountColor,
                     maxLines = 1,
                 )
@@ -721,7 +634,7 @@ private fun TransactionEntryPanel(
             Row(Modifier.fillMaxWidth().height(38.dp), verticalAlignment = Alignment.CenterVertically) {
                 Surface(
                     modifier = Modifier.weight(1f).height(34.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    color = surfaceInset(),
                     shape = MaterialTheme.shapes.small,
                 ) {
                     Row(Modifier.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -767,7 +680,7 @@ private fun TransactionEntryPanel(
                         ).show()
                     },
                     modifier = Modifier.height(34.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    color = surfaceInset(),
                     shape = MaterialTheme.shapes.small,
                 ) {
                     Row(
@@ -884,7 +797,7 @@ private fun Keypad(
                 val color = when {
                     isDone -> MaterialTheme.colorScheme.primary
                     isAction || isOperator -> MaterialTheme.colorScheme.secondaryContainer
-                    else -> MaterialTheme.colorScheme.surfaceVariant
+                    else -> surfaceInset()
                 }
                 val contentColor = if (isDone) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                 Surface(
@@ -914,3 +827,7 @@ private fun Keypad(
 }
 
 private fun Int.twoDigits(): String = toString().padStart(2, '0')
+
+/** 分类格子的高度区间：再高图标和文字就散了，再矮点不动。 */
+private val MaxCategoryCell = 72.dp
+private val MinCategoryCell = 56.dp

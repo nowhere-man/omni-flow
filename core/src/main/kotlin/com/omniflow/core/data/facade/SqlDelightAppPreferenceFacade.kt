@@ -55,7 +55,7 @@ class SqlDelightAppPreferenceFacade(
         analyticsLedgerScope = decodeScope(values[AppPreferenceKey.AnalyticsLedgerScope]),
         transactionDetailDisplayMode = values[AppPreferenceKey.TransactionDetailDisplayMode]
             ?.let { runCatching { TransactionDetailDisplayMode.valueOf(it) }.getOrNull() }
-            ?: TransactionDetailDisplayMode.LIST,
+            ?: TransactionDetailDisplayMode.CARD,
         appearanceMode = values[AppPreferenceKey.AppearanceMode]
             ?.let { runCatching { AppearanceMode.valueOf(it) }.getOrNull() }
             ?: AppearanceMode.SYSTEM,

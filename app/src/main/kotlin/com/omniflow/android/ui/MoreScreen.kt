@@ -134,9 +134,9 @@ internal fun MoreScreen(
         if (page != MorePage.HOME) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = mutedContent())
                 }
-                Text(page.label, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                Text(page.label, style = OmniText.titleRow)
             }
         }
         when (page) {
@@ -175,7 +175,7 @@ internal fun MoreScreen(
 private fun MoreHome(state: MoreUiState, onPage: (MorePage) -> Unit) {
     LazyColumn(
         Modifier.readableContentWidth().fillMaxHeight().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { Spacer(Modifier.height(8.dp)) }
         item {
@@ -183,111 +183,61 @@ private fun MoreHome(state: MoreUiState, onPage: (MorePage) -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = MaterialTheme.shapes.small,
+                shape = RoundedCornerShape(OmniRadius.medium),
             ) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("净资产", style = OmniText.caption)
-                    Text(state.accountSummary.netAssets.asRmb(), style = OmniText.amountHero)
-                    Text("资产 ${state.accountSummary.assets.asRmb()} · 负债 ${state.accountSummary.liabilities.asRmb()}")
+                    Text(state.accountSummary.netAssets.asRmb(), style = OmniText.amountHero, maxLines = 1)
+                    Text(
+                        "资产 ${state.accountSummary.assets.asRmb()} · 负债 ${state.accountSummary.liabilities.asRmb()}",
+                        style = OmniText.caption,
+                    )
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.CloudSync, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.CloudSync, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text(syncLabel(state), style = MaterialTheme.typography.bodySmall)
+                        Text(syncLabel(state), style = OmniText.caption)
                     }
                 }
             }
         }
-        item { MoreSection("账本与账户", listOf(MorePage.LEDGERS, MorePage.ACCOUNTS, MorePage.ASSETS), state, onPage) }
-        item { MoreSection("分类与标签", listOf(MorePage.CATEGORIES, MorePage.TAGS), state, onPage) }
-        item { MoreSection("预算与自动化", listOf(MorePage.BUDGETS, MorePage.RULES, MorePage.REMINDERS), state, onPage) }
-        item { MoreSection("数据", listOf(MorePage.IMPORT, MorePage.EXPORT, MorePage.DATA), state, onPage) }
-        item { MoreSection("通用", listOf(MorePage.SETTINGS), state, onPage) }
-        state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
-        item { Spacer(Modifier.height(24.dp)) }
+        // 分块本身已经把功能分好了，再顶一行「账本与账户」这种标题只是多一层文字
+        item { MoreSection(listOf(MorePage.SETTINGS), state, onPage) }
+        item { MoreSection(listOf(MorePage.LEDGERS, MorePage.ACCOUNTS, MorePage.ASSETS), state, onPage) }
+        item { MoreSection(listOf(MorePage.CATEGORIES, MorePage.TAGS), state, onPage) }
+        item { MoreSection(listOf(MorePage.BUDGETS, MorePage.RULES, MorePage.REMINDERS), state, onPage) }
+        item { MoreSection(listOf(MorePage.IMPORT, MorePage.EXPORT, MorePage.DATA), state, onPage) }
+        state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error, style = OmniText.caption) } }
+        item { Spacer(Modifier.height(88.dp)) }
     }
 }
 
 @Composable
-private fun MoreSection(
-    title: String,
-    pages: List<MorePage>,
-    state: MoreUiState,
-    onPage: (MorePage) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            title,
-            modifier = Modifier.padding(start = 8.dp),
-            color = mutedContent(),
-            style = OmniText.caption,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            pages.forEachIndexed { index, page ->
-                GroupedOptionRow(
-                    title = page.label,
-                    subtitle = page.description(state),
-                    icon = page.icon,
-                    shape = groupedOptionShape(index, pages.size),
-                    onClick = { onPage(page) },
-                    trailing = { Icon(Icons.Default.ChevronRight, contentDescription = page.label) },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun GroupedOptionRow(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    shape: Shape,
-    onClick: (() -> Unit)? = null,
-    trailing: @Composable (() -> Unit)? = null,
-    content: @Composable (() -> Unit)? = null,
-) {
-    val modifier = if (onClick == null) {
-        Modifier.fillMaxWidth()
-    } else {
-        Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onClick)
-    }
-    Surface(modifier = modifier, color = MaterialTheme.colorScheme.surfaceVariant, shape = shape) {
-        Row(
-            Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // 图标改中性：主题色留给选中态和图表，列表图标跟着变会喧宾夺主
-            Icon(
-                icon,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = mutedContent(),
+private fun MoreSection(pages: List<MorePage>, state: MoreUiState, onPage: (MorePage) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        pages.forEachIndexed { index, page ->
+            GroupedOptionRow(
+                title = page.label,
+                icon = page.icon,
+                shape = groupedOptionShape(index, pages.size),
+                subtitle = page.description(state),
+                onClick = { onPage(page) },
+                trailing = {
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = mutedContent(),
+                    )
+                },
             )
-            Column(
-                Modifier.weight(1f).padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(title, style = OmniText.titleRow)
-                Text(subtitle, style = OmniText.caption, color = mutedContent())
-                content?.invoke()
-            }
-            trailing?.invoke()
         }
     }
-}
-
-internal fun groupedOptionShape(index: Int, size: Int): Shape = when {
-    size == 1 -> RoundedCornerShape(24.dp)
-    index == 0 -> RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 4.dp, bottomEnd = 4.dp)
-    index == size - 1 -> RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
-    else -> RoundedCornerShape(4.dp)
 }
 
 private fun MorePage.description(state: MoreUiState): String = when (this) {
     MorePage.HOME -> ""
     MorePage.DATA -> syncLabel(state)
-    MorePage.IMPORT -> "从支付宝、微信等账单文件批量导入"
+    MorePage.IMPORT -> "从支付宝、微信、银行流水批量导入"
     MorePage.EXPORT -> "导出青子记账兼容数据"
     MorePage.SETTINGS -> "外观、主题色与应用锁"
     MorePage.LEDGERS -> "账本封面、默认账本与收支概览"
@@ -298,6 +248,53 @@ private fun MorePage.description(state: MoreUiState): String = when (this) {
     MorePage.BUDGETS -> budgetLabel(state)
     MorePage.RULES -> "自动分类和排除规则"
     MorePage.REMINDERS -> "还款与订阅提醒"
+}
+
+@Composable
+private fun GroupedOptionRow(
+    title: String,
+    icon: ImageVector,
+    shape: Shape,
+    subtitle: String? = null,
+    onClick: (() -> Unit)? = null,
+    trailing: @Composable (() -> Unit)? = null,
+    content: @Composable (() -> Unit)? = null,
+) {
+    val modifier = if (onClick == null) {
+        Modifier.fillMaxWidth()
+    } else {
+        Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onClick)
+    }
+    Surface(modifier = modifier, color = surfaceCard(), shape = shape) {
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // 图标改中性：主题色留给选中态和图表，列表图标跟着变会喧宾夺主
+            Icon(
+                icon,
+                contentDescription = null,
+                modifier = Modifier.size(22.dp),
+                tint = mutedContent(),
+            )
+            Column(
+                Modifier.weight(1f).padding(horizontal = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(title, style = OmniText.titleRow)
+                subtitle?.let { Text(it, style = OmniText.caption, color = mutedContent()) }
+                content?.invoke()
+            }
+            trailing?.invoke()
+        }
+    }
+}
+
+internal fun groupedOptionShape(index: Int, size: Int): Shape = when {
+    size == 1 -> RoundedCornerShape(OmniRadius.medium)
+    index == 0 -> RoundedCornerShape(topStart = OmniRadius.medium, topEnd = OmniRadius.medium, bottomStart = 4.dp, bottomEnd = 4.dp)
+    index == size - 1 -> RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = OmniRadius.medium, bottomEnd = OmniRadius.medium)
+    else -> RoundedCornerShape(4.dp)
 }
 
 @Composable
@@ -312,15 +309,15 @@ private fun SettingsPage(
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 GroupedOptionRow(
                     title = "应用锁",
-                    subtitle = "启动或回到前台时验证设备凭据",
                     icon = Icons.Default.Lock,
+                    subtitle = "启动或回到前台时验证设备凭据",
                     shape = groupedOptionShape(0, 4),
                     trailing = { Switch(state.preferences.appLockEnabled, viewModel::setAppLockEnabled) },
                 )
                 GroupedOptionRow(
                     title = "界面外观",
-                    subtitle = "跟随系统、浅色或深色",
                     icon = Icons.Default.DarkMode,
+                    subtitle = "跟随系统、浅色或深色",
                     shape = groupedOptionShape(1, 4),
                     content = {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -337,8 +334,8 @@ private fun SettingsPage(
                 )
                 GroupedOptionRow(
                     title = "主题色",
-                    subtitle = "选择按钮和导航的全局强调色",
                     icon = Icons.Default.Palette,
+                    subtitle = "选择按钮和导航的全局强调色",
                     shape = groupedOptionShape(2, 4),
                     content = {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -374,8 +371,8 @@ private fun SettingsPage(
                 )
                 GroupedOptionRow(
                     title = "动态取色",
-                    subtitle = "使用 Android 系统壁纸生成 Material 3 配色（Android 12+）",
                     icon = Icons.Default.Palette,
+                    subtitle = "使用 Android 系统壁纸生成 Material 3 配色（Android 12+）",
                     shape = groupedOptionShape(3, 4),
                     trailing = { Switch(dynamicColorEnabled, onDynamicColorChanged) },
                 )
@@ -523,45 +520,90 @@ private fun ImportPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
             )
             return@Column
         }
-        Column(
-            Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+        LazyColumn(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            ValueMenu(
-                label = state.ledgers.firstOrNull { it.id == ledgerId }?.name ?: "先选择账本",
-                values = state.ledgers,
-                valueLabel = Ledger::name,
-            ) { ledgerId = it.id; viewModel.selectMoreLedger(it.id) }
-            NullableValueMenu(
-                label = selectedFormat?.label ?: "自动识别来源",
-                allLabel = "自动识别来源",
-                values = ImportFormat.entries,
-                valueLabel = { it.label },
-                onAll = { selectedFormat = null },
-                onSelected = { selectedFormat = it },
-            )
+            item {
+                LedgerPickerBar(state.ledgers, ledgerId) { ledgerId = it; viewModel.selectMoreLedger(it) }
+            }
             if (state.accounts.isEmpty()) {
-                Text("请先在「账户」里创建至少一个账户，导入的交易需要落到账户上。", color = MaterialTheme.colorScheme.error)
+                item {
+                    Text(
+                        "请先在「账户」里创建至少一个账户，导入的交易需要落到账户上。",
+                        color = MaterialTheme.colorScheme.error,
+                        style = OmniText.caption,
+                    )
+                }
             }
-            Button(
-                onClick = { fileLauncher.launch("*/*") },
-                enabled = ledgerId != null && state.accounts.isNotEmpty() && !state.isImporting,
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("选择账单文件") }
+            item { Text("选择账单来源", style = OmniText.caption, color = mutedContent()) }
+            // 品牌图标比一排文字按钮好认得多，点一下直接进选文件
+            items(ImportFormat.entries.chunked(3)) { row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    row.forEach { format ->
+                        ImportSourceTile(
+                            format = format,
+                            enabled = ledgerId != null && state.accounts.isNotEmpty() && !state.isImporting,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            selectedFormat = format
+                            fileLauncher.launch("*/*")
+                        }
+                    }
+                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+            item {
+                OutlinedButton(
+                    onClick = { selectedFormat = null; fileLauncher.launch("*/*") },
+                    enabled = ledgerId != null && state.accounts.isNotEmpty() && !state.isImporting,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("自动识别来源") }
+            }
             state.importPreview?.let { preview ->
-                Text(
-                    when (preview.phase) {
-                        ImportPreviewPhase.DETECTING -> "正在识别格式"
-                        ImportPreviewPhase.PARSING -> "正在解析账单"
-                        ImportPreviewPhase.ENRICHING -> "正在应用规则、记忆和去重"
-                        ImportPreviewPhase.READY -> "准备就绪"
-                    },
-                    fontWeight = FontWeight.SemiBold,
-                )
+                item {
+                    Text(
+                        when (preview.phase) {
+                            ImportPreviewPhase.DETECTING -> "正在识别格式"
+                            ImportPreviewPhase.PARSING -> "正在解析账单"
+                            ImportPreviewPhase.ENRICHING -> "正在应用规则、记忆和去重"
+                            ImportPreviewPhase.READY -> "准备就绪"
+                        },
+                        style = OmniText.caption,
+                        color = mutedContent(),
+                    )
+                }
             }
-            if (state.isImporting) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            state.importMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
-            state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            if (state.isImporting) item { LinearProgressIndicator(modifier = Modifier.fillMaxWidth()) }
+            state.importMessage?.let { item { Text(it, color = MaterialTheme.colorScheme.primary, style = OmniText.caption) } }
+            state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error, style = OmniText.caption) } }
+            item { Spacer(Modifier.height(24.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun ImportSourceTile(
+    format: ImportFormat,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier,
+        shape = RoundedCornerShape(OmniRadius.medium),
+        color = surfaceCard(),
+    ) {
+        Column(
+            Modifier.padding(vertical = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            ImportSourceIcon(format, Modifier.size(44.dp))
+            Text(format.label, style = OmniText.caption, maxLines = 1)
+            Text(format.fileHint, style = OmniText.caption, color = mutedContent(), maxLines = 1)
         }
     }
 }
@@ -608,7 +650,7 @@ private fun ExportPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
                 }
             }
         }
-        state.exportWarnings.forEach { Text(it, color = MaterialTheme.colorScheme.tertiary) }
+        state.exportWarnings.forEach { Text(it, color = mutedContent(), style = OmniText.caption) }
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
     }
 }
@@ -647,16 +689,6 @@ private fun syncLabel(state: MoreUiState): String = when (state.syncState.phase)
     SyncPhase.SUCCESS -> "最近备份 ${state.syncState.lastBackupAt ?: "刚刚"}"
     SyncPhase.ERROR -> state.syncState.errorMessage ?: "备份失败"
 }
-
-private val ImportFormat.label: String
-    get() = when (this) {
-        ImportFormat.ALIPAY -> "支付宝"
-        ImportFormat.WECHAT -> "微信"
-        ImportFormat.JD -> "京东"
-        ImportFormat.MEITUAN -> "美团"
-        ImportFormat.CCB -> "建设银行"
-        ImportFormat.QINGZI -> "青子记账"
-    }
 
 private fun Context.fileName(uri: Uri): String {
     contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->

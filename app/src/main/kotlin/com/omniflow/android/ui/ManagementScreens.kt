@@ -102,8 +102,8 @@ private fun LedgerManagement(state: MoreUiState, viewModel: OmniFlowViewModel, o
             Surface(
                 onClick = { onOpen(ledger.id) },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(OmniRadius.medium),
+                color = surfaceCard(),
             ) {
                 Row(
                     Modifier.fillMaxWidth().padding(14.dp),
@@ -122,7 +122,7 @@ private fun LedgerManagement(state: MoreUiState, viewModel: OmniFlowViewModel, o
                             )
                             if (state.defaultLedgerId == ledger.id) {
                                 Spacer(Modifier.size(6.dp))
-                                Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.primary) {
+                                Surface(shape = RoundedCornerShape(OmniRadius.small), color = MaterialTheme.colorScheme.primary) {
                                     Text(
                                         "默认",
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
@@ -267,7 +267,7 @@ private fun AccountRow(
 ) {
     // 信用卡这类负债余额为负，用 error 语义色，和列表、统计口径一致
     val isLiability = account.balance.minor < 0
-    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = shape, color = MaterialTheme.colorScheme.surfaceVariant) {
+    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = shape, color = surfaceCard()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             RoundIcon(account.iconKey)
             Spacer(Modifier.size(12.dp))
@@ -285,7 +285,7 @@ private fun AccountRow(
                 account.balance.asRmb(),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
-                color = if (isLiability) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                color = if (isLiability) expenseColor() else MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
             )
             TextButton(onClick = onEdit) { Text("编辑") }
@@ -388,7 +388,7 @@ private fun AssetManagement(state: MoreUiState, onOpenAccount: (String) -> Unit)
         item {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(OmniRadius.medium),
                 color = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
             ) {
@@ -456,7 +456,7 @@ private fun AssetRow(
     shape: androidx.compose.ui.graphics.Shape,
     onClick: () -> Unit,
 ) {
-    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = shape, color = MaterialTheme.colorScheme.surfaceVariant) {
+    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = shape, color = surfaceCard()) {
         Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RoundIcon(account.iconKey, size = 34)
@@ -469,7 +469,7 @@ private fun AssetRow(
                     account.balance.asRmb(),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = if (account.balance.minor < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                    color = if (account.balance.minor < 0) expenseColor() else MaterialTheme.colorScheme.onSurface,
                 )
             }
             // share <= 0 的分组（负债、不计入总资产）直接不画轨道，否则留一条空条
@@ -580,8 +580,8 @@ private fun CategoryCardRow(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(OmniRadius.medium),
+        color = surfaceCard(),
     ) {
         Column {
             Row(
@@ -707,7 +707,7 @@ private fun TagManagement(state: MoreUiState, viewModel: OmniFlowViewModel) {
                     onClick = { editing = tag },
                     modifier = Modifier.fillMaxWidth(),
                     shape = groupedOptionShape(index, state.tags.size),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    color = surfaceInset(),
                 ) {
                     Row(
                         Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp),
