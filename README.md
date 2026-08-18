@@ -2,7 +2,7 @@
   <img src="assets/branding/omniflow-icon.png#gh-light-mode-only" alt="OmniFlow App 图标（浅色模式）" width="112" />
   <img src="assets/branding/omniflow-icon-dark.png#gh-dark-mode-only" alt="OmniFlow App 图标（深色模式）" width="112" />
   <h1>OmniFlow</h1>
-  <p>一款 Android 原生记账 App，让账单自动流入账本 </p>
+  <p>一款 Android 原生记账 App，让账单自动流入 </p>
   <p>
     <img src="https://img.shields.io/badge/Platform-Android-brightgreen.svg" alt="Platform" />
     <a href="https://github.com/nowhere-man/OmniFlow/releases/latest"><img src="https://img.shields.io/github/v/release/nowhere-man/OmniFlow?label=release&color=orange" alt="Latest release" /></a>
@@ -15,7 +15,15 @@
 
 ### 👋 告别逐笔记账
 
-支持导入支付宝、微信、京东、美团和银行账单，自动完成解析、分类与重复检测。
+支持导入：
+ + 支付宝
+ + 微信
+ + 京东
+ + 美团
+ + 中国银行
+ + 中国建设银行
+
+自动完成解析、分类与重复检测。
 
 ### ☁️ 多端数据同步
 
@@ -23,16 +31,16 @@
 
 ### 📱 原生应用体验
 
-Android 使用 Kotlin 与 Jetpack Compose，交互与界面遵循平台习惯。
+交互与 UI 遵循 Material Design 3 设计规范，并使用 Material 3 组件体系实现。
 
 ## 🧩 核心功能
 
-- 🧾 账单导入、预览、分类与批量处理
-- 📒 多账本、账户、分类、标签与资产管理
-- 📊 收支趋势、分类统计、排行与年度账单
-- 🔎 日历明细与多条件交易搜索
-- 🔔 还款和订阅提醒
-- 🔐 数据备份、应用锁与敏感凭据保护
+- 🧾 账单导入、预览、分类与批量处理。
+- 📒 多账本、账户、分类、标签与资产管理。
+- 📊 收支趋势、分类统计、排行与年度账单。
+- 🔎 日历明细与多条件交易搜索。
+- 🔔 还款和订阅提醒。
+- 🔐 数据备份、应用锁与敏感凭据保护。
 
 ## 📦 安装
 
