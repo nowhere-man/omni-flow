@@ -1028,7 +1028,7 @@ private fun CalendarCell(
             Text(
                 date.dayOfMonth.toString(),
                 color = if (isToday) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp),
                 fontWeight = FontWeight.SemiBold,
             )
         }
@@ -1050,7 +1050,7 @@ private fun CalendarAmount(text: String, color: Color) {
         maxLines = 1,
         softWrap = false,
         overflow = TextOverflow.Clip,
-        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, lineHeight = 13.sp),
+        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 12.sp),
     )
 }
 

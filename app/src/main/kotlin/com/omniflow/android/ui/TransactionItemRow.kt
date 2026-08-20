@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.omniflow.core.domain.model.Money
 import com.omniflow.core.domain.model.TransactionType
 
@@ -134,7 +135,7 @@ internal fun TransactionTile(
                 title,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                style = OmniText.caption.copy(fontWeight = FontWeight.Medium),
+                style = OmniText.caption.copy(fontSize = 13.sp, fontWeight = FontWeight.Medium),
                 color = if (titleMuted) mutedContent() else MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
             )
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

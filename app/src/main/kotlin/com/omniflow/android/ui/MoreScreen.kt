@@ -203,9 +203,9 @@ private fun MoreHome(state: MoreUiState, onPage: (MorePage) -> Unit) {
         // 分块本身已经把功能分好了，再顶一行「账本与账户」这种标题只是多一层文字
         item { MoreSection(listOf(MorePage.SETTINGS), state, onPage) }
         item { MoreSection(listOf(MorePage.LEDGERS, MorePage.ACCOUNTS, MorePage.ASSETS), state, onPage) }
+        item { MoreSection(listOf(MorePage.IMPORT, MorePage.EXPORT, MorePage.DATA), state, onPage) }
         item { MoreSection(listOf(MorePage.CATEGORIES, MorePage.TAGS), state, onPage) }
         item { MoreSection(listOf(MorePage.BUDGETS, MorePage.RULES, MorePage.REMINDERS), state, onPage) }
-        item { MoreSection(listOf(MorePage.IMPORT, MorePage.EXPORT, MorePage.DATA), state, onPage) }
         state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error, style = OmniText.caption) } }
         item { Spacer(Modifier.height(88.dp)) }
     }
@@ -267,18 +267,18 @@ private fun GroupedOptionRow(
     }
     Surface(modifier = modifier, color = surfaceCard(), shape = shape) {
         Row(
-            Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 10.dp),
+            Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // 图标改中性：主题色留给选中态和图表，列表图标跟着变会喧宾夺主
             Icon(
                 icon,
                 contentDescription = null,
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(24.dp),
                 tint = mutedContent(),
             )
             Column(
-                Modifier.weight(1f).padding(horizontal = 14.dp),
+                Modifier.weight(1f).padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Text(title, style = OmniText.titleRow)

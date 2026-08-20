@@ -46,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
@@ -196,9 +197,13 @@ private fun TrendCard(dashboard: AnalyticsDashboardState, now: Instant) {
                         },
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Row(Modifier.height(112.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Column(Modifier.weight(1f).fillMaxHeight()) { VerticalBar(point.income.minor, maximum, incomeColor()) }
-                        Column(Modifier.weight(1f).fillMaxHeight()) { VerticalBar(point.expense.minor, maximum, expenseColor()) }
+                    Row(Modifier.height(112.dp)) {
+                        Column(Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.End) {
+                            VerticalBar(point.income.minor, maximum, incomeColor(), IncomeBarShape)
+                        }
+                        Column(Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.Start) {
+                            VerticalBar(point.expense.minor, maximum, expenseColor(), ExpenseBarShape)
+                        }
                     }
                     Text(
                         point.label.monthLabel(),
@@ -309,9 +314,13 @@ private fun MonthBars(
                 }
             }
         } else {
-            Row(Modifier.height(126.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                Column(Modifier.weight(1f).fillMaxHeight()) { VerticalBar(month.income.minor, maximum, incomeColor()) }
-                Column(Modifier.weight(1f).fillMaxHeight()) { VerticalBar(month.expense.minor, maximum, expenseColor()) }
+            Row(Modifier.height(126.dp)) {
+                Column(Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.End) {
+                    VerticalBar(month.income.minor, maximum, incomeColor(), IncomeBarShape)
+                }
+                Column(Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.Start) {
+                    VerticalBar(month.expense.minor, maximum, expenseColor(), ExpenseBarShape)
+                }
             }
         }
         Text(
@@ -339,16 +348,25 @@ private fun ColumnScope.InvertedBar(value: Long, maximum: Long, color: Color) {
 
 /** 用 weight 分配而不是写死 dp，柱子才能真正填满所在容器。 */
 @Composable
-private fun ColumnScope.VerticalBar(value: Long, maximum: Long, color: Color) {
+private fun ColumnScope.VerticalBar(
+    value: Long,
+    maximum: Long,
+    color: Color,
+    shape: Shape = RoundedCornerShape(4.dp),
+) {
     val fraction = (value.toDouble() / maximum).toFloat().coerceIn(0f, 1f)
     Spacer(Modifier.weight((1f - fraction).coerceAtLeast(0.0001f)))
     Box(
         Modifier
             .weight(fraction.coerceAtLeast(0.0001f))
             .width(10.dp)
-            .background(color, RoundedCornerShape(4.dp)),
+            .background(color, shape),
     )
 }
+
+/** 并排的一对柱子：收入在左、支出在右，相邻的一侧收成直角贴在一起。 */
+private val IncomeBarShape = RoundedCornerShape(topStart = 4.dp, bottomStart = 4.dp)
+private val ExpenseBarShape = RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp)
 
 @Composable
 private fun RankingCard(
@@ -358,6 +376,7 @@ private fun RankingCard(
 ) {
     var expanded by remember(dashboard.query.range, selected) { mutableStateOf(false) }
     AnalyticsCard {
+        Text("收支排行", style = OmniText.caption, color = mutedContent())
         val items = dashboard.ranking.take(if (expanded) 10 else 3)
         if (items.isEmpty()) {
             Text(
@@ -409,6 +428,7 @@ private fun TagAnalysisCard(dashboard: AnalyticsDashboardState, selected: Transa
     val total = if (selected == TransactionType.EXPENSE) dashboard.summary.expenseTotal else dashboard.summary.incomeTotal
     if (dashboard.tagAnalysis.isEmpty()) return
     AnalyticsCard {
+        Text("标签统计", style = OmniText.caption, color = mutedContent())
         dashboard.tagAnalysis.forEach { item ->
             val fraction = if (total == Money.Zero) 0f else item.amount.minor.toFloat() / total.minor
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -489,8 +509,9 @@ private fun CategoryDonut(items: List<CategoryBreakdownItem>, total: Money) {
     val description = items.joinToString("，") { item ->
         "${item.primaryCategoryName} ${(item.amount.minor * 100 / totalMinor)}%"
     }
-    Box(Modifier.fillMaxWidth().height(184.dp), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.fillMaxSize().semantics { contentDescription = description }) {
+    Box(Modifier.fillMaxWidth().height(DonutSize), contentAlignment = Alignment.Center) {
+        // 必须是正方形画布：铺满宽度的话 drawArc 会按容器长宽画出椭圆
+        Canvas(Modifier.size(DonutSize).semantics { contentDescription = description }) {
             var start = -90f
             items.forEachIndexed { index, item ->
                 val sweep = item.amount.minor.toFloat() / totalMinor * 360f
@@ -610,12 +631,16 @@ private fun StatementChart(months: List<StatementMonth>, filter: StatementFilter
                 },
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Row(Modifier.height(96.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(Modifier.height(96.dp)) {
                     if (filter != StatementFilter.EXPENSE) {
-                        Column(Modifier.weight(1f).fillMaxHeight()) { VerticalBar(month.income.minor, maximum, incomeColor()) }
+                        Column(Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.End) {
+                            VerticalBar(month.income.minor, maximum, incomeColor(), IncomeBarShape)
+                        }
                     }
                     if (filter != StatementFilter.INCOME) {
-                        Column(Modifier.weight(1f).fillMaxHeight()) { VerticalBar(month.expense.minor, maximum, expenseColor()) }
+                        Column(Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.Start) {
+                            VerticalBar(month.expense.minor, maximum, expenseColor(), ExpenseBarShape)
+                        }
                     }
                 }
                 Text("${month.month}月", style = OmniText.caption, color = mutedContent())
@@ -661,3 +686,6 @@ private val AnalyticsRangeMode.label: String get() = when (this) {
     AnalyticsRangeMode.YEAR -> "年"
     AnalyticsRangeMode.CUSTOM -> "范围"
 }
+
+/** 饼图直径，画布必须是正方形。 */
+private val DonutSize = 184.dp

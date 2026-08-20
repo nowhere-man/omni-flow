@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -158,13 +159,17 @@ internal fun SummaryCardRow(
     onNet: (() -> Unit)? = null,
 ) {
     val net = income - expense
+    val texts = listOf(expense, income, net).map(Money::asWholeAmount)
+    // 字号按最长的那个数算，三张卡共用：各算各的会让并排的三个数字大小不一
+    val style = OmniText.amountCard(texts.maxOf(String::length))
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         // 支出占绝大多数，全标红会让整屏发碎；只给收入和结余语义色
-        SummaryCard("总支出", expense, MaterialTheme.colorScheme.onSurface, onExpense, Modifier.weight(1f))
-        SummaryCard("总收入", income, incomeColor(), onIncome, Modifier.weight(1f))
+        SummaryCard("总支出", texts[0], style, MaterialTheme.colorScheme.onSurface, onExpense, Modifier.weight(1f))
+        SummaryCard("总收入", texts[1], style, incomeColor(), onIncome, Modifier.weight(1f))
         SummaryCard(
             "总结余",
-            net,
+            texts[2],
+            style,
             if (net.minor >= 0) incomeColor() else expenseColor(),
             onNet,
             Modifier.weight(1f),
@@ -175,7 +180,8 @@ internal fun SummaryCardRow(
 @Composable
 private fun SummaryCard(
     label: String,
-    amount: Money,
+    amount: String,
+    style: TextStyle,
     color: Color,
     onClick: (() -> Unit)?,
     modifier: Modifier,
@@ -193,10 +199,9 @@ private fun SummaryCard(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(label, style = OmniText.caption, color = mutedContent(), maxLines = 1)
-            val text = amount.asWholeAmount()
             Text(
-                text,
-                style = OmniText.amountCard(text.length),
+                amount,
+                style = style,
                 color = color,
                 maxLines = 1,
                 textAlign = TextAlign.Center,
