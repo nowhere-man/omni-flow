@@ -1113,6 +1113,19 @@ class OmniFlowViewModel(
         }
     }
 
+    /** AI 建议失败后重试；结果直接替换当前预览。 */
+    fun resuggestImport() {
+        val preview = _moreUiState.value.importPreview ?: return
+        _moreUiState.value = _moreUiState.value.copy(isImporting = true)
+        viewModelScope.launch {
+            sharedApp.imports.resuggest(preview.sessionId).onSuccess { updated ->
+                _moreUiState.value = _moreUiState.value.copy(importPreview = updated, isImporting = false)
+            }.onFailure { error ->
+                _moreUiState.value = _moreUiState.value.copy(isImporting = false, error = error.message)
+            }
+        }
+    }
+
     fun setImportGroupMode(mode: ImportGroupMode) {
         _moreUiState.value = _moreUiState.value.copy(importGroupMode = mode)
     }

@@ -21,6 +21,8 @@ interface ImportWorkflow {
         sessionId: ImportSessionId,
         edit: ImportExcludeBatchEdit,
     ): Result<ImportPreviewState>
+    /** AI 建议失败后重试；没配置 AI 时原样返回当前会话。 */
+    suspend fun resuggest(sessionId: ImportSessionId): Result<ImportPreviewState>
     suspend fun cancel(sessionId: ImportSessionId): Result<Unit>
     suspend fun commit(sessionId: ImportSessionId): Result<ImportCommitResult>
 }

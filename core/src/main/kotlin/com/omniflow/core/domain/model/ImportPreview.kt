@@ -8,9 +8,9 @@ typealias ImportPreviewItemId = String
 
 enum class ImportDuplicateStatus { NONE, CONFIRMED, SUSPECTED }
 
-enum class ImportCategoryOrigin { NONE, RULE, MEMORY, USER }
+enum class ImportCategoryOrigin { NONE, RULE, MEMORY, AI, USER }
 
-enum class ImportPreviewPhase { DETECTING, PARSING, ENRICHING, READY }
+enum class ImportPreviewPhase { DETECTING, PARSING, ENRICHING, SUGGESTING, READY }
 
 data class ImportRequest(
     val ledgerId: LedgerId,
@@ -43,7 +43,15 @@ data class ImportPreviewState(
     val items: List<ImportPreviewItem>,
     val phase: ImportPreviewPhase = ImportPreviewPhase.READY,
     val progress: Float = 1f,
+    /**
+     * AI 建议失败或被截断时的提示。只活在本次预览的内存态里、不落库：
+     * 它是一次性通知，重新 observe 会话时不该再冒出来。
+     */
+    val suggestionError: String? = null,
 ) {
+    val aiSuggestedCount: Int get() = items.count {
+        !it.isSkipped && it.categoryOrigin == ImportCategoryOrigin.AI
+    }
     val importableItems: List<ImportPreviewItem> get() = items.filterNot(ImportPreviewItem::isSkipped)
     // 不计收支的条目不进收支汇总，和首页统计口径保持一致。
     val expenseTotal: Money get() = importableItems.countableTotal(TransactionType.EXPENSE)

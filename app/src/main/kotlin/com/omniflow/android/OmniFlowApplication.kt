@@ -7,6 +7,10 @@ import com.omniflow.core.domain.model.SyncTarget
 
 class OmniFlowApplication : Application() {
     val sharedApp: SharedApp by lazy {
-        createAndroidSharedApp(this, mapOf(SyncTarget.WEBDAV to WebDavSyncAdapter(this)))
+        createAndroidSharedApp(
+            this,
+            mapOf(SyncTarget.WEBDAV to WebDavSyncAdapter(this)),
+            AiCategoryAdapter(this),
+        )
     }
 }

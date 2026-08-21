@@ -49,6 +49,7 @@ sealed interface OmniRoute : NavKey {
 
     @Serializable data object MoreSettings : OmniRoute
     @Serializable data object MoreData : OmniRoute
+    @Serializable data object MoreAi : OmniRoute
     @Serializable data object MoreImport : OmniRoute
     @Serializable data object MoreExport : OmniRoute
     @Serializable data object MoreRules : OmniRoute
@@ -125,6 +126,7 @@ internal fun MorePage.toRoute(): OmniRoute = when (this) {
     MorePage.HOME -> OmniRoute.More
     MorePage.SETTINGS -> OmniRoute.MoreSettings
     MorePage.DATA -> OmniRoute.MoreData
+    MorePage.AI -> OmniRoute.MoreAi
     MorePage.IMPORT -> OmniRoute.MoreImport
     MorePage.EXPORT -> OmniRoute.MoreExport
     MorePage.RULES -> OmniRoute.MoreRules
@@ -141,6 +143,7 @@ internal fun OmniRoute.morePage(): MorePage? = when (this) {
     OmniRoute.More -> MorePage.HOME
     OmniRoute.MoreSettings -> MorePage.SETTINGS
     OmniRoute.MoreData -> MorePage.DATA
+    OmniRoute.MoreAi -> MorePage.AI
     OmniRoute.MoreImport -> MorePage.IMPORT
     OmniRoute.MoreExport -> MorePage.EXPORT
     OmniRoute.MoreRules -> MorePage.RULES

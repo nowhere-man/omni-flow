@@ -11,6 +11,7 @@ import com.omniflow.core.domain.model.Money
 import com.omniflow.core.domain.model.ImportPreviewEdit
 import com.omniflow.core.domain.model.ImportPreviewItem
 import com.omniflow.core.domain.model.ImportSessionId
+import com.omniflow.core.domain.model.ImportCategoryOrigin
 import com.omniflow.core.parser.ImportFormat
 import com.omniflow.core.domain.model.Rule
 import com.omniflow.core.domain.model.RuleId
@@ -100,7 +101,13 @@ interface ImportSessionRepository {
     )
     suspend fun state(sessionId: ImportSessionId): ImportPreviewSession?
     suspend fun updateItem(sessionId: ImportSessionId, edit: ImportPreviewEdit)
-    suspend fun updateCategories(sessionId: ImportSessionId, itemIds: Set<String>, categoryId: CategoryId?)
+    /** [origin] 区分用户手改还是 AI 建议，决定预览页徽章和提交时是否写入分类记忆。 */
+    suspend fun updateCategories(
+        sessionId: ImportSessionId,
+        itemIds: Set<String>,
+        categoryId: CategoryId?,
+        origin: ImportCategoryOrigin = ImportCategoryOrigin.USER,
+    )
     suspend fun updateSkipped(sessionId: ImportSessionId, itemIds: Set<String>, isSkipped: Boolean)
     suspend fun delete(sessionId: ImportSessionId)
 }

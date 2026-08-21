@@ -1,5 +1,6 @@
 package com.omniflow.android.ui
 
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +44,7 @@ import com.omniflow.core.domain.model.Category
 import com.omniflow.core.domain.model.ImportGroupMode
 import com.omniflow.core.domain.model.ImportItemBucket
 import com.omniflow.core.domain.model.ImportItemGroup
+import com.omniflow.core.domain.model.ImportCategoryOrigin
 import com.omniflow.core.domain.model.ImportPreviewItem
 import com.omniflow.core.domain.model.ImportPreviewState
 import com.omniflow.core.domain.model.TransactionDetailDisplayMode
@@ -227,6 +229,19 @@ private fun ImportSummary(preview: ImportPreviewState, state: MoreUiState, viewM
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            if (preview.aiSuggestedCount > 0) {
+                Text(
+                    "AI 建议了 ${preview.aiSuggestedCount} 笔的分类，确认前请抽查",
+                    style = OmniText.caption,
+                    color = mutedContent(),
+                )
+            }
+            preview.suggestionError?.let { failure ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(failure, Modifier.weight(1f), style = OmniText.caption, color = MaterialTheme.colorScheme.error)
+                    TextButton(onClick = viewModel::resuggestImport) { Text("重试", style = OmniText.caption) }
+                }
+            }
             Text(
                 accountName?.let { "账户 $it（按账单支付方式自动匹配）" } ?: "未匹配到账户，请先在「账户」里创建",
                 style = MaterialTheme.typography.bodySmall,
@@ -409,13 +424,29 @@ private fun ImportItemRow(
             titleMuted = item.categoryId == null,
             onClick = onClick,
             trailing = {
-                TextButton(onClick = onToggleSkip) {
-                    Text(
-                        if (item.isSkipped) "加回" else "排除",
-                        style = MaterialTheme.typography.labelMedium,
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (item.categoryOrigin == ImportCategoryOrigin.AI) AiBadge()
+                    TextButton(onClick = onToggleSkip) {
+                        Text(
+                            if (item.isSkipped) "加回" else "排除",
+                            style = OmniText.caption,
+                        )
+                    }
                 }
             },
+        )
+    }
+}
+
+/** 只在 AI 填过分类的行上出现，提醒这条是猜的、值得看一眼。 */
+@Composable
+private fun AiBadge() {
+    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
+        Text(
+            "AI",
+            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+            style = OmniText.caption,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
         )
     }
 }

@@ -105,6 +105,7 @@ class SqlDelightImportSessionRepository(
         sessionId: ImportSessionId,
         itemIds: Set<String>,
         categoryId: String?,
+        origin: ImportCategoryOrigin,
     ) {
         val timestamp = now().toEpochMilliseconds()
         database.transaction {
@@ -113,7 +114,7 @@ class SqlDelightImportSessionRepository(
                     ?: error("导入预览项不存在")
                 val updated = decode(row.id, row.payload, row.is_skipped != 0L).copy(
                     categoryId = categoryId,
-                    categoryOrigin = ImportCategoryOrigin.USER,
+                    categoryOrigin = origin,
                 )
                 database.importSessionQueries.updateImportPreviewItem(
                     payload = encode(updated),

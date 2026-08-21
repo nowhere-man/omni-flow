@@ -31,6 +31,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.Rule
 import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CloudSync
@@ -103,6 +104,7 @@ internal enum class MorePage(val label: String, val icon: ImageVector) {
     HOME("更多", Icons.Default.Settings),
     SETTINGS("通用设置", Icons.Default.Tune),
     DATA("数据同步", Icons.Default.CloudSync),
+    AI("AI 分类", Icons.Default.AutoAwesome),
     IMPORT("导入账单", Icons.Default.FileUpload),
     EXPORT("导出数据", Icons.Default.FileDownload),
     RULES("规则", Icons.AutoMirrored.Filled.Rule),
@@ -148,6 +150,7 @@ internal fun MoreScreen(
                 onDynamicColorChanged = onDynamicColorChanged,
             )
             MorePage.DATA -> DataManagementPage(state, viewModel)
+            MorePage.AI -> AiSettingsPage()
             MorePage.BUDGETS -> BudgetPage(state, viewModel)
             MorePage.IMPORT -> ImportPage(state, viewModel)
             MorePage.EXPORT -> ExportPage(state, viewModel)
@@ -203,7 +206,7 @@ private fun MoreHome(state: MoreUiState, onPage: (MorePage) -> Unit) {
         // 分块本身已经把功能分好了，再顶一行「账本与账户」这种标题只是多一层文字
         item { MoreSection(listOf(MorePage.SETTINGS), state, onPage) }
         item { MoreSection(listOf(MorePage.LEDGERS, MorePage.ACCOUNTS, MorePage.ASSETS), state, onPage) }
-        item { MoreSection(listOf(MorePage.IMPORT, MorePage.EXPORT, MorePage.DATA), state, onPage) }
+        item { MoreSection(listOf(MorePage.IMPORT, MorePage.EXPORT, MorePage.DATA, MorePage.AI), state, onPage) }
         item { MoreSection(listOf(MorePage.CATEGORIES, MorePage.TAGS), state, onPage) }
         item { MoreSection(listOf(MorePage.BUDGETS, MorePage.RULES, MorePage.REMINDERS), state, onPage) }
         state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error, style = OmniText.caption) } }
@@ -237,6 +240,7 @@ private fun MoreSection(pages: List<MorePage>, state: MoreUiState, onPage: (More
 private fun MorePage.description(state: MoreUiState): String = when (this) {
     MorePage.HOME -> ""
     MorePage.DATA -> syncLabel(state)
+    MorePage.AI -> "导入时让大模型建议一级分类"
     MorePage.IMPORT -> "从支付宝、微信、银行流水批量导入"
     MorePage.EXPORT -> "导出青子记账兼容数据"
     MorePage.SETTINGS -> "外观、主题色与应用锁"
@@ -567,6 +571,7 @@ private fun ImportPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
                             ImportPreviewPhase.DETECTING -> "正在识别格式"
                             ImportPreviewPhase.PARSING -> "正在解析账单"
                             ImportPreviewPhase.ENRICHING -> "正在应用规则、记忆和去重"
+                        ImportPreviewPhase.SUGGESTING -> "正在请求 AI 建议分类"
                             ImportPreviewPhase.READY -> "准备就绪"
                         },
                         style = OmniText.caption,

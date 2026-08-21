@@ -25,6 +25,7 @@ import com.omniflow.core.data.usecase.SqlDelightSearchTransactionsUseCase
 import com.omniflow.core.data.sync.SqlDelightBackupStore
 import com.omniflow.core.data.sync.SqlDelightSyncEngine
 import com.omniflow.core.data.sync.SyncAdapter
+import com.omniflow.core.domain.ai.CategorySuggester
 import com.omniflow.core.domain.facade.AnalyticsFacade
 import com.omniflow.core.domain.facade.AppPreferenceFacade
 import com.omniflow.core.domain.facade.HomeFacade
@@ -71,6 +72,7 @@ import com.omniflow.core.domain.usecase.UpdateTransactionUseCase
 class SharedApp(
     driver: SqlDriver,
     syncAdapters: Map<SyncTarget, SyncAdapter> = emptyMap(),
+    categorySuggester: CategorySuggester? = null,
 ) {
     private val database = createDatabase(driver)
     private val ledgers = SqlDelightLedgerRepository(database)
@@ -104,6 +106,7 @@ class SharedApp(
         rules = rules,
         categoryMemory = SqlDelightCategoryMemoryRepository(database),
         dedupe = SqlDelightTransactionDedupeRepository(database),
+        suggester = categorySuggester,
     )
     val initialize = InitializeAppUseCase(SqlDelightInitialDataRepository(database))
     val createLedger = CreateLedgerUseCase(ledgers)
