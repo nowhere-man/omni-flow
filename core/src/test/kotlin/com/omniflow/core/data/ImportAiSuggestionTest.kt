@@ -13,6 +13,7 @@ import com.omniflow.core.db.OmniFlowDatabase
 import com.omniflow.core.domain.ai.CategorySuggester
 import com.omniflow.core.domain.ai.CategorySuggestionRequest
 import com.omniflow.core.domain.model.CategoryId
+import com.omniflow.core.domain.model.DateRange
 import com.omniflow.core.domain.model.ImportCategoryOrigin
 import com.omniflow.core.domain.model.ImportPreviewPhase
 import com.omniflow.core.domain.model.ImportPreviewState
@@ -20,6 +21,7 @@ import com.omniflow.core.domain.model.ImportRequest
 import com.omniflow.core.parser.ImportFormat
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -30,6 +32,29 @@ import kotlin.test.assertTrue
  * 重点验证三件事：只问空缺、同一来源键只问一次、任何失败都不能影响导入本身。
  */
 class ImportAiSuggestionTest {
+    @Test
+    fun dateRangeKeepsOnlyTransactionsInsideInclusiveDates() = runBlocking {
+        val range = DateRange(
+            startInclusive = Instant.parse("2026-01-06T00:00:00+08:00"),
+            endExclusive = Instant.parse("2026-01-07T00:00:00+08:00"),
+        )
+        val state = workflow(seed(), RecordingSuggester(emptyMap(), configured = false))
+            .preview(
+                ImportRequest(
+                    ledgerId = "ledger",
+                    fileName = "美团.csv",
+                    bytes = BILL.encodeToByteArray(),
+                    selectedFormat = ImportFormat.MEITUAN,
+                    dateRange = range,
+                ),
+            )
+            .toList()
+            .last()
+            .getOrThrow()
+
+        assertEquals(listOf("M2"), state.items.map { it.raw.externalId })
+    }
+
     @Test
     fun asksOnlyForGapsAndDeduplicatesByMemoryKey() = runBlocking {
         val suggester = RecordingSuggester(mapOf("MEITUAN:party:星巴克咖啡" to "c-food"))

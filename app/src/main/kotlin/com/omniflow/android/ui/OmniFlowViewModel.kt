@@ -1032,7 +1032,13 @@ class OmniFlowViewModel(
 
     fun deleteBudget(id: String) = mutate { sharedApp.budgets.delete(id) }
 
-    fun importFile(ledgerId: String, fileName: String, bytes: ByteArray, selectedFormat: ImportFormat? = null) {
+    fun importFile(
+        ledgerId: String,
+        fileName: String,
+        bytes: ByteArray,
+        selectedFormat: ImportFormat? = null,
+        dateRange: DateRange? = null,
+    ) {
         importJob?.cancel()
         _moreUiState.value = _moreUiState.value.copy(
             importPreview = null,
@@ -1043,7 +1049,15 @@ class OmniFlowViewModel(
             error = null,
         )
         importJob = viewModelScope.launch {
-            sharedApp.imports.preview(ImportRequest(ledgerId, fileName, bytes, selectedFormat)).collect { result ->
+            sharedApp.imports.preview(
+                ImportRequest(
+                    ledgerId = ledgerId,
+                    fileName = fileName,
+                    bytes = bytes,
+                    selectedFormat = selectedFormat,
+                    dateRange = dateRange,
+                ),
+            ).collect { result ->
                 result.onSuccess { preview ->
                     _moreUiState.value = _moreUiState.value.copy(
                         importPreview = preview,

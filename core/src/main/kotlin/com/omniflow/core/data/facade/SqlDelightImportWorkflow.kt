@@ -75,7 +75,11 @@ class SqlDelightImportWorkflow(
         emit(runCatching {
             val format = detectFormat(request)
             emit(Result.success(progressState(request, ImportPreviewPhase.PARSING, 0.3f, format)))
-            val rawItems = parse(format, request.bytes)
+            val rawItems = parse(format, request.bytes).filter { item ->
+                request.dateRange?.let { range ->
+                    item.occurredAt >= range.startInclusive && item.occurredAt < range.endExclusive
+                } ?: true
+            }
             val sessionId = ids.next()
             emit(Result.success(progressState(request, ImportPreviewPhase.ENRICHING, 0.7f, format)))
             val enriched = enrichPreview(
