@@ -109,7 +109,7 @@ class SqlDelightImportWorkflow(
         edit: ImportCategoryBatchEdit,
     ): Result<ImportPreviewState> = withContext(Dispatchers.Default) {
         runCatching {
-            sessions.updateCategories(sessionId, edit.itemIds, edit.categoryId)
+            sessions.updateCategories(sessionId, edit.itemIds, edit.categoryId, edit.type)
             toState(sessions.state(sessionId) ?: error("导入会话不存在或已结束"))
         }
     }

@@ -25,6 +25,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -197,8 +198,8 @@ internal fun ImportPreviewSection(
             selectedCategoryId = preview.items.firstOrNull { it.id in target.itemIds }?.categoryId,
             initialType = target.type,
             onDismiss = { picker = null },
-            onSelected = { categoryId, _ ->
-                viewModel.setImportCategory(target.itemIds, categoryId)
+            onSelected = { categoryId, type ->
+                viewModel.setImportCategory(target.itemIds, categoryId, type)
                 picker = null
             },
         )
@@ -454,34 +455,53 @@ private fun AiBadge() {
 @Composable
 private fun ImportActionBar(preview: ImportPreviewState, state: MoreUiState, viewModel: OmniFlowViewModel) {
     Surface(tonalElevation = 3.dp) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Column(Modifier.weight(1f)) {
+        Column {
+            if (state.isImporting) {
+                LinearProgressIndicator(Modifier.fillMaxWidth())
                 Text(
-                    if (preview.pendingCount > 0) "还有 ${preview.pendingCount} 笔待分类" else "全部已归类",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (preview.pendingCount > 0) {
-                        MaterialTheme.colorScheme.error
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
+                    "正在入账，请稍候…",
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
                 )
-                if (preview.skippedCount > 0) {
-                    Text(
-                        "不导入 ${preview.skippedCount} 笔",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             }
-            TextButton(onClick = viewModel::cancelImport) { Text("取消") }
-            Button(
-                onClick = viewModel::commitImport,
-                enabled = preview.isReadyToCommit && !state.isImporting && preview.importableItems.isNotEmpty(),
-            ) { Text("确认入账 ${preview.importableItems.size} 笔") }
+            state.error?.let { error ->
+                Text(
+                    error,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        if (preview.pendingCount > 0) "还有 ${preview.pendingCount} 笔待分类" else "全部已归类",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (preview.pendingCount > 0) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                    if (preview.skippedCount > 0) {
+                        Text(
+                            "不导入 ${preview.skippedCount} 笔",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                TextButton(onClick = viewModel::cancelImport) { Text("取消") }
+                Button(
+                    onClick = viewModel::commitImport,
+                    enabled = preview.isReadyToCommit && !state.isImporting && preview.importableItems.isNotEmpty(),
+                ) { Text("确认入账 ${preview.importableItems.size} 笔") }
+            }
         }
     }
 }

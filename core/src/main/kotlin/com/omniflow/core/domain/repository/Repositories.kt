@@ -106,6 +106,7 @@ interface ImportSessionRepository {
         sessionId: ImportSessionId,
         itemIds: Set<String>,
         categoryId: CategoryId?,
+        type: TransactionType? = null,
         origin: ImportCategoryOrigin = ImportCategoryOrigin.USER,
     )
     suspend fun updateSkipped(sessionId: ImportSessionId, itemIds: Set<String>, isSkipped: Boolean)

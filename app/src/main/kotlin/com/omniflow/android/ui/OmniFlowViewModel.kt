@@ -1088,13 +1088,13 @@ class OmniFlowViewModel(
     }
 
     /** 整组或单条改分类；导入时唯一需要用户决策的字段就是分类。 */
-    fun setImportCategory(itemIds: Set<String>, categoryId: String?) {
+    fun setImportCategory(itemIds: Set<String>, categoryId: String?, type: TransactionType? = null) {
         val preview = _moreUiState.value.importPreview ?: return
         if (itemIds.isEmpty()) return
         viewModelScope.launch {
             sharedApp.imports.editCategories(
                 preview.sessionId,
-                ImportCategoryBatchEdit(itemIds, categoryId),
+                ImportCategoryBatchEdit(itemIds, categoryId, type),
             ).onSuccess { updated -> _moreUiState.value = _moreUiState.value.copy(importPreview = updated) }
                 .onFailure { error -> _moreUiState.value = _moreUiState.value.copy(error = error.message) }
         }

@@ -80,6 +80,7 @@ data class ImportPreviewEdit(
 data class ImportCategoryBatchEdit(
     val itemIds: Set<ImportPreviewItemId>,
     val categoryId: CategoryId?,
+    val type: TransactionType? = null,
 )
 
 data class ImportExcludeBatchEdit(
