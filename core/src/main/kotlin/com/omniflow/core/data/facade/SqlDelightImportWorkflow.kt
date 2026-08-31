@@ -47,6 +47,7 @@ import com.omniflow.core.parser.csv.CsvDecoder
 import com.omniflow.core.parser.csv.CsvBillParser
 import com.omniflow.core.parser.qingzi.QingziBillParser
 import com.omniflow.core.parser.pdf.BocPdfBillParser
+import com.omniflow.core.parser.pdf.CmbPdfBillParser
 import com.omniflow.core.parser.spreadsheet.SpreadsheetBillParser
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -353,9 +354,14 @@ class SqlDelightImportWorkflow(
         if (fileName.endsWith(".xlsx")) return ImportFormat.WECHAT
         if (fileName.endsWith(".xls")) return ImportFormat.CCB
         if (fileName.endsWith(".pdf")) {
-            require(BocPdfBillParser.matches(request.bytes)) { "暂不支持这个 PDF 账单，目前只识别中国银行交易流水明细清单" }
-            return ImportFormat.BOC
-        }
+                if (BocPdfBillParser.matches(request.bytes)) {
+                    return ImportFormat.BOC
+                }
+                if (CmbPdfBillParser.matches(request.bytes)) {
+                    return ImportFormat.CMB
+                }
+                error("暂不支持这个 PDF 账单，目前只识别中国银行和招商银行交易流水")
+            }
 
         val candidates = listOf(CsvCharset.UTF8, CsvCharset.GB18030)
             .flatMap { charset -> formatDetector.detect(request.fileName, CsvDecoder.decode(request.bytes, charset)) }
@@ -370,6 +376,7 @@ class SqlDelightImportWorkflow(
         ImportFormat.QINGZI -> qingziParser.parse(CsvDecoder.decode(bytes, CsvCharset.UTF8)).getOrThrow().transactions
         ImportFormat.WECHAT, ImportFormat.CCB -> SpreadsheetBillParser.parse(format, bytes).getOrThrow()
         ImportFormat.BOC -> BocPdfBillParser.parse(bytes).getOrThrow()
+        ImportFormat.CMB -> CmbPdfBillParser.parse(bytes).getOrThrow()
     }
 
     private fun toState(session: ImportPreviewSession): ImportPreviewState = ImportPreviewState(

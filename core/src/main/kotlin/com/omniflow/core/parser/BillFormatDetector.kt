@@ -8,6 +8,7 @@ class BillFormatDetector {
             text.contains("支付宝支付科技有限公司") && text.contains("交易对方") -> listOf(ImportFormat.ALIPAY)
             text.contains("京东账号名") && text.contains("商户名称") -> listOf(ImportFormat.JD)
             text.contains("美团交易账单明细") && text.contains("订单标题") -> listOf(ImportFormat.MEITUAN)
+            text.contains("招商银行") && text.contains("记账日期") -> listOf(ImportFormat.CMB)
             else -> emptyList()
         }
     }

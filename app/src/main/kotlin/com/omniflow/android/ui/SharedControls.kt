@@ -223,7 +223,9 @@ internal fun ImportSourceIcon(format: ImportFormat, modifier: Modifier = Modifie
         ImportFormat.JD -> R.drawable.brand_jd
         ImportFormat.CCB -> R.drawable.brand_ccb
         ImportFormat.QINGZI -> R.drawable.brand_qingzi
-        ImportFormat.MEITUAN, ImportFormat.BOC -> null
+        ImportFormat.MEITUAN -> R.drawable.brand_meituan
+        ImportFormat.BOC -> R.drawable.brand_boc
+        ImportFormat.CMB -> R.drawable.brand_cmb
     }
     val shape = RoundedCornerShape(OmniRadius.small)
     if (drawable != null) {
@@ -251,6 +253,7 @@ internal val ImportFormat.label: String
         ImportFormat.MEITUAN -> "美团"
         ImportFormat.CCB -> "建设银行"
         ImportFormat.BOC -> "中国银行"
+        ImportFormat.CMB -> "招商银行"
         ImportFormat.QINGZI -> "青子记账"
     }
 
@@ -263,5 +266,6 @@ internal val ImportFormat.fileHint: String
         ImportFormat.MEITUAN -> "账单 CSV"
         ImportFormat.CCB -> "流水 XLS"
         ImportFormat.BOC -> "流水明细 PDF"
+        ImportFormat.CMB -> "交易流水 PDF"
         ImportFormat.QINGZI -> "备份 JSON"
     }

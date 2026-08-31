@@ -12,7 +12,7 @@ enum class TransactionType { EXPENSE, INCOME }
 
 enum class AccountType { CASH, DEBIT_CARD, CREDIT_CARD, E_WALLET, INVESTMENT }
 
-enum class TransactionSource { MANUAL, ALIPAY, WECHAT, JD, MEITUAN, CCB, BOC }
+enum class TransactionSource { MANUAL, ALIPAY, WECHAT, JD, MEITUAN, CCB, BOC, CMB }
 
 sealed interface LedgerScope {
     data object All : LedgerScope

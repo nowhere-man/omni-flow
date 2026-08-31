@@ -9,5 +9,6 @@ enum class ImportFormat(val transactionSource: TransactionSource?) {
     MEITUAN(TransactionSource.MEITUAN),
     CCB(TransactionSource.CCB),
     BOC(TransactionSource.BOC),
+    CMB(TransactionSource.CMB),
     QINGZI(null),
 }
