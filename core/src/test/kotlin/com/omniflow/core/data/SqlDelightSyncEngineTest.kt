@@ -11,8 +11,10 @@ import com.omniflow.core.domain.model.SyncConfig
 import com.omniflow.core.domain.model.SyncTarget
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Instant
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class SqlDelightSyncEngineTest {
     @Test
@@ -41,6 +43,21 @@ class SqlDelightSyncEngineTest {
         assertEquals(100, adapter.backups.maxOf { it.createdAt.toEpochMilliseconds() })
     }
 
+    @Test
+    fun listBackupsPropagatesCancellation() = runBlocking {
+        val database = createJvmDatabase()
+        val engine = SqlDelightSyncEngine(
+            database = database,
+            preferences = SqlDelightAppPreferenceFacade(database),
+            backupStore = EmptyBackupStore,
+            adapters = mapOf(SyncTarget.WEBDAV to CancellingListAdapter()),
+        )
+        engine.configure(SyncConfig(SyncTarget.WEBDAV, 10)).getOrThrow()
+
+        assertFailsWith<CancellationException> { engine.listBackups() }
+        Unit
+    }
+
     private class MemorySyncAdapter(initial: List<RemoteBackupMeta>) : SyncAdapter {
         val backups = initial.toMutableList()
         override suspend fun listBackups() = Result.success(backups.toList())
@@ -55,5 +72,22 @@ class SqlDelightSyncEngineTest {
             backups.remove(meta)
             return Result.success(Unit)
         }
+    }
+
+    private class CancellingListAdapter : SyncAdapter {
+        override suspend fun listBackups(): Result<List<RemoteBackupMeta>> =
+            throw CancellationException("cancelled")
+
+        override suspend fun uploadBackup(backup: BackupRecord): Result<Unit> = Result.success(Unit)
+        override suspend fun downloadBackup(meta: RemoteBackupMeta): Result<BackupRecord> =
+            Result.success(BackupRecord(meta.deviceId, meta.backupId, meta.createdAt, "{}"))
+        override suspend fun deleteBackup(meta: RemoteBackupMeta): Result<Unit> = Result.success(Unit)
+    }
+
+    private object EmptyBackupStore : BackupStore {
+        override suspend fun create(deviceId: String, backupId: String, createdAtMillis: Long) =
+            BackupRecord(deviceId, backupId, Instant.fromEpochMilliseconds(createdAtMillis), "{}")
+
+        override suspend fun restore(backup: BackupRecord) = Unit
     }
 }

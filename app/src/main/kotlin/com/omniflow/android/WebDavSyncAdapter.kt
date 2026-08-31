@@ -23,6 +23,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.json.JSONObject
+import kotlin.coroutines.cancellation.CancellationException
 
 internal class WebDavHttpClient(
     private val client: OkHttpClient,
@@ -150,7 +151,15 @@ class WebDavSyncAdapter(context: Context) : SyncAdapter {
         )
     }
 
-    private suspend fun <T> io(block: () -> T): Result<T> = withContext(Dispatchers.IO) { runCatching(block) }
+    private suspend fun <T> io(block: () -> T): Result<T> = withContext(Dispatchers.IO) {
+        try {
+            Result.success(block())
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            Result.failure(error)
+        }
+    }
 
     private companion object {
         val HREF = Regex("<[^>]*href[^>]*>(.*?)</[^>]*href>", RegexOption.IGNORE_CASE)

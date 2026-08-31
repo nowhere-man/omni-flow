@@ -28,6 +28,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
+import kotlin.coroutines.cancellation.CancellationException
 
 class SqlDelightSyncEngine(
     private val database: OmniFlowDatabase,
@@ -66,14 +67,14 @@ class SqlDelightSyncEngine(
 
     override fun observeSyncState(): StateFlow<SyncState> = _state.asStateFlow()
 
-    override suspend fun configure(config: SyncConfig): Result<Unit> = runCatching {
+    override suspend fun configure(config: SyncConfig): Result<Unit> = runCatchingCancellable {
         val current = preferences.observe().first().getOrThrow()
         preferences.save(
             current.copy(syncTarget = config.target, backupRetention = config.backupRetention),
         ).getOrThrow()
     }
 
-    override suspend fun listBackups(): Result<List<RemoteBackupMeta>> = runCatching {
+    override suspend fun listBackups(): Result<List<RemoteBackupMeta>> = runCatchingCancellable {
         val (_, adapter) = adapterAndRetention()
         adapter.listBackups().getOrThrow().sortedByDescending(RemoteBackupMeta::createdAt)
     }
@@ -82,7 +83,7 @@ class SqlDelightSyncEngine(
         scheduledBackup?.cancel()
         scheduledBackup = null
         _state.value = _state.value.copy(phase = SyncPhase.RUNNING, progress = 0f, errorMessage = null)
-        runCatching {
+        runCatchingCancellable {
             val (retention, adapter) = adapterAndRetention()
             val timestamp = now()
             val backup = backupStore.create(deviceId(), ids.next(), timestamp.toEpochMilliseconds())
@@ -112,7 +113,7 @@ class SqlDelightSyncEngine(
         scheduledBackup?.cancel()
         scheduledBackup = null
         _state.value = _state.value.copy(phase = SyncPhase.RUNNING, progress = 0f, errorMessage = null)
-        runCatching {
+        runCatchingCancellable {
             val (_, adapter) = adapterAndRetention()
             val backup = adapter.downloadBackup(meta).getOrThrow()
             _state.value = _state.value.copy(progress = 0.5f)
@@ -134,6 +135,14 @@ class SqlDelightSyncEngine(
             val current = preferences.observe().first().getOrNull()
             if (current?.syncTarget != null && adapters.containsKey(current.syncTarget)) syncNow()
         }
+    }
+
+    private suspend fun <T> runCatchingCancellable(block: suspend () -> T): Result<T> = try {
+        Result.success(block())
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: Throwable) {
+        Result.failure(error)
     }
 
     private suspend fun adapterAndRetention(): Pair<Int, SyncAdapter> {

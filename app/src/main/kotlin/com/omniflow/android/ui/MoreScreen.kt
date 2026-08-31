@@ -443,19 +443,31 @@ private fun DataManagementPage(
                             }
                         },
                     )
-                    OutlinedTextField(retention, { retention = it.filter(Char::isDigit) }, label = { Text("最大备份数") })
+                    OutlinedTextField(
+                        retention,
+                        { retention = it.filter(Char::isDigit) },
+                        label = { Text("最大备份数") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                    )
                     Button(onClick = {
                         WebDavCredentials.save(context, endpoint, username, password)
                         viewModel.configureSync(SyncTarget.WEBDAV, retention.toIntOrNull() ?: 10)
                     }) { Text("保存配置") }
-                    LinearProgressIndicator(
-                        progress = { state.syncState.progress ?: 0f },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    if (state.syncState.phase == SyncPhase.RUNNING) {
+                        LinearProgressIndicator(
+                            progress = { state.syncState.progress ?: 0f },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                     Text(syncLabel(state), style = MaterialTheme.typography.bodySmall)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = viewModel::syncNow, enabled = state.syncState.phase != SyncPhase.RUNNING) { Text("立即备份") }
-                        OutlinedButton(onClick = viewModel::loadBackups) { Text("刷新备份") }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = viewModel::syncNow,
+                            enabled = state.syncState.phase != SyncPhase.RUNNING,
+                            modifier = Modifier.weight(1f),
+                        ) { Text("立即备份") }
+                        OutlinedButton(onClick = viewModel::loadBackups, modifier = Modifier.weight(1f)) { Text("刷新备份") }
                     }
                 }
             }
@@ -481,8 +493,7 @@ private fun DataManagementPage(
             ) {
                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(backup.createdAt.backupTimeText(), fontWeight = FontWeight.Medium)
-                        Text(backup.backupId, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                        Text(backup.createdAt.backupTimeText(), style = OmniText.titleRow)
                     }
                     TextButton(onClick = { pendingRestore = backup }) { Text("恢复") }
                 }
@@ -806,7 +817,7 @@ internal fun exportRange(first: LocalDate, second: LocalDate): DateRange {
 private fun syncLabel(state: MoreUiState): String = when (state.syncState.phase) {
     SyncPhase.IDLE -> if (state.preferences.syncTarget == null) "未配置同步" else "等待备份"
     SyncPhase.RUNNING -> "备份进行中 ${((state.syncState.progress ?: 0f) * 100).toInt()}%"
-    SyncPhase.SUCCESS -> "最近备份 ${state.syncState.lastBackupAt ?: "刚刚"}"
+    SyncPhase.SUCCESS -> "最近备份 ${state.syncState.lastBackupAt?.backupTimeText() ?: "刚刚"}"
     SyncPhase.ERROR -> state.syncState.errorMessage ?: "备份失败"
 }
 

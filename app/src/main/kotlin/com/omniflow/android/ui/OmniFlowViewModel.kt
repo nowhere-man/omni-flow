@@ -74,6 +74,7 @@ import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.minus
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
+import kotlin.coroutines.cancellation.CancellationException
 
 data class HomeUiState(
     val home: HomeState? = null,
@@ -241,6 +242,7 @@ class OmniFlowViewModel(
     private var moreBudgetsJob: Job? = null
     private var importJob: Job? = null
     private var exportPreviewJob: Job? = null
+    private var loadBackupsJob: Job? = null
     private var entityDetailJob: Job? = null
     private var ledgerStatsJob: Job? = null
 
@@ -866,11 +868,17 @@ class OmniFlowViewModel(
         }
     }
     fun loadBackups() {
+        loadBackupsJob?.cancel()
         _moreUiState.value = _moreUiState.value.copy(isLoadingBackups = true, error = null)
-        viewModelScope.launch {
+        loadBackupsJob = viewModelScope.launch {
             sharedApp.sync.listBackups().onSuccess { backups ->
-                _moreUiState.value = _moreUiState.value.copy(backups = backups, isLoadingBackups = false)
+                _moreUiState.value = _moreUiState.value.copy(
+                    backups = backups,
+                    isLoadingBackups = false,
+                    error = null,
+                )
             }.onFailure { error ->
+                if (error is CancellationException) return@onFailure
                 _moreUiState.value = _moreUiState.value.copy(isLoadingBackups = false, error = error.message)
             }
         }

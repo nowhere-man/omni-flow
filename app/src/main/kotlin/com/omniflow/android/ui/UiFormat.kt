@@ -56,11 +56,11 @@ internal fun LocalDate.displayName(): String {
 
 internal fun Instant.displayTime(): String = toLocalDateTime(ChinaTimeZone).time.toString().take(5)
 
-/** 备份列表用的时间戳，原来直接 `Instant.toString()` 会显示 ISO 文本且是 UTC。 */
+/** 备份列表用的本地时间，精确到秒。 */
 internal fun Instant.backupTimeText(): String {
     val local = toLocalDateTime(ChinaTimeZone)
     return "${local.year}-${local.monthNumber.twoDigits()}-${local.dayOfMonth.twoDigits()} " +
-        "${local.hour.twoDigits()}:${local.minute.twoDigits()}"
+        "${local.hour.twoDigits()}:${local.minute.twoDigits()}:${local.second.twoDigits()}"
 }
 
 internal fun DateRange.displayLabel(mode: AnalyticsRangeMode): String {
