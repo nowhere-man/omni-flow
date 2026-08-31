@@ -504,10 +504,6 @@ private fun ImportPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
     val scope = rememberCoroutineScope()
     var ledgerId by remember(state.selectedLedgerId) { mutableStateOf(state.selectedLedgerId) }
     var selectedFormat by remember { mutableStateOf<ImportFormat?>(null) }
-    val today = remember { Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date }
-    var dateFilterEnabled by remember { mutableStateOf(false) }
-    var startDate by remember { mutableStateOf(today) }
-    var endDate by remember { mutableStateOf(today) }
     val fileLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null && ledgerId != null) {
             scope.launch {
@@ -520,7 +516,6 @@ private fun ImportPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
                         fileName = context.fileName(uri),
                         bytes = bytes,
                         selectedFormat = selectedFormat,
-                        dateRange = if (dateFilterEnabled) exportRange(startDate, endDate) else null,
                     )
                 }
             }
@@ -550,23 +545,6 @@ private fun ImportPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
                         color = MaterialTheme.colorScheme.error,
                         style = OmniText.caption,
                     )
-                }
-            }
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("按日期筛选", modifier = Modifier.weight(1f))
-                        Switch(
-                            checked = dateFilterEnabled,
-                            onCheckedChange = { dateFilterEnabled = it },
-                        )
-                    }
-                    if (dateFilterEnabled) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            ExportDateButton("开始", startDate, Modifier.weight(1f)) { startDate = it }
-                            ExportDateButton("结束", endDate, Modifier.weight(1f)) { endDate = it }
-                        }
-                    }
                 }
             }
             item { Text("选择账单来源", style = OmniText.caption, color = mutedContent()) }
@@ -690,7 +668,7 @@ private fun ExportPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
 }
 
 @Composable
-private fun ExportDateButton(label: String, date: LocalDate, modifier: Modifier, onDate: (LocalDate) -> Unit) {
+internal fun ExportDateButton(label: String, date: LocalDate, modifier: Modifier, onDate: (LocalDate) -> Unit) {
     val context = LocalContext.current
     OutlinedButton(
         onClick = {
@@ -706,7 +684,7 @@ private fun ExportDateButton(label: String, date: LocalDate, modifier: Modifier,
     ) { Text("$label ${date.monthNumber}/${date.dayOfMonth}") }
 }
 
-private fun exportRange(first: LocalDate, second: LocalDate): DateRange {
+internal fun exportRange(first: LocalDate, second: LocalDate): DateRange {
     val start = minOf(first, second)
     val end = maxOf(first, second)
     val exclusive = java.time.LocalDate.of(end.year, end.monthNumber, end.dayOfMonth).plusDays(1)

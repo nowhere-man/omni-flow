@@ -7,6 +7,7 @@ import com.omniflow.core.domain.ai.CategorySuggestionRequest
 import com.omniflow.core.domain.facade.ImportWorkflow
 import com.omniflow.core.domain.model.Account
 import com.omniflow.core.domain.model.AccountType
+import com.omniflow.core.domain.model.DateRange
 import com.omniflow.core.domain.model.ImportCategoryBatchEdit
 import com.omniflow.core.domain.model.ImportCategoryDefaults
 import com.omniflow.core.domain.model.ImportCategoryOrigin
@@ -17,6 +18,8 @@ import com.omniflow.core.domain.model.ImportPreviewEdit
 import com.omniflow.core.domain.model.ImportPreviewItem
 import com.omniflow.core.domain.model.ImportPreviewState
 import com.omniflow.core.domain.model.ImportPreviewPhase
+import com.omniflow.core.domain.model.itemsIn
+import com.omniflow.core.domain.model.occurredDateBounds
 import com.omniflow.core.domain.model.ImportRequest
 import com.omniflow.core.domain.model.ImportSessionId
 import com.omniflow.core.domain.model.LedgerId
@@ -75,11 +78,7 @@ class SqlDelightImportWorkflow(
         emit(runCatching {
             val format = detectFormat(request)
             emit(Result.success(progressState(request, ImportPreviewPhase.PARSING, 0.3f, format)))
-            val rawItems = parse(format, request.bytes).filter { item ->
-                request.dateRange?.let { range ->
-                    item.occurredAt >= range.startInclusive && item.occurredAt < range.endExclusive
-                } ?: true
-            }
+            val rawItems = parse(format, request.bytes)
             val sessionId = ids.next()
             emit(Result.success(progressState(request, ImportPreviewPhase.ENRICHING, 0.7f, format)))
             val enriched = enrichPreview(
@@ -150,12 +149,16 @@ class SqlDelightImportWorkflow(
         runCatching { sessions.delete(sessionId) }
     }
 
-    override suspend fun commit(sessionId: ImportSessionId): Result<ImportCommitResult> = withContext(Dispatchers.Default) {
+    override suspend fun commit(sessionId: ImportSessionId, dateRange: DateRange?): Result<ImportCommitResult> = withContext(Dispatchers.Default) {
         runCatching {
             val session = sessions.state(sessionId) ?: error("导入会话不存在或已结束")
             val state = toState(session)
-            require(state.isReadyToCommit) { "仍有未完成的导入明细" }
-            val transactionsToCreate = state.importableItems.map { item ->
+            // readiness 只看区间内条目：区间外的待分类明细用户在预览页看不见，不该堵死入账。
+            val inRange = state.itemsIn(dateRange)
+            require(inRange.none {
+                it.requiresTypeSelection || it.requiresCategorySelection || it.accountId == null
+            }) { "仍有未完成的导入明细" }
+            val transactionsToCreate = inRange.filterNot(ImportPreviewItem::isSkipped).map { item ->
             ImportCommitTransaction(
                 transaction = Transaction(
                     id = ids.next(),
@@ -173,7 +176,8 @@ class SqlDelightImportWorkflow(
                 tagNames = item.tags,
             )
         }
-            val categoryMemories = state.importableItems
+            val categoryMemories = inRange
+                .filterNot(ImportPreviewItem::isSkipped)
             // AI 判定和用户手改一视同仁：下次同一商户直接走记忆，不再请求模型。
             // 用户在预览页改过的条目 origin 已经是 USER，所以「AI 猜错 → 用户改」记住的是改后的。
             .filter { it.categoryOrigin in REMEMBERED_ORIGINS && it.categoryId != null }
@@ -185,9 +189,12 @@ class SqlDelightImportWorkflow(
                 )
             }
             commits.commit(sessionId, transactionsToCreate, categoryMemories)
+            val importableInRange = inRange.filterNot(ImportPreviewItem::isSkipped)
             ImportCommitResult(
                 importedCount = transactionsToCreate.size,
-                excludedCount = session.items.count(ImportPreviewItem::isSkipped),
+                // 区间外被筛掉的可入账条目和用户手动跳过的一起计入「跳过」，口径一致。
+                excludedCount = session.items.count(ImportPreviewItem::isSkipped) +
+                    state.importableItems.size - importableInRange.size,
             )
         }
     }

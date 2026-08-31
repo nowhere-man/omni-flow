@@ -51,6 +51,7 @@ import com.omniflow.core.domain.model.TransactionListItem
 import com.omniflow.core.domain.model.TransactionSearchQuery
 import com.omniflow.core.domain.model.TransactionSummary
 import com.omniflow.core.domain.model.TransactionType
+import com.omniflow.core.domain.model.occurredDateBounds
 import com.omniflow.core.domain.usecase.CreateTransactionCommand
 import com.omniflow.core.parser.ImportFormat
 import java.time.LocalDate as JavaLocalDate
@@ -188,6 +189,7 @@ data class MoreUiState(
     val importPreview: ImportPreviewState? = null,
     val importGroupMode: ImportGroupMode = ImportGroupMode.SOURCE,
     val importFilter: ImportFilter = ImportFilter.IMPORTABLE,
+    val importDateFilter: ImportDateFilterState? = null,
     val importFileName: String? = null,
     val importFormat: ImportFormat? = null,
     val importMessage: String? = null,
@@ -1037,11 +1039,11 @@ class OmniFlowViewModel(
         fileName: String,
         bytes: ByteArray,
         selectedFormat: ImportFormat? = null,
-        dateRange: DateRange? = null,
     ) {
         importJob?.cancel()
         _moreUiState.value = _moreUiState.value.copy(
             importPreview = null,
+            importDateFilter = null,
             importFileName = fileName,
             importFormat = selectedFormat,
             importMessage = null,
@@ -1055,7 +1057,6 @@ class OmniFlowViewModel(
                     fileName = fileName,
                     bytes = bytes,
                     selectedFormat = selectedFormat,
-                    dateRange = dateRange,
                 ),
             ).collect { result ->
                 result.onSuccess { preview ->
@@ -1064,6 +1065,16 @@ class OmniFlowViewModel(
                         importFormat = preview.format,
                         isImporting = preview.phase != com.omniflow.core.domain.model.ImportPreviewPhase.READY,
                     )
+                    // 解析完成时用明细的最早/最晚日期预填筛选，默认全区间展示。
+                    if (preview.phase == com.omniflow.core.domain.model.ImportPreviewPhase.READY &&
+                        _moreUiState.value.importDateFilter == null
+                    ) {
+                        preview.occurredDateBounds()?.let { (start, end) ->
+                            _moreUiState.value = _moreUiState.value.copy(
+                                importDateFilter = ImportDateFilterState(enabled = true, start = start, end = end),
+                            )
+                        }
+                    }
                 }.onFailure { error ->
                     _moreUiState.value = _moreUiState.value.copy(isImporting = false, error = error.message)
                 }
@@ -1148,19 +1159,32 @@ class OmniFlowViewModel(
         _moreUiState.value = _moreUiState.value.copy(importFilter = filter)
     }
 
+    /** 更新预览页日期筛选；起止日自动归一化。 */
+    fun setImportDateFilter(filter: ImportDateFilterState) {
+        _moreUiState.value = _moreUiState.value.copy(
+            importDateFilter = filter.copy(
+                start = minOf(filter.start, filter.end),
+                end = maxOf(filter.start, filter.end),
+            ),
+        )
+    }
+
     fun cancelImport() {
         val preview = _moreUiState.value.importPreview ?: return
-        _moreUiState.value = _moreUiState.value.copy(importPreview = null, importMessage = null)
+        _moreUiState.value = _moreUiState.value.copy(importPreview = null, importDateFilter = null, importMessage = null)
         viewModelScope.launch { sharedApp.imports.cancel(preview.sessionId) }
     }
 
     fun commitImport() {
-        val preview = _moreUiState.value.importPreview ?: return
-        _moreUiState.value = _moreUiState.value.copy(isImporting = true, error = null)
+        val state = _moreUiState.value
+        val preview = state.importPreview ?: return
+        val dateRange = state.importDateFilter?.takeIf { it.enabled }?.let { exportRange(it.start, it.end) }
+        _moreUiState.value = state.copy(isImporting = true, error = null)
         viewModelScope.launch {
-            sharedApp.imports.commit(preview.sessionId).onSuccess { result ->
+            sharedApp.imports.commit(preview.sessionId, dateRange).onSuccess { result ->
                 _moreUiState.value = _moreUiState.value.copy(
                     importPreview = null,
+                    importDateFilter = null,
                     isImporting = false,
                     importMessage = "已导入 ${result.importedCount} 条，跳过 ${result.excludedCount} 条",
                 )

@@ -17,7 +17,6 @@ data class ImportRequest(
     val fileName: String,
     val bytes: ByteArray,
     val selectedFormat: ImportFormat? = null,
-    val dateRange: DateRange? = null,
 )
 
 data class ImportPreviewItem(

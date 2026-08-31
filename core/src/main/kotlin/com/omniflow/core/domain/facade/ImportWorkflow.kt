@@ -7,6 +7,7 @@ import com.omniflow.core.domain.model.ImportPreviewEdit
 import com.omniflow.core.domain.model.ImportPreviewState
 import com.omniflow.core.domain.model.ImportRequest
 import com.omniflow.core.domain.model.ImportSessionId
+import com.omniflow.core.domain.model.DateRange
 import kotlinx.coroutines.flow.Flow
 
 interface ImportWorkflow {
@@ -24,5 +25,6 @@ interface ImportWorkflow {
     /** AI 建议失败后重试；没配置 AI 时原样返回当前会话。 */
     suspend fun resuggest(sessionId: ImportSessionId): Result<ImportPreviewState>
     suspend fun cancel(sessionId: ImportSessionId): Result<Unit>
-    suspend fun commit(sessionId: ImportSessionId): Result<ImportCommitResult>
+    /** [dateRange] 非 null 时只入账区间内明细，区间外按跳过计。 */
+    suspend fun commit(sessionId: ImportSessionId, dateRange: DateRange? = null): Result<ImportCommitResult>
 }

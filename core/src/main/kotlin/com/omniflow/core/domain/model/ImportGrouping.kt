@@ -52,6 +52,22 @@ fun ImportPreviewItem.bucket(): ImportItemBucket = when {
 fun ImportPreviewState.countIn(vararg buckets: ImportItemBucket): Int =
     items.count { it.bucket() in buckets }
 
+/** 条目交易时间是否落在 [range] 内（start 含、end 不含），与导入 commit 的过滤口径一致。 */
+fun ImportPreviewItem.occurredIn(range: DateRange): Boolean =
+    raw.occurredAt >= range.startInclusive && raw.occurredAt < range.endExclusive
+
+/** 区间内的预览条目；[range] 为 null 时返回全量。 */
+fun ImportPreviewState.itemsIn(range: DateRange?): List<ImportPreviewItem> =
+    if (range == null) items else items.filter { it.occurredIn(range) }
+
+/** 明细里最早/最晚交易日（按本地时区的自然日）；没有明细时返回 null。 */
+fun ImportPreviewState.occurredDateBounds(
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): Pair<LocalDate, LocalDate>? = items
+    .map { it.raw.occurredAt.toLocalDateTime(timeZone).date }
+    .takeIf(List<LocalDate>::isNotEmpty)
+    ?.let { dates -> dates.min() to dates.max() }
+
 /** 该账单是否有可用的归类键；没有的话界面应默认按日期分组。 */
 val ImportPreviewState.supportsSourceGrouping: Boolean
     get() = items.any { it.raw.groupingKey != null }

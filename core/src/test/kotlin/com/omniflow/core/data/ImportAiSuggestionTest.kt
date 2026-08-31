@@ -13,7 +13,6 @@ import com.omniflow.core.db.OmniFlowDatabase
 import com.omniflow.core.domain.ai.CategorySuggester
 import com.omniflow.core.domain.ai.CategorySuggestionRequest
 import com.omniflow.core.domain.model.CategoryId
-import com.omniflow.core.domain.model.DateRange
 import com.omniflow.core.domain.model.ImportCategoryOrigin
 import com.omniflow.core.domain.model.ImportPreviewPhase
 import com.omniflow.core.domain.model.ImportPreviewState
@@ -21,7 +20,6 @@ import com.omniflow.core.domain.model.ImportRequest
 import com.omniflow.core.parser.ImportFormat
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
-import kotlinx.datetime.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -33,26 +31,15 @@ import kotlin.test.assertTrue
  */
 class ImportAiSuggestionTest {
     @Test
-    fun dateRangeKeepsOnlyTransactionsInsideInclusiveDates() = runBlocking {
-        val range = DateRange(
-            startInclusive = Instant.parse("2026-01-06T00:00:00+08:00"),
-            endExclusive = Instant.parse("2026-01-07T00:00:00+08:00"),
-        )
+    fun previewKeepsAllTransactionsWithoutDateRange() = runBlocking {
+        // 日期筛选已迁移到预览页展示层 + commit 参数，preview 全量落库
         val state = workflow(seed(), RecordingSuggester(emptyMap(), configured = false))
-            .preview(
-                ImportRequest(
-                    ledgerId = "ledger",
-                    fileName = "美团.csv",
-                    bytes = BILL.encodeToByteArray(),
-                    selectedFormat = ImportFormat.MEITUAN,
-                    dateRange = range,
-                ),
-            )
+            .preview(ImportRequest("ledger", "美团.csv", BILL.encodeToByteArray(), ImportFormat.MEITUAN))
             .toList()
             .last()
             .getOrThrow()
 
-        assertEquals(listOf("M2"), state.items.map { it.raw.externalId })
+        assertEquals(listOf("M1", "M2", "M3"), state.items.map { it.raw.externalId })
     }
 
     @Test

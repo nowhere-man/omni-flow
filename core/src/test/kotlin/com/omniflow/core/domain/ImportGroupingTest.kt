@@ -1,6 +1,7 @@
 package com.omniflow.core.domain
 
 import com.omniflow.core.domain.model.Category
+import com.omniflow.core.domain.model.DateRange
 import com.omniflow.core.domain.model.ImportCategoryDefaults
 import com.omniflow.core.domain.model.ImportDuplicateStatus
 import com.omniflow.core.domain.model.ImportGroupMode
@@ -13,10 +14,13 @@ import com.omniflow.core.domain.model.TransactionType
 import com.omniflow.core.domain.model.bucket
 import com.omniflow.core.domain.model.groupingKey
 import com.omniflow.core.domain.model.groups
+import com.omniflow.core.domain.model.itemsIn
+import com.omniflow.core.domain.model.occurredDateBounds
 import com.omniflow.core.domain.model.supportsSourceGrouping
 import com.omniflow.core.parser.ImportFormat
 import com.omniflow.core.parser.RawTransaction
 import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -107,6 +111,34 @@ class ImportGroupingTest {
         assertEquals(Money(1000), state.expenseTotal)
         assertEquals(Money.Zero, state.incomeTotal)
         assertEquals(1, state.skippedCount)
+    }
+
+    @Test
+    fun itemsInFiltersByOccurredAtWithInclusiveStartAndExclusiveEnd() {
+        val state = stateOf(
+            item("before", raw(ImportFormat.CCB, occurredAt = "2026-01-05T00:00:00Z")),
+            item("atStart", raw(ImportFormat.CCB, occurredAt = "2026-01-06T00:00:00Z")),
+            item("inside", raw(ImportFormat.CCB, occurredAt = "2026-01-06T12:00:00Z")),
+            item("atEnd", raw(ImportFormat.CCB, occurredAt = "2026-01-07T00:00:00Z")),
+        )
+        val range = DateRange(
+            startInclusive = Instant.parse("2026-01-06T00:00:00Z"),
+            endExclusive = Instant.parse("2026-01-07T00:00:00Z"),
+        )
+
+        assertEquals(listOf("atStart", "inside"), state.itemsIn(range).map { it.id })
+        assertEquals(listOf("before", "atStart", "inside", "atEnd"), state.itemsIn(null).map { it.id })
+    }
+
+    @Test
+    fun occurredDateBoundsReturnsMinAndMaxDatesOrNullWhenEmpty() {
+        val bounds = stateOf(
+            item("a", raw(ImportFormat.CCB, occurredAt = "2026-01-06T12:00:00Z")),
+            item("b", raw(ImportFormat.CCB, occurredAt = "2026-01-04T22:00:00Z")),
+        ).occurredDateBounds(TimeZone.UTC)
+        assertEquals(LocalDate(2026, 1, 4) to LocalDate(2026, 1, 6), bounds)
+
+        assertNull(stateOf().occurredDateBounds(TimeZone.UTC))
     }
 
     @Test

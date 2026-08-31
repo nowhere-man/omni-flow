@@ -28,6 +28,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -54,7 +55,9 @@ import com.omniflow.core.domain.model.countIn
 import com.omniflow.core.domain.model.dateOrNull
 import com.omniflow.core.domain.model.groups
 import com.omniflow.core.domain.model.hourMinuteText
+import com.omniflow.core.domain.model.itemsIn
 import com.omniflow.core.domain.model.supportsSourceGrouping
+import kotlinx.datetime.LocalDate
 
 /** 顶部筛选 chip，与 [ImportItemBucket] 的映射。 */
 enum class ImportFilter(val label: String, val buckets: Set<ImportItemBucket>) {
@@ -65,6 +68,13 @@ enum class ImportFilter(val label: String, val buckets: Set<ImportItemBucket>) {
     EXISTING("已存在", setOf(ImportItemBucket.EXISTING)),
 }
 
+/** 预览明细的日期范围筛选；开启后列表只展示区间内明细，确认入账也只入账区间内。 */
+data class ImportDateFilterState(
+    val enabled: Boolean,
+    val start: LocalDate,
+    val end: LocalDate,
+)
+
 private data class PickerTarget(val itemIds: Set<String>, val title: String, val type: TransactionType)
 
 @Composable
@@ -74,13 +84,18 @@ internal fun ImportPreviewSection(
     viewModel: OmniFlowViewModel,
     modifier: Modifier = Modifier,
 ) {
-    val sourceGrouping = preview.supportsSourceGrouping
+    // 日期筛选只影响展示与入账口径：会话里始终存全量，改区间即时生效、无需重新解析。
+    val dateFilter = state.importDateFilter
+    val scoped = remember(preview, dateFilter) {
+        preview.copy(items = preview.itemsIn(dateFilter?.takeIf { it.enabled }?.let { exportRange(it.start, it.end) }))
+    }
+    val sourceGrouping = scoped.supportsSourceGrouping
     val mode = if (sourceGrouping) state.importGroupMode else ImportGroupMode.DATE
     val collapsed = rememberSaveable(preview.sessionId, saver = collapsedKeysSaver) { mutableStateOf(emptySet<String>()) }
     var displayMode by rememberSaveable(preview.sessionId) { mutableStateOf(TransactionDetailDisplayMode.LIST) }
     var picker by remember { mutableStateOf<PickerTarget?>(null) }
-    val groups = remember(preview, mode, state.importFilter) {
-        preview.groups(mode, state.importFilter.buckets)
+    val groups = remember(scoped, mode, state.importFilter) {
+        scoped.groups(mode, state.importFilter.buckets)
     }
 
     Column(modifier.fillMaxSize()) {
@@ -89,7 +104,10 @@ internal fun ImportPreviewSection(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            item { ImportSummary(preview, state, viewModel) }
+            dateFilter?.let {
+                item(key = "date-filter") { ImportDateFilterBar(it, viewModel::setImportDateFilter) }
+            }
+            item { ImportSummary(scoped, state, viewModel) }
             item {
                 ImportToolbar(
                     mode = mode,
@@ -188,14 +206,14 @@ internal fun ImportPreviewSection(
                 }
             }
         }
-        ImportActionBar(preview, state, viewModel)
+        ImportActionBar(scoped, state, viewModel)
     }
 
     picker?.let { target ->
         CategoryPickerSheet(
             title = target.title,
             categories = state.categories,
-            selectedCategoryId = preview.items.firstOrNull { it.id in target.itemIds }?.categoryId,
+            selectedCategoryId = scoped.items.firstOrNull { it.id in target.itemIds }?.categoryId,
             initialType = target.type,
             onDismiss = { picker = null },
             onSelected = { categoryId, type ->
@@ -203,6 +221,43 @@ internal fun ImportPreviewSection(
                 picker = null
             },
         )
+    }
+}
+
+/** 预览明细顶部的日期筛选条；默认按明细最早/最晚日期预填并开启。 */
+@Composable
+private fun ImportDateFilterBar(
+    filter: ImportDateFilterState,
+    onFilter: (ImportDateFilterState) -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "按日期筛选",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Switch(
+                    checked = filter.enabled,
+                    onCheckedChange = { onFilter(filter.copy(enabled = it)) },
+                )
+            }
+            if (filter.enabled) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ExportDateButton("开始", filter.start, Modifier.weight(1f)) { onFilter(filter.copy(start = it)) }
+                    ExportDateButton("结束", filter.end, Modifier.weight(1f)) { onFilter(filter.copy(end = it)) }
+                }
+            }
+        }
     }
 }
 
