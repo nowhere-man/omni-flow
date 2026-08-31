@@ -256,16 +256,3 @@ internal val ImportFormat.label: String
         ImportFormat.CMB -> "招商银行"
         ImportFormat.QINGZI -> "青子记账"
     }
-
-/** 每个来源认哪些文件，选文件前先说清楚，省得用户挑错格式。 */
-internal val ImportFormat.fileHint: String
-    get() = when (this) {
-        ImportFormat.ALIPAY -> "账单 CSV"
-        ImportFormat.WECHAT -> "账单 XLSX"
-        ImportFormat.JD -> "账单 CSV"
-        ImportFormat.MEITUAN -> "账单 CSV"
-        ImportFormat.CCB -> "流水 XLS"
-        ImportFormat.BOC -> "流水明细 PDF"
-        ImportFormat.CMB -> "交易流水 PDF"
-        ImportFormat.QINGZI -> "备份 JSON"
-    }

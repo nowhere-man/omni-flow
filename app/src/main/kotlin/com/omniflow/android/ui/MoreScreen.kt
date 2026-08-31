@@ -569,28 +569,36 @@ private fun ImportPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
                 }
             }
             item { Text("选择账单来源", style = OmniText.caption, color = mutedContent()) }
-            // 品牌图标比一排文字按钮好认得多，点一下直接进选文件
-            items(ImportFormat.entries.chunked(3)) { row ->
+            val importOptions: List<ImportFormat?> = listOf(null) + ImportFormat.entries
+            items(importOptions.chunked(3)) { row ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     row.forEach { format ->
-                        ImportSourceTile(
-                            format = format,
-                            enabled = ledgerId != null && state.accounts.isNotEmpty() && !state.isImporting,
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            selectedFormat = format
-                            fileLauncher.launch("*/*")
+                        if (format == null) {
+                            ImportSourceTile(
+                                label = "自动识别",
+                                icon = {
+                                    Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(44.dp))
+                                },
+                                enabled = ledgerId != null && state.accounts.isNotEmpty() && !state.isImporting,
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                selectedFormat = null
+                                fileLauncher.launch("*/*")
+                            }
+                        } else {
+                            ImportSourceTile(
+                                label = format.label,
+                                icon = { ImportSourceIcon(format, Modifier.size(44.dp)) },
+                                enabled = ledgerId != null && state.accounts.isNotEmpty() && !state.isImporting,
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                selectedFormat = format
+                                fileLauncher.launch("*/*")
+                            }
                         }
                     }
                     repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                 }
-            }
-            item {
-                OutlinedButton(
-                    onClick = { selectedFormat = null; fileLauncher.launch("*/*") },
-                    enabled = ledgerId != null && state.accounts.isNotEmpty() && !state.isImporting,
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("自动识别来源") }
             }
             state.importPreview?.let { preview ->
                 item {
@@ -617,7 +625,8 @@ private fun ImportPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
 
 @Composable
 private fun ImportSourceTile(
-    format: ImportFormat,
+    label: String,
+    icon: @Composable () -> Unit,
     enabled: Boolean,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
@@ -634,9 +643,8 @@ private fun ImportSourceTile(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            ImportSourceIcon(format, Modifier.size(44.dp))
-            Text(format.label, style = OmniText.caption, maxLines = 1)
-            Text(format.fileHint, style = OmniText.caption, color = mutedContent(), maxLines = 1)
+            icon()
+            Text(label, style = OmniText.caption, maxLines = 1)
         }
     }
 }
