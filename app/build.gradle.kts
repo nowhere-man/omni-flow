@@ -61,5 +61,8 @@ dependencies {
     // biometric 1.1.0 会把 fragment 拉回 1.2.5，其 FragmentActivity 仍校验 requestCode 只能用低 16 位，
     // 与 activity 1.12 的 ActivityResultRegistry（requestCode ≥ 0x10000）冲突，导致文件选择等启动即崩溃。
     implementation(libs.androidx.fragment)
+    implementation(libs.okhttp)
+    testImplementation(libs.kotlin.test)
+    testImplementation(libs.okhttp.mockwebserver)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

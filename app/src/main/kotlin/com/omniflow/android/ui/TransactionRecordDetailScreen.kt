@@ -233,4 +233,5 @@ private fun TransactionSource.displayName(): String = when (this) {
     TransactionSource.MEITUAN -> "美团"
     TransactionSource.CCB -> "建设银行"
     TransactionSource.BOC -> "中国银行"
+    TransactionSource.CMB -> "招商银行"
 }

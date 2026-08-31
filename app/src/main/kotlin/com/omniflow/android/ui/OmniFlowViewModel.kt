@@ -195,6 +195,8 @@ data class MoreUiState(
     val importMessage: String? = null,
     val exportPayload: String? = null,
     val exportWarnings: List<String> = emptyList(),
+    val exportPreviewCount: Int? = null,
+    val isLoadingExportPreview: Boolean = false,
     val isImporting: Boolean = false,
     val isExporting: Boolean = false,
     val isLoadingBackups: Boolean = false,
@@ -238,6 +240,7 @@ class OmniFlowViewModel(
     private var moreRulesJob: Job? = null
     private var moreBudgetsJob: Job? = null
     private var importJob: Job? = null
+    private var exportPreviewJob: Job? = null
     private var entityDetailJob: Job? = null
     private var ledgerStatsJob: Job? = null
 
@@ -1194,10 +1197,43 @@ class OmniFlowViewModel(
         }
     }
 
-    fun prepareQingziExport(dateRange: DateRange? = null) {
+    fun observeExportPreview(scope: LedgerScope, dateRange: DateRange?, type: TransactionType?) {
+        exportPreviewJob?.cancel()
+        _moreUiState.value = _moreUiState.value.copy(
+            exportPreviewCount = null,
+            isLoadingExportPreview = true,
+            error = null,
+        )
+        exportPreviewJob = viewModelScope.launch {
+            sharedApp.home.observeTransactionDetails(
+                TransactionDetailQuery(scope, dateRange ?: allExportDateRange, type),
+            ).collect { result ->
+                result.onSuccess { detail ->
+                    _moreUiState.value = _moreUiState.value.copy(
+                        exportPreviewCount = detail.items.size,
+                        isLoadingExportPreview = false,
+                        error = null,
+                    )
+                }.onFailure { error ->
+                    _moreUiState.value = _moreUiState.value.copy(
+                        isLoadingExportPreview = false,
+                        error = error.message,
+                    )
+                }
+            }
+        }
+    }
+
+    fun prepareExport(scope: LedgerScope, dateRange: DateRange?, type: TransactionType?) {
         _moreUiState.value = _moreUiState.value.copy(isExporting = true, error = null)
         viewModelScope.launch {
-            sharedApp.qingzi.export(QingziExportRequest(dateRange = dateRange)).onSuccess { result ->
+            val ledgerIds = when (scope) {
+                LedgerScope.All -> emptySet()
+                is LedgerScope.Single -> setOf(scope.ledgerId)
+            }
+            sharedApp.qingzi.export(
+                QingziExportRequest(ledgerIds = ledgerIds, dateRange = dateRange, type = type),
+            ).onSuccess { result ->
                 _moreUiState.value = _moreUiState.value.copy(
                     exportPayload = result.payload,
                     exportWarnings = result.warnings,
@@ -1279,6 +1315,11 @@ private fun analyticsGranularity(mode: AnalyticsRangeMode, range: DateRange): Ti
 
 private fun javaDate(date: LocalDate) = JavaLocalDate.of(date.year, date.monthNumber, date.dayOfMonth)
 private fun JavaLocalDate.toKotlinDate() = LocalDate(year, monthValue, dayOfMonth)
+
+private val allExportDateRange = DateRange(
+    startInclusive = Instant.fromEpochMilliseconds(0),
+    endExclusive = Instant.fromEpochMilliseconds(Long.MAX_VALUE),
+)
 
 private fun Money.toInputString(): String = "${minor / 100}.${kotlin.math.abs(minor % 100).toString().padStart(2, '0')}"
 

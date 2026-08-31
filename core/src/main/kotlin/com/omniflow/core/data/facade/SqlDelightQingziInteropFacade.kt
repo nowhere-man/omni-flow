@@ -16,6 +16,8 @@ class SqlDelightQingziInteropFacade(
         val transactions = queries.allTransactionsForBackup().executeAsList()
             .filter { it.deleted_at == null }
             .filter { request.transactionIds.isEmpty() || it.id in request.transactionIds }
+            .filter { request.ledgerIds.isEmpty() || it.ledger_id in request.ledgerIds }
+            .filter { request.type == null || it.type == request.type.name }
             .filter { row -> request.dateRange?.let { range ->
                 row.occurred_at >= range.startInclusive.toEpochMilliseconds() &&
                     row.occurred_at < range.endExclusive.toEpochMilliseconds()
@@ -75,7 +77,7 @@ class SqlDelightQingziInteropFacade(
             payload = payload,
             exportedTransactions = transactions.size,
             warnings = if (unmappedCount == 0) emptyList() else listOf(
-                "$unmappedCount 条交易的来源平台或外部订单号在青子格式中无对应字段，已跳过",
+                "$unmappedCount 条交易的来源平台或外部订单号无法在导出文件中保留",
             ),
         )
     }

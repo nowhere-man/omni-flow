@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -49,6 +50,7 @@ import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -84,6 +86,7 @@ import com.omniflow.core.domain.model.AppearanceMode
 import com.omniflow.core.domain.model.DateRange
 import com.omniflow.core.domain.model.ImportPreviewPhase
 import com.omniflow.core.domain.model.Ledger
+import com.omniflow.core.domain.model.LedgerScope
 import com.omniflow.core.domain.model.Money
 import com.omniflow.core.domain.model.SyncPhase
 import com.omniflow.core.domain.model.SyncTarget
@@ -242,7 +245,7 @@ private fun MorePage.description(state: MoreUiState): String = when (this) {
     MorePage.DATA -> syncLabel(state)
     MorePage.AI -> "导入时让大模型建议一级分类"
     MorePage.IMPORT -> "从支付宝、微信、银行流水批量导入"
-    MorePage.EXPORT -> "导出青子记账兼容数据"
+    MorePage.EXPORT -> "导出账本数据"
     MorePage.SETTINGS -> "外观、主题色与应用锁"
     MorePage.LEDGERS -> "账本封面、默认账本与收支概览"
     MorePage.ACCOUNTS -> "账户余额、卡片信息与流水"
@@ -418,7 +421,11 @@ private fun DataManagementPage(
     var showPassword by remember { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.small) {
+            Card(
+                Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.small,
+                colors = CardDefaults.cardColors(containerColor = surfaceCard()),
+            ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("WebDAV 全量备份", fontWeight = FontWeight.SemiBold)
                     OutlinedTextField(endpoint, { endpoint = it }, label = { Text("服务器目录 URL") }, modifier = Modifier.fillMaxWidth())
@@ -468,7 +475,10 @@ private fun DataManagementPage(
             }
         }
         items(state.backups, key = { "${it.deviceId}-${it.backupId}" }) { backup ->
-            Card(Modifier.fillMaxWidth()) {
+            Card(
+                Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = surfaceCard()),
+            ) {
                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(backup.createdAt.backupTimeText(), fontWeight = FontWeight.Medium)
@@ -625,9 +635,12 @@ private fun ExportPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
     val context = LocalContext.current
     var payload by remember { mutableStateOf<String?>(null) }
     val today = remember { Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date }
+    var ledgerScope by remember { mutableStateOf<LedgerScope>(LedgerScope.All) }
     var incremental by remember { mutableStateOf(false) }
     var startDate by remember { mutableStateOf(today) }
     var endDate by remember { mutableStateOf(today) }
+    var exportType by remember { mutableStateOf<TransactionType?>(null) }
+    val exportDateRange = if (incremental) exportRange(startDate, endDate) else null
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) context.contentResolver.openOutputStream(uri)?.use { it.write(payload.orEmpty().encodeToByteArray()) }
         payload = null
@@ -636,34 +649,129 @@ private fun ExportPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
     LaunchedEffect(state.exportPayload) {
         state.exportPayload?.let {
             payload = it
-            launcher.launch("OmniFlow-Qingzi.json")
+            launcher.launch("OmniFlow-Export.json")
         }
     }
-    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.small) {
-            Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("青子记账兼容 JSON", fontWeight = FontWeight.SemiBold)
-                Text("默认导出全部有效交易，也可按日期范围增量导出。")
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("仅导出日期范围", modifier = Modifier.weight(1f))
-                    Switch(incremental, { incremental = it })
-                }
-                if (incremental) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ExportDateButton("开始", startDate, Modifier.weight(1f)) { startDate = it }
-                        ExportDateButton("结束", endDate, Modifier.weight(1f)) { endDate = it }
+    LaunchedEffect(ledgerScope, incremental, startDate, endDate, exportType, state.ledgers) {
+        viewModel.observeExportPreview(ledgerScope, exportDateRange, exportType)
+    }
+    Column(Modifier.fillMaxSize()) {
+        LazyColumn(
+            Modifier.weight(1f).fillMaxWidth(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item {
+                Text("账本", style = OmniText.caption, color = mutedContent())
+            }
+            item {
+                LedgerScopePill(
+                    scope = ledgerScope,
+                    ledgers = state.ledgers,
+                    onScope = { ledgerScope = it },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                Text("日期", style = OmniText.caption, color = mutedContent())
+            }
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(OmniRadius.medium),
+                    color = surfaceCard(),
+                ) {
+                    Column(
+                        Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(
+                                Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(2.dp),
+                            ) {
+                                Text("仅导出日期范围", style = OmniText.bodyRow)
+                                Text(
+                                    if (incremental) "只导出所选日期内的交易" else "默认导出全部日期",
+                                    style = OmniText.caption,
+                                    color = mutedContent(),
+                                )
+                            }
+                            Switch(incremental, { incremental = it })
+                        }
+                        if (incremental) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                ExportDateButton("开始", startDate, Modifier.weight(1f)) { startDate = it }
+                                ExportDateButton("结束", endDate, Modifier.weight(1f)) { endDate = it }
+                            }
+                        }
                     }
                 }
-                Button(
-                    onClick = { viewModel.prepareQingziExport(if (incremental) exportRange(startDate, endDate) else null) },
-                    enabled = !state.isExporting,
+            }
+            item {
+                Text("类别", style = OmniText.caption, color = mutedContent())
+            }
+            item {
+                OmniSegmented(
+                    options = listOf<TransactionType?>(null, TransactionType.INCOME, TransactionType.EXPENSE),
+                    selected = exportType,
+                    label = { type ->
+                        when (type) {
+                            null -> "全部"
+                            TransactionType.INCOME -> "收入"
+                            TransactionType.EXPENSE -> "支出"
+                        }
+                    },
+                    onSelected = { exportType = it },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(OmniRadius.medium),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 ) {
-                    Text(if (state.isExporting) "生成中…" else "生成并保存")
+                    Row(
+                        Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("导出预览", style = OmniText.caption)
+                            Text(
+                                when {
+                                    state.isLoadingExportPreview -> "正在计算…"
+                                    state.exportPreviewCount != null -> "${state.exportPreviewCount} 条记录"
+                                    else -> "—"
+                                },
+                                style = OmniText.amountPrimary,
+                            )
+                            Text("当前筛选条件下的交易", style = OmniText.caption)
+                        }
+                        Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(32.dp))
+                    }
+                }
+            }
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    state.exportWarnings.forEach { Text(it, color = mutedContent(), style = OmniText.caption) }
+                    state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = OmniText.bodyRow) }
                 }
             }
         }
-        state.exportWarnings.forEach { Text(it, color = mutedContent(), style = OmniText.caption) }
-        state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        Button(
+            onClick = { viewModel.prepareExport(ledgerScope, exportDateRange, exportType) },
+            enabled = !state.isExporting,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 12.dp).height(52.dp),
+        ) {
+            Icon(Icons.Default.FileDownload, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text(if (state.isExporting) "导出中…" else "导出")
+        }
     }
 }
 

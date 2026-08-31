@@ -8,9 +8,8 @@ import android.security.keystore.KeyProperties
 import com.omniflow.core.data.sync.SyncAdapter
 import com.omniflow.core.domain.model.BackupRecord
 import com.omniflow.core.domain.model.RemoteBackupMeta
-import java.net.HttpURLConnection
-import java.net.URL
 import java.security.KeyStore
+import java.util.concurrent.TimeUnit
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -18,80 +17,114 @@ import javax.crypto.spec.GCMParameterSpec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Instant
+import okhttp3.Credentials
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import org.json.JSONObject
+
+internal class WebDavHttpClient(
+    private val client: OkHttpClient,
+    private val credentials: () -> Pair<String, String>,
+) {
+    fun execute(
+        url: String,
+        method: String,
+        headers: Map<String, String> = emptyMap(),
+        body: String? = null,
+    ): Response {
+        val (username, password) = credentials()
+        val request = Request.Builder().url(url).apply {
+            if (username.isNotEmpty() || password.isNotEmpty()) {
+                header("Authorization", Credentials.basic(username, password, Charsets.UTF_8))
+            }
+            headers.forEach { (name, value) -> header(name, value) }
+        }.method(method, body?.toRequestBody()).build()
+        return client.newCall(request).execute()
+    }
+}
 
 class WebDavSyncAdapter(context: Context) : SyncAdapter {
     private val context = context.applicationContext
     private val preferences = this.context.getSharedPreferences("webdav", Context.MODE_PRIVATE)
+    private val httpClient = WebDavHttpClient(
+        client = OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build(),
+        credentials = {
+            preferences.getString("username", "").orEmpty() to WebDavCredentials.password(context)
+        },
+    )
 
     override suspend fun listBackups(): Result<List<RemoteBackupMeta>> = io {
         ensureDirectory()
-        val connection = open(directoryUrl(), "PROPFIND").apply { setRequestProperty("Depth", "1") }
-        connection.outputStream.use { it.write(PROPFIND_BODY.encodeToByteArray()) }
-        requireStatus(connection, setOf(207))
-        val response = connection.inputStream.bufferedReader().use { it.readText() }
-        HREF.findAll(response).mapNotNull { match ->
-            val name = Uri.decode(match.groupValues[1]).substringAfterLast('/')
-            parseMeta(name)
-        }.distinctBy { it.backupId }.toList()
+        open(
+            directoryUrl(),
+            "PROPFIND",
+            headers = mapOf("Depth" to "1", "Content-Type" to "application/xml; charset=utf-8"),
+            body = PROPFIND_BODY,
+        ).use { connection ->
+            requireStatus(connection, setOf(207))
+            val response = connection.body?.string().orEmpty()
+            HREF.findAll(response).mapNotNull { match ->
+                val name = Uri.decode(match.groupValues[1]).substringAfterLast('/')
+                parseMeta(name)
+            }.distinctBy { it.backupId }.toList()
+        }
     }
 
     override suspend fun uploadBackup(backup: BackupRecord): Result<Unit> = io {
         ensureDirectory()
-        val connection = open(fileUrl(fileName(backup.createdAt, backup.deviceId, backup.backupId)), "PUT")
-        connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
         val body = JSONObject()
             .put("deviceId", backup.deviceId)
             .put("backupId", backup.backupId)
             .put("createdAt", backup.createdAt.toEpochMilliseconds())
             .put("payload", backup.payload)
             .toString()
-        connection.outputStream.use { it.write(body.encodeToByteArray()) }
-        requireStatus(connection, setOf(200, 201, 204))
+        open(
+            fileUrl(fileName(backup.createdAt, backup.deviceId, backup.backupId)),
+            "PUT",
+            headers = mapOf("Content-Type" to "application/json; charset=utf-8"),
+            body = body,
+        ).use { requireStatus(it, setOf(200, 201, 204)) }
     }
 
     override suspend fun downloadBackup(meta: RemoteBackupMeta): Result<BackupRecord> = io {
-        val connection = open(fileUrl(fileName(meta.createdAt, meta.deviceId, meta.backupId)), "GET")
-        requireStatus(connection, setOf(200))
-        val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-        BackupRecord(
-            deviceId = json.getString("deviceId"),
-            backupId = json.getString("backupId"),
-            createdAt = Instant.fromEpochMilliseconds(json.getLong("createdAt")),
-            payload = json.getString("payload"),
-        )
-    }
-
-    override suspend fun deleteBackup(meta: RemoteBackupMeta): Result<Unit> = io {
-        val connection = open(fileUrl(fileName(meta.createdAt, meta.deviceId, meta.backupId)), "DELETE")
-        requireStatus(connection, setOf(200, 204, 404))
-    }
-
-    private fun ensureDirectory() {
-        val connection = open(directoryUrl(), "MKCOL")
-        requireStatus(connection, setOf(201, 405))
-    }
-
-    private fun open(url: String, method: String): HttpURLConnection {
-        val username = preferences.getString("username", "").orEmpty()
-        val password = WebDavCredentials.password(context)
-        return (URL(url).openConnection() as HttpURLConnection).apply {
-            requestMethod = method
-            connectTimeout = 15_000
-            readTimeout = 30_000
-            doInput = true
-            doOutput = method in setOf("PUT", "PROPFIND")
-            if (username.isNotEmpty() || password.isNotEmpty()) {
-                val credentials = Base64.encodeToString("$username:$password".encodeToByteArray(), Base64.NO_WRAP)
-                setRequestProperty("Authorization", "Basic $credentials")
-            }
+        open(fileUrl(fileName(meta.createdAt, meta.deviceId, meta.backupId)), "GET").use { connection ->
+            requireStatus(connection, setOf(200))
+            val json = JSONObject(connection.body?.string().orEmpty())
+            BackupRecord(
+                deviceId = json.getString("deviceId"),
+                backupId = json.getString("backupId"),
+                createdAt = Instant.fromEpochMilliseconds(json.getLong("createdAt")),
+                payload = json.getString("payload"),
+            )
         }
     }
 
-    private fun requireStatus(connection: HttpURLConnection, expected: Set<Int>) {
-        if (connection.responseCode in expected) return
-        val detail = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
-        error("WebDAV ${connection.requestMethod} 失败：${connection.responseCode} ${detail.take(160)}")
+    override suspend fun deleteBackup(meta: RemoteBackupMeta): Result<Unit> = io {
+        open(fileUrl(fileName(meta.createdAt, meta.deviceId, meta.backupId)), "DELETE").use {
+            requireStatus(it, setOf(200, 204, 404))
+        }
+    }
+
+    private fun ensureDirectory() {
+        open(directoryUrl(), "MKCOL").use { requireStatus(it, setOf(201, 405)) }
+    }
+
+    private fun open(
+        url: String,
+        method: String,
+        headers: Map<String, String> = emptyMap(),
+        body: String? = null,
+    ): Response = httpClient.execute(url, method, headers, body)
+
+    private fun requireStatus(connection: Response, expected: Set<Int>) {
+        if (connection.code in expected) return
+        val detail = connection.body?.string().orEmpty()
+        error("WebDAV ${connection.request.method} 失败：${connection.code} ${detail.take(160)}")
     }
 
     private fun endpoint(): String = preferences.getString("endpoint", "")
