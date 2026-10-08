@@ -1,6 +1,5 @@
 <div align="center">
-  <img src="assets/branding/omniflow-icon.png#gh-light-mode-only" alt="OmniFlow App 图标（浅色模式）" width="112" />
-  <img src="assets/branding/omniflow-icon-dark.png#gh-dark-mode-only" alt="OmniFlow App 图标（深色模式）" width="112" />
+  <img src="app/src/main/res/mipmap-anydpi-v26/ic_launcher.png" alt="OmniFlow App 图标" width="112" />
   <h1>OmniFlow</h1>
   <p>一款 Android 原生记账 App，让账单自动流入 </p>
   <p>
