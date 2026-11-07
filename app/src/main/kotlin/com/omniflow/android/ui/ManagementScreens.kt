@@ -213,7 +213,7 @@ private fun LedgerSheet(
         onSave = { onSave(name.trim(), cover) },
         saveEnabled = name.isNotBlank(),
     ) {
-        OutlinedTextField(name, { name = it }, label = { Text("账本名称") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        OmniTextField(name, { name = it }, label = "账本名称")
         Text("封面", style = MaterialTheme.typography.labelLarge)
         LedgerCoverPicker(cover) { cover = it }
     }
@@ -325,7 +325,7 @@ private fun AccountSheet(
         },
         saveEnabled = name.isNotBlank(),
     ) {
-        OutlinedTextField(name, { name = it }, label = { Text("账户名称") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        OmniTextField(name, { name = it }, label = "账户名称")
         Text("类型", style = MaterialTheme.typography.labelLarge)
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -337,17 +337,15 @@ private fun AccountSheet(
         }
         Text("图标", style = MaterialTheme.typography.labelLarge)
         IconPickerGrid(AccountIconOptions, icon) { icon = it }
-        OutlinedTextField(
-            balance,
-            { balance = it; balanceError = null },
-            label = { Text("当前余额") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            isError = balanceError != null,
-            supportingText = { balanceError?.let { Text(it) } },
+        OmniTextField(
+            value = balance,
+            onValueChange = { balance = it; balanceError = null },
+            label = "当前余额",
+            placeholder = "0.00",
+            supportingText = balanceError,
         )
-        OutlinedTextField(card, { card = it }, label = { Text("卡号（可选）") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(note, { note = it }, label = { Text("备注（可选）") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        OmniTextField(card, { card = it }, label = "卡号（可选）")
+        OmniTextField(note, { note = it }, label = "备注（可选）")
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("计入总资产")
@@ -661,7 +659,7 @@ private fun CategorySheet(
             onAll = { parentId = null },
             onSelected = { parentId = it.id },
         )
-        OutlinedTextField(name, { name = it }, label = { Text("分类名称") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        OmniTextField(name, { name = it }, label = "分类名称")
         if (parentId == null) {
             Text("图标", style = MaterialTheme.typography.labelLarge)
             IconPickerGrid(CategoryIconOptions, icon) { icon = it }
@@ -753,7 +751,7 @@ private fun TagSheet(tag: Tag?, onDismiss: () -> Unit, onDelete: (String) -> Uni
         onSave = { onSave(name.trim()) },
         saveEnabled = name.isNotBlank(),
     ) {
-        OutlinedTextField(name, { name = it }, label = { Text("标签名称") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        OmniTextField(name, { name = it }, label = "标签名称")
         if (tag != null) {
             TextButton(onClick = { onDelete(tag.id) }) {
                 Text("删除标签", color = MaterialTheme.colorScheme.error)

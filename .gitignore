@@ -1,6 +1,8 @@
 .claude/
 .codex/
 .planning/
+.agents/
+skills-lock.json
 
 # Logs
 logs

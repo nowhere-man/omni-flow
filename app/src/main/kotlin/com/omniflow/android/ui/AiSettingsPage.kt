@@ -10,14 +10,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,8 +29,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.omniflow.android.AiCategoryAdapter
 import com.omniflow.android.AiConfig
@@ -49,18 +49,17 @@ internal fun AiSettingsPage() {
     var baseUrl by remember { mutableStateOf(saved.baseUrl) }
     var apiKey by remember { mutableStateOf(saved.apiKey) }
     var model by remember { mutableStateOf(saved.model) }
-    var showKey by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     var testing by remember { mutableStateOf(false) }
     val config = AiConfig(enabled = enabled, baseUrl = baseUrl, apiKey = apiKey, model = model)
 
     LazyColumn(
-        Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
-            Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(OmniRadius.medium), color = surfaceCard()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(OmniRadius.large), color = surfaceCard()) {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text("导入时用 AI 建议分类", style = OmniText.titleRow)
@@ -72,42 +71,37 @@ internal fun AiSettingsPage() {
                         }
                         Switch(enabled, { enabled = it; message = null })
                     }
-                    OutlinedTextField(
-                        baseUrl,
-                        { baseUrl = it; message = null },
-                        label = { Text("服务地址") },
-                        placeholder = { Text("https://api.deepseek.com/v1") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
+                    OmniTextField(
+                        value = baseUrl,
+                        onValueChange = { baseUrl = it; message = null },
+                        label = "服务地址",
+                        placeholder = "https://api.deepseek.com/v1",
+                        leadingIcon = Icons.Default.CloudSync,
                     )
-                    OutlinedTextField(
-                        apiKey,
-                        { apiKey = it; message = null },
-                        label = { Text("API Key") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            TextButton(onClick = { showKey = !showKey }) { Text(if (showKey) "隐藏" else "显示") }
-                        },
+                    OmniTextField(
+                        value = apiKey,
+                        onValueChange = { apiKey = it; message = null },
+                        label = "API Key",
+                        placeholder = "sk-...",
+                        isPassword = true,
+                        leadingIcon = Icons.Default.Lock,
                     )
-                    OutlinedTextField(
-                        model,
-                        { model = it; message = null },
-                        label = { Text("模型名称") },
-                        placeholder = { Text("deepseek-chat") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
+                    OmniTextField(
+                        value = model,
+                        onValueChange = { model = it; message = null },
+                        label = "模型名称",
+                        placeholder = "deepseek-chat",
+                        leadingIcon = Icons.Default.AutoAwesome,
                     )
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Button(
                             onClick = {
                                 AiCredentials.save(context, config)
                                 message = "已保存"
                             },
-                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(OmniRadius.medium),
+                            modifier = Modifier.weight(1f).height(46.dp),
                         ) { Text("保存配置") }
-                        // 地址少写 /v1、Key 粘错是最常见的失败，没有这个按钮就只能等导入跑到一半才发现
                         OutlinedButton(
                             onClick = {
                                 testing = true
@@ -119,15 +113,23 @@ internal fun AiSettingsPage() {
                                 }
                             },
                             enabled = !testing && baseUrl.isNotBlank() && model.isNotBlank(),
-                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(OmniRadius.medium),
+                            modifier = Modifier.weight(1f).height(46.dp),
                         ) { Text(if (testing) "测试中…" else "测试连接") }
                     }
                     message?.let {
-                        Text(
-                            it,
-                            style = OmniText.caption,
-                            color = if (it.contains("失败")) MaterialTheme.colorScheme.error else mutedContent(),
-                        )
+                        Surface(
+                            shape = RoundedCornerShape(OmniRadius.small),
+                            color = if (it.contains("失败")) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(
+                                it,
+                                style = OmniText.caption,
+                                color = if (it.contains("失败")) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            )
+                        }
                     }
                 }
             }

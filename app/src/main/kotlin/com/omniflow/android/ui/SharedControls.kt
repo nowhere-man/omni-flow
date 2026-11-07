@@ -16,11 +16,15 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,9 +36,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -256,3 +263,58 @@ internal val ImportFormat.label: String
         ImportFormat.CMB -> "招商银行"
         ImportFormat.QINGZI -> "青子记账"
     }
+
+/**
+ * M3 现代设计风格输入框：16dp 柔和中圆角、微透明 Tonal 底色与细致边框，支持前置图标与密码显隐。
+ */
+@Composable
+internal fun OmniTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    leadingIcon: ImageVector? = null,
+    placeholder: String? = null,
+    supportingText: String? = null,
+    isPassword: Boolean = false,
+    singleLine: Boolean = true,
+    trailingIcon: @Composable (() -> Unit)? = null,
+) {
+    var passwordVisible by remember { mutableStateOf(false) }
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        placeholder = placeholder?.let { { Text(it, color = mutedContent().copy(alpha = 0.6f)) } },
+        supportingText = supportingText?.let { { Text(it, style = OmniText.caption) } },
+        leadingIcon = leadingIcon?.let {
+            { Icon(it, contentDescription = null, tint = mutedContent(), modifier = Modifier.size(20.dp)) }
+        },
+        trailingIcon = when {
+            isPassword -> {
+                {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = if (passwordVisible) "隐藏密码" else "显示密码",
+                            tint = mutedContent(),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+            }
+            trailingIcon != null -> trailingIcon
+            else -> null
+        },
+        visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else VisualTransformation.None,
+        singleLine = singleLine,
+        shape = RoundedCornerShape(OmniRadius.medium),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f),
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+        ),
+        modifier = modifier.fillMaxWidth(),
+    )
+}

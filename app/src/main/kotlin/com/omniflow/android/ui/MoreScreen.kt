@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -507,47 +508,76 @@ private fun DataManagementPage(
     var password by remember { mutableStateOf(WebDavCredentials.password(context)) }
     var retention by remember(state.preferences.backupRetention) { mutableStateOf(state.preferences.backupRetention.toString()) }
     var pendingRestore by remember { mutableStateOf<com.omniflow.core.domain.model.RemoteBackupMeta?>(null) }
-    var showPassword by remember { mutableStateOf(false) }
     var testStatus by remember { mutableStateOf<String?>(null) }
     var isTesting by remember { mutableStateOf(false) }
-    LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        // 卡片 1：WebDAV 服务配置
         item {
-            Card(
-                Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.small,
-                colors = CardDefaults.cardColors(containerColor = surfaceCard()),
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(OmniRadius.large),
+                color = surfaceCard(),
             ) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("WebDAV 全量备份", fontWeight = FontWeight.SemiBold)
-                    OutlinedTextField(endpoint, { endpoint = it; testStatus = null }, label = { Text("服务器目录 URL") }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(username, { username = it; testStatus = null }, label = { Text("用户名") }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(
-                        password,
-                        { password = it; testStatus = null },
-                        label = { Text("密码") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            TextButton(onClick = { showPassword = !showPassword }) {
-                                Text(if (showPassword) "隐藏" else "显示")
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier.size(36.dp),
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.CloudSync, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
                             }
-                        },
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text("WebDAV 备份配置", style = OmniText.titleRow)
+                            Text("私有云存储全量加密快照", style = OmniText.caption, color = mutedContent())
+                        }
+                    }
+
+                    OmniTextField(
+                        value = endpoint,
+                        onValueChange = { endpoint = it; testStatus = null },
+                        label = "服务器地址",
+                        placeholder = "https://dav.jianguoyun.com/dav/",
+                        supportingText = "支持坚果云、Nextcloud、Alist 等 WebDAV 服务",
+                        leadingIcon = Icons.Default.CloudSync,
                     )
-                    OutlinedTextField(
-                        retention,
-                        { retention = it.filter(Char::isDigit) },
-                        label = { Text("最大备份数") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
+                    OmniTextField(
+                        value = username,
+                        onValueChange = { username = it; testStatus = null },
+                        label = "账户用户名",
+                        placeholder = "your-account@example.com",
+                        leadingIcon = Icons.Default.Tune,
                     )
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OmniTextField(
+                        value = password,
+                        onValueChange = { password = it; testStatus = null },
+                        label = "应用授权密码",
+                        placeholder = "WebDAV 专用密码或 Token",
+                        isPassword = true,
+                        leadingIcon = Icons.Default.Lock,
+                    )
+                    OmniTextField(
+                        value = retention,
+                        onValueChange = { retention = it.filter(Char::isDigit) },
+                        label = "最大备份保留份数",
+                        placeholder = "10",
+                        supportingText = "超出数量将自动轮转清理最早的历史备份",
+                        leadingIcon = Icons.Default.Storage,
+                    )
+
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Button(
                             onClick = {
                                 WebDavCredentials.save(context, endpoint, username, password)
                                 viewModel.configureSync(SyncTarget.WEBDAV, retention.toIntOrNull() ?: 10)
+                                testStatus = "配置已保存"
                             },
-                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(OmniRadius.medium),
+                            modifier = Modifier.weight(1f).height(46.dp),
                         ) { Text("保存配置") }
                         OutlinedButton(
                             onClick = {
@@ -555,22 +585,55 @@ private fun DataManagementPage(
                                     isTesting = true
                                     testStatus = "正在测试连接…"
                                     val res = WebDavSyncAdapter.testConnection(endpoint, username, password)
-                                    testStatus = if (res.isSuccess) "连接成功！" else "连接失败: ${res.exceptionOrNull()?.message ?: "未知错误"}"
+                                    testStatus = if (res.isSuccess) "连接成功！服务正常" else "连接失败: ${res.exceptionOrNull()?.message ?: "未知错误"}"
                                     isTesting = false
                                 }
                             },
                             enabled = !isTesting && endpoint.isNotBlank(),
-                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(OmniRadius.medium),
+                            modifier = Modifier.weight(1f).height(46.dp),
                         ) {
                             Text(if (isTesting) "测试中…" else "测试连接")
                         }
                     }
+
                     testStatus?.let { status ->
-                        Text(
-                            status,
-                            color = if (status.startsWith("连接成功")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                            style = OmniText.caption,
-                        )
+                        Surface(
+                            shape = RoundedCornerShape(OmniRadius.small),
+                            color = if (status.startsWith("连接成功") || status == "配置已保存") {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.errorContainer
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(
+                                status,
+                                color = if (status.startsWith("连接成功") || status == "配置已保存") {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onErrorContainer
+                                },
+                                style = OmniText.caption,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 卡片 2：立即备份与同步控制卡
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(OmniRadius.large),
+                color = surfaceCard(),
+            ) {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("备份与恢复", style = OmniText.titleRow, modifier = Modifier.weight(1f))
+                        Text(syncLabel(state), style = OmniText.caption, color = mutedContent())
                     }
                     if (state.syncState.phase == SyncPhase.RUNNING) {
                         LinearProgressIndicator(
@@ -578,46 +641,81 @@ private fun DataManagementPage(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                    Text(syncLabel(state), style = MaterialTheme.typography.bodySmall)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Button(
                             onClick = viewModel::syncNow,
-                            enabled = state.syncState.phase != SyncPhase.RUNNING,
-                            modifier = Modifier.weight(1f),
-                        ) { Text("立即备份") }
-                        OutlinedButton(onClick = viewModel::loadBackups, modifier = Modifier.weight(1f)) { Text("刷新备份") }
+                            enabled = state.syncState.phase != SyncPhase.RUNNING && endpoint.isNotBlank(),
+                            shape = RoundedCornerShape(OmniRadius.medium),
+                            modifier = Modifier.weight(1f).height(46.dp),
+                        ) {
+                            Icon(Icons.Default.CloudSync, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("立即备份")
+                        }
+                        OutlinedButton(
+                            onClick = viewModel::loadBackups,
+                            shape = RoundedCornerShape(OmniRadius.medium),
+                            modifier = Modifier.weight(1f).height(46.dp),
+                        ) {
+                            Text("刷新列表")
+                        }
                     }
                 }
             }
         }
+
         item {
-            Text("云端备份", style = OmniText.caption, color = mutedContent(), modifier = Modifier.padding(top = 4.dp))
+            Text("云端历史快照", style = OmniText.caption, color = mutedContent(), modifier = Modifier.padding(start = 4.dp))
         }
         if (state.backups.isEmpty()) {
             item {
-                Text(
-                    if (state.syncState.lastBackupAt == null) "配置 WebDAV 后点「立即备份」创建第一个备份" else "还没有拉取到云端备份，试试「刷新备份」",
-                    style = OmniText.caption,
-                    color = mutedContent(),
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
-                    textAlign = TextAlign.Center,
-                )
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(OmniRadius.medium),
+                    color = surfaceCard(),
+                ) {
+                    Text(
+                        if (state.syncState.lastBackupAt == null) "配置 WebDAV 后点击「立即备份」创建第一个云端快照" else "未拉取到云端备份，请点击「刷新列表」",
+                        style = OmniText.caption,
+                        color = mutedContent(),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp, horizontal = 16.dp),
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
         }
         items(state.backups, key = { "${it.deviceId}-${it.backupId}" }) { backup ->
-            Card(
-                Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = surfaceCard()),
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(OmniRadius.medium),
+                color = surfaceCard(),
             ) {
-                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = CircleShape,
+                        color = surfaceInset(),
+                        modifier = Modifier.size(36.dp),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Storage, contentDescription = null, modifier = Modifier.size(18.dp), tint = mutedContent())
+                        }
+                    }
+                    Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(backup.createdAt.backupTimeText(), style = OmniText.titleRow)
+                        Text(backup.deviceId, style = OmniText.caption, color = mutedContent(), maxLines = 1)
                     }
-                    TextButton(onClick = { pendingRestore = backup }) { Text("恢复") }
+                    OutlinedButton(
+                        onClick = { pendingRestore = backup },
+                        shape = RoundedCornerShape(OmniRadius.small),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                        modifier = Modifier.height(32.dp),
+                    ) { Text("恢复") }
                 }
             }
         }
         state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
+        item { Spacer(Modifier.height(32.dp)) }
     }
     pendingRestore?.let { backup ->
         AlertDialog(
