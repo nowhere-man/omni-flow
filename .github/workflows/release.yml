@@ -45,10 +45,17 @@ jobs:
             echo "Version must use v<semver> or <semver>: $VERSION"
             exit 1
           fi
+          SEMVER_BASE="${VERSION%%[-+]*}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$SEMVER_BASE"
+          VERSION_CODE=$(( ${MAJOR:-0} * 10000 + ${MINOR:-0} * 100 + ${PATCH:-0} ))
+          if [[ "$VERSION_CODE" -le 0 ]]; then
+            VERSION_CODE=1
+          fi
           echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "APP_VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
 
       - name: Verify core logic, migrations, and Android lint
-        run: ./gradlew :core:testDebugUnitTest :core:verifySqlDelightMigration :app:lintRelease -PversionName="$APP_VERSION" --stacktrace
+        run: ./gradlew :core:testDebugUnitTest :core:verifySqlDelightMigration :app:lintRelease -PversionName="$APP_VERSION" -PversionCode="$APP_VERSION_CODE" --stacktrace
 
       - name: Decode Android keystore
         env:
@@ -65,6 +72,7 @@ jobs:
         run: |
           ./gradlew :app:assembleRelease --stacktrace \
             -PversionName="$APP_VERSION" \
+            -PversionCode="$APP_VERSION_CODE" \
             -PandroidArm64Only=true \
             -Pandroid.injected.signing.store.file="$RUNNER_TEMP/omniflow-release.keystore" \
             -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \

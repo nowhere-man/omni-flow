@@ -6,6 +6,21 @@ plugins {
 }
 
 val appVersionName = providers.gradleProperty("versionName").orElse("0.0.0-dev")
+val appVersionCode = providers.gradleProperty("versionCode").map { it.toInt() }.orElse(
+    providers.provider {
+        val name = appVersionName.get()
+        val base = name.substringBefore('-').substringBefore('+')
+        val parts = base.split('.')
+        if (parts.size >= 3) {
+            val major = parts[0].toIntOrNull() ?: 0
+            val minor = parts[1].toIntOrNull() ?: 0
+            val patch = parts[2].toIntOrNull() ?: 0
+            maxOf(1, major * 10000 + minor * 100 + patch)
+        } else {
+            1
+        }
+    }
+)
 
 android {
     namespace = "com.omniflow.android"
@@ -15,7 +30,7 @@ android {
         applicationId = "com.omniflow.android"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
+        versionCode = appVersionCode.get()
         versionName = appVersionName.get()
     }
 
