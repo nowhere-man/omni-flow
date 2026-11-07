@@ -39,6 +39,7 @@ class SqlDelightSearchTransactionsUseCase(
         val items = rows.asSequence()
             .map { row -> toSearchItem(row, tagsByTransaction[row.id].orEmpty()) }
             .filter { item -> matches(query, item) }
+            .take(MAX_SEARCH_RESULTS)
             .toList()
         SearchResult(
             items = items,
@@ -121,6 +122,7 @@ class SqlDelightSearchTransactionsUseCase(
     }
 
     private companion object {
+        const val MAX_SEARCH_RESULTS = 500
         val ENTIRE_RANGE = com.omniflow.core.domain.model.DateRange(
             startInclusive = Instant.fromEpochMilliseconds(0),
             endExclusive = Instant.fromEpochMilliseconds(Long.MAX_VALUE),

@@ -50,6 +50,11 @@ class SqlDelightSearchAnalyticsTest {
         ).getOrThrow()
         assertEquals(listOf("expense-2"), textSearch.items.map { it.transaction.id })
 
+        val scopeSearchQuery = TransactionSearchQuery(scope = LedgerScope.Single("ledger"))
+        kotlin.test.assertTrue(scopeSearchQuery.hasFilters)
+        val scopeSearch = SqlDelightSearchTransactionsUseCase(database)(scopeSearchQuery).getOrThrow()
+        assertEquals(4, scopeSearch.items.size)
+
         val dashboard = SqlDelightAnalyticsFacade(database).observeDashboard(
             AnalyticsQuery(
                 scope = LedgerScope.All,

@@ -207,7 +207,7 @@ private fun BudgetSheet(
     var amountText by remember(editing) { mutableStateOf(editing?.budget?.amount?.toDecimal().orEmpty()) }
     var error by remember(editing) { mutableStateOf<String?>(null) }
     // 编辑时范围不可改；新建时把已经有预算的分类排除掉，避免建出重复项
-    val selectable = categories.filterNot { it.id in usedCategoryIds || it.id == categoryId }
+    val selectable = categories.filterNot { it.id in usedCategoryIds && it.id != categoryId }
     ManagementSheet(
         title = if (editing == null) "新增预算" else "编辑「${editing.name}」预算",
         onDismiss = onDismiss,

@@ -67,7 +67,7 @@ class QingziBillParser(
                 RawTransaction(
                     format = ImportFormat.QINGZI,
                     occurredAt = Instant.fromEpochSeconds(entry.epochSeconds("createDate")),
-                    amount = Money.fromDecimal(entry.decimal("value")),
+                    amount = Money.parseOrNull(entry.decimal("value")) ?: error("青子记账金额格式有误"),
                     type = category.type,
                     isExcluded = entry.boolean("excludeFromBudget") ?: false,
                     accountName = accountNames[entry.stringOrNull("accountID")] ?: "现金",
@@ -115,23 +115,4 @@ class QingziBillParser(
         "1" -> TransactionType.EXPENSE
         else -> error("无法识别青子记账分类类型")
     }
-}
-
-private fun Money.Companion.fromDecimal(value: String): Money {
-    val normalized = value.trim()
-    val negative = normalized.startsWith('-')
-    val unsigned = normalized.removePrefix("-")
-    val integerAndFraction = unsigned.split('.', limit = 2)
-    var yuan = integerAndFraction[0].toLong()
-    val fraction = integerAndFraction.getOrElse(1) { "" }.padEnd(3, '0')
-    var cents = fraction.take(2).toLong()
-    if (fraction[2] >= '5') {
-        cents += 1
-        if (cents == 100L) {
-            yuan += 1
-            cents = 0
-        }
-    }
-    val minor = yuan * 100 + cents
-    return Money(if (negative) -minor else minor)
 }

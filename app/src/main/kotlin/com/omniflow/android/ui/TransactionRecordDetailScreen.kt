@@ -95,7 +95,7 @@ internal fun TransactionRecordDetailSheet(
                     item {
                         Surface(
                             shape = RoundedCornerShape(OmniRadius.large),
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                            color = surfaceCard(),
                         ) {
                             Column(
                                 Modifier.fillMaxWidth().padding(20.dp),

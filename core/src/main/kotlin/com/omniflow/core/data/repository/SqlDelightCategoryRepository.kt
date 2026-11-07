@@ -93,6 +93,7 @@ class SqlDelightCategoryRepository(
         database.transaction {
             database.ruleQueries.archiveRulesForCategory(timestamp, categoryId)
             database.categoryMemoryQueries.deleteCategoryMemoriesForCategory(categoryId)
+            database.budgetQueries.archiveBudgetsForCategory(deleted_at = timestamp, updated_at = timestamp, category_id = categoryId)
             database.categoryQueries.archiveCategory(timestamp, categoryId)
         }
     }

@@ -26,5 +26,11 @@ UPDATE budget SET amount_minor = :amount_minor, updated_at = :updated_at WHERE i
 deleteBudget:
 UPDATE budget SET deleted_at = :deleted_at, updated_at = :updated_at WHERE id = :id;
 
+archiveBudgetsForCategory:
+UPDATE budget SET deleted_at = :deleted_at, updated_at = :updated_at WHERE category_id = :category_id AND deleted_at IS NULL;
+
+archiveBudgetsForLedger:
+UPDATE budget SET deleted_at = :deleted_at, updated_at = :updated_at WHERE ledger_id = :ledger_id AND deleted_at IS NULL;
+
 deleteAllBudgets:
 DELETE FROM budget;

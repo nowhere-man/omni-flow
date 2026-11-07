@@ -162,6 +162,6 @@ class SqlDelightSyncEngine(
     private companion object {
         const val DEVICE_ID = "device_id"
         const val LAST_BACKUP_AT = "last_backup_at"
-        const val AUTO_BACKUP_DEBOUNCE_MILLIS = 2_000L
+        const val AUTO_BACKUP_DEBOUNCE_MILLIS = 60_000L
     }
 }

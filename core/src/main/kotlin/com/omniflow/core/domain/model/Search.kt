@@ -31,7 +31,7 @@ data class TransactionSearchQuery(
     val dateRange: DateRange? = null,
 ) {
     val hasFilters: Boolean
-        get() = keyword.isNotBlank() || primaryCategoryText.isNotBlank() ||
+        get() = scope is LedgerScope.Single || keyword.isNotBlank() || primaryCategoryText.isNotBlank() ||
             secondaryCategoryText.isNotBlank() || tagText.isNotBlank() || noteText.isNotBlank() ||
             type != null || primaryCategoryId != null ||
             secondaryCategoryId != null || tagId != null || accountId != null ||

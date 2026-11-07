@@ -84,6 +84,7 @@ class SqlDelightLedgerRepository(
             database.ledgerQueries.archiveTagsForLedger(timestamp, ledgerId)
             database.ledgerQueries.archiveRulesForLedger(timestamp, ledgerId)
             database.ledgerQueries.archiveTransactionsForLedger(timestamp, ledgerId)
+            database.budgetQueries.archiveBudgetsForLedger(deleted_at = timestamp, updated_at = timestamp, ledger_id = ledgerId)
             if (database.appPreferenceQueries.preference(AppPreferenceKey.DefaultLedgerId)
                     .executeAsOneOrNull() == ledgerId
             ) {

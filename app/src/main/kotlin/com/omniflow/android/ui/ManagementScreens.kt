@@ -496,19 +496,13 @@ private fun CategoryManagement(state: MoreUiState, viewModel: OmniFlowViewModel,
     val primaries = state.categories.filter { it.parentId == null && it.type == type }
     Column(Modifier.fillMaxSize()) {
         LedgerPickerBar(state.ledgers, state.selectedLedgerId) { viewModel.selectMoreLedger(it) }
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            TransactionType.entries.forEach { entry ->
-                FilterChip(
-                    selected = type == entry,
-                    onClick = { type = entry },
-                    modifier = Modifier.weight(1f),
-                    label = { Text(entry.label, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
-                )
-            }
-        }
+        OmniSegmented(
+            options = TransactionType.entries,
+            selected = type,
+            label = { it.label },
+            onSelected = { type = it },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        )
         Spacer(Modifier.height(8.dp))
         LazyColumn(
             Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -641,11 +635,16 @@ private fun CategorySheet(
         onSave = { onSave(parentId, name.trim(), if (parentId == null) icon else null, type) },
         saveEnabled = name.isNotBlank(),
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TransactionType.entries.forEach { value ->
-                FilterChip(selected = type == value, onClick = { type = value; parentId = null }, label = { Text(value.label) })
-            }
-        }
+        OmniSegmented(
+            options = TransactionType.entries,
+            selected = type,
+            label = { it.label },
+            onSelected = {
+                type = it
+                parentId = null
+            },
+            modifier = Modifier.fillMaxWidth(),
+        )
         NullableValueMenu(
             label = parents.firstOrNull { it.id == parentId }?.name ?: "作为一级分类",
             allLabel = "作为一级分类",

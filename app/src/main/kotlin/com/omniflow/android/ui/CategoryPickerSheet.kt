@@ -59,18 +59,16 @@ internal fun CategoryPickerSheet(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TransactionType.entries.forEach { entry ->
-                    FilterChip(
-                        selected = type == entry,
-                        onClick = {
-                            type = entry
-                            primaryId = null
-                        },
-                        label = { Text(if (entry == TransactionType.EXPENSE) "支出" else "收入") },
-                    )
-                }
-            }
+            OmniSegmented(
+                options = TransactionType.entries,
+                selected = type,
+                label = { if (it == TransactionType.EXPENSE) "支出" else "收入" },
+                onSelected = {
+                    type = it
+                    primaryId = null
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
             if (primaryCategories.isEmpty()) {
                 Text("当前账本还没有该类型的分类", color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
@@ -81,13 +79,16 @@ internal fun CategoryPickerSheet(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     items(primaryCategories, key = { it.id }) { category ->
+                        val hasChildren = categories.any { it.parentId == category.id && it.type == type }
                         CategoryTile(
                             category = category,
                             selected = primaryId == category.id,
                             onClick = {
-                                primaryId = category.id
-                                // 一级分类本身就是可用分类；点了就先落一级，再按需细化到二级。
-                                onSelected(category.id, type)
+                                if (primaryId == category.id || !hasChildren) {
+                                    onSelected(category.id, type)
+                                } else {
+                                    primaryId = category.id
+                                }
                             },
                             modifier = Modifier.height(76.dp),
                         )
@@ -111,7 +112,18 @@ internal fun CategoryPickerSheet(
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = onDismiss) { Text("完成") }
+                TextButton(
+                    onClick = {
+                        val currentPrimary = primaryId
+                        if (currentPrimary != null) {
+                            onSelected(currentPrimary, type)
+                        } else {
+                            onDismiss()
+                        }
+                    },
+                ) {
+                    Text("完成")
+                }
             }
             Spacer(Modifier.height(12.dp))
         }

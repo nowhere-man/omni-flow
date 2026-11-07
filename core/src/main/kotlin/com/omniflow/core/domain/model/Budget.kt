@@ -49,8 +49,10 @@ fun buildBudgetProgress(
         .groupBy { primaryOf[it.categoryId] ?: it.categoryId }
         .mapValues { (_, items) -> items.fold(Money.Zero) { total, item -> total + item.amount } }
 
-    return budgets.map { budget ->
-        val category = budget.categoryId?.let { id -> categories.firstOrNull { it.id == id } }
+    return budgets.mapNotNull { budget ->
+        val category = budget.categoryId?.let { id ->
+            categories.firstOrNull { it.id == id } ?: return@mapNotNull null
+        }
         BudgetProgress(
             budget = budget,
             name = category?.name ?: "总预算",

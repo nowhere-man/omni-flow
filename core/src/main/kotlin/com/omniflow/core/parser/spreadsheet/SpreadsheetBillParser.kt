@@ -8,8 +8,6 @@ import org.apache.poi.ss.usermodel.DataFormatter
 import org.apache.poi.ss.usermodel.Row
 import org.apache.poi.ss.usermodel.WorkbookFactory
 import java.io.ByteArrayInputStream
-import java.math.BigDecimal
-import java.math.RoundingMode
 import java.time.LocalDateTime
 import java.time.ZoneId
 
@@ -112,12 +110,8 @@ object SpreadsheetBillParser {
         .toEpochMilli()
         .let(kotlinx.datetime.Instant::fromEpochMilliseconds)
 
-    private fun parseMoney(value: String): Money = Money(
-        BigDecimal(value.trim().removePrefix("¥").replace(",", ""))
-            .movePointRight(2)
-            .setScale(0, RoundingMode.HALF_UP)
-            .longValueExact(),
-    )
+    private fun parseMoney(value: String): Money =
+        Money.parseOrNull(value) ?: error("金额格式有误：$value")
 
     private fun joinNote(vararg values: String?): String? = values
         .mapNotNull { it?.trim()?.takeIf(String::isNotEmpty)?.takeUnless { value -> value == "/" } }

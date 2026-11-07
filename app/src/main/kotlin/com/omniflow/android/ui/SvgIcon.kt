@@ -32,16 +32,23 @@ private data class SvgDocument(
     val shapes: List<SvgShape>,
 )
 
-@Composable
-internal fun SvgIcon(iconKey: String, modifier: Modifier = Modifier, tint: Color = androidx.compose.material3.LocalContentColor.current) {
-    val context = LocalContext.current
-    val document = remember(iconKey) {
+private val svgCache = java.util.concurrent.ConcurrentHashMap<String, SvgDocument>()
+
+private fun loadSvgDocument(context: android.content.Context, iconKey: String): SvgDocument =
+    svgCache.getOrPut(iconKey) {
         runCatching {
             context.assets.open("icons/$iconKey.svg").use(::parseSvg)
         }.getOrElse {
-            context.assets.open("icons/category.svg").use(::parseSvg)
+            svgCache.getOrPut("category") {
+                context.assets.open("icons/category.svg").use(::parseSvg)
+            }
         }
     }
+
+@Composable
+internal fun SvgIcon(iconKey: String, modifier: Modifier = Modifier, tint: Color = androidx.compose.material3.LocalContentColor.current) {
+    val context = LocalContext.current
+    val document = remember(iconKey) { loadSvgDocument(context, iconKey) }
     Canvas(modifier.size(24.dp)) {
         val scale = minOf(size.width / document.width, size.height / document.height)
         val offset = Offset(

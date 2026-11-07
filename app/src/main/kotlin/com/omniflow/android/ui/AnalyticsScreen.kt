@@ -465,7 +465,7 @@ private fun CategoryCard(dashboard: AnalyticsDashboardState, onCategorySelected:
             }
             if (showSecondary) {
                 item.secondaryCategories.forEach { secondary ->
-                    CategoryRow("  ${secondary.categoryName}", secondary.amount, item.amount, secondary.iconKey, color.copy(alpha = 0.75f)) {
+                    CategoryRow("  ${secondary.categoryName}", secondary.amount, total, secondary.iconKey, color.copy(alpha = 0.75f)) {
                         onCategorySelected(secondary.categoryId)
                     }
                 }

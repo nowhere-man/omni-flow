@@ -70,6 +70,20 @@ class BudgetProgressTest {
         assertEquals(Money(-2_000), progress.remaining)
     }
 
+    @Test
+    fun skipsOrphanedBudgetsWhoseCategoryWasDeleted() {
+        val progress = buildBudgetProgress(
+            budgets = listOf(
+                budget("b1", null, 100_000),
+                budget("b2", "deleted-cat", 20_000),
+            ),
+            categories = categories,
+            monthTransactions = emptyList(),
+        )
+        assertEquals(1, progress.size)
+        assertEquals("总预算", progress.single().name)
+    }
+
     private fun budget(id: String, categoryId: String?, minor: Long) =
         Budget(id = id, ledgerId = "ledger", categoryId = categoryId, amount = Money(minor))
 

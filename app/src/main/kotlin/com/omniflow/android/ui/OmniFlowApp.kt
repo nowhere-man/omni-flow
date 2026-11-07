@@ -856,72 +856,85 @@ private fun HomeScreen(
         when {
             state.isLoading && home == null -> LoadingState()
             state.error != null && home == null -> ErrorState(state.error)
-            home != null -> Column(
+            home != null -> LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp)
                     .widthIn(max = 1040.dp)
                     .wrapContentWidth(Alignment.CenterHorizontally),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Spacer(Modifier.height(8.dp))
+                item { Spacer(Modifier.height(8.dp)) }
                 // 账本单独占一行，和统计页一致；月份切换两个箭头顶在两端
-                LedgerScopePill(home.scope, state.ledgers, onLedgerSelected)
-                RangeStepper(
-                    label = home.month.startInclusive.toLocalDateTime(ChinaTimeZone).date.yearMonthText(),
-                    onPrevious = onPreviousMonth,
-                    onNext = onNextMonth,
-                    onLabel = { onMonthSelected(Clock.System.now().toLocalDateTime(ChinaTimeZone).date) },
-                )
-                SummaryCardRow(
-                    expense = home.summary.expenseTotal,
-                    income = home.summary.incomeTotal,
-                    onExpense = { onSummary(TransactionType.EXPENSE) },
-                    onIncome = { onSummary(TransactionType.INCOME) },
-                    onNet = { onSummary(null) },
-                )
-                Surface(shape = RoundedCornerShape(OmniRadius.medium), color = surfaceCard()) {
-                    CalendarMonth(
-                        month = home.month.startInclusive.toLocalDateTime(ChinaTimeZone).date,
-                        summaries = home.calendar,
-                        onDateSelected = onDateSelected,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                item { LedgerScopePill(home.scope, state.ledgers, onLedgerSelected) }
+                item {
+                    RangeStepper(
+                        label = home.month.startInclusive.toLocalDateTime(ChinaTimeZone).date.yearMonthText(),
+                        onPrevious = onPreviousMonth,
+                        onNext = onNextMonth,
+                        onLabel = { onMonthSelected(Clock.System.now().toLocalDateTime(ChinaTimeZone).date) },
                     )
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("明细", style = OmniText.titleRow)
-                    Spacer(Modifier.weight(1f))
-                    IconButton(onClick = onToggleDisplayMode) {
-                        val icon = if (state.displayMode == TransactionDetailDisplayMode.LIST) {
-                            Icons.Default.ViewModule
-                        } else {
-                            Icons.AutoMirrored.Filled.List
+                item {
+                    SummaryCardRow(
+                        expense = home.summary.expenseTotal,
+                        income = home.summary.incomeTotal,
+                        onExpense = { onSummary(TransactionType.EXPENSE) },
+                        onIncome = { onSummary(TransactionType.INCOME) },
+                        onNet = { onSummary(null) },
+                    )
+                }
+                item {
+                    Surface(shape = RoundedCornerShape(OmniRadius.medium), color = surfaceCard()) {
+                        CalendarMonth(
+                            month = home.month.startInclusive.toLocalDateTime(ChinaTimeZone).date,
+                            summaries = home.calendar,
+                            onDateSelected = onDateSelected,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                        )
+                    }
+                }
+                item {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("明细", style = OmniText.titleRow)
+                        Spacer(Modifier.weight(1f))
+                        IconButton(onClick = onToggleDisplayMode) {
+                            val icon = if (state.displayMode == TransactionDetailDisplayMode.LIST) {
+                                Icons.Default.ViewModule
+                            } else {
+                                Icons.AutoMirrored.Filled.List
+                            }
+                            Icon(icon, contentDescription = "切换明细展示方式", tint = mutedContent())
                         }
-                        Icon(icon, contentDescription = "切换明细展示方式", tint = mutedContent())
                     }
                 }
                 if (state.ledgers.isEmpty()) {
-                    HomeEmptyState(
-                        title = "先创建一个账本",
-                        message = "账本准备好后，就可以开始记录每一笔交易。",
-                        actionLabel = "管理账本",
-                        onAction = onManageLedgers,
-                    )
+                    item {
+                        HomeEmptyState(
+                            title = "先创建一个账本",
+                            message = "账本准备好后，就可以开始记录每一笔交易。",
+                            actionLabel = "管理账本",
+                            onAction = onManageLedgers,
+                        )
+                    }
                 } else if (home.groups.isEmpty()) {
                     // 本月没有账单时只留一句状态说明，右下角本来就有记账按钮，不必再放一个
-                    Text(
-                        "本月还没有账单",
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 28.dp),
-                        textAlign = TextAlign.Center,
-                        style = OmniText.caption,
-                        color = mutedContent(),
-                    )
+                    item {
+                        Text(
+                            "本月还没有账单",
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 28.dp),
+                            textAlign = TextAlign.Center,
+                            style = OmniText.caption,
+                            color = mutedContent(),
+                        )
+                    }
                 } else {
-                    TransactionGroups(home.groups, state.displayMode, onEdit)
+                    items(home.groups, key = { it.date.toString() }) { group ->
+                        TransactionDayGroupItem(group, state.displayMode, onEdit)
+                    }
                 }
                 // 给右下角的悬浮记账按钮让位，避免压住最后一条明细
-                Spacer(Modifier.height(88.dp))
+                item { Spacer(Modifier.height(88.dp)) }
             }
         }
     }
@@ -995,7 +1008,7 @@ private fun CalendarMonth(
     }
 }
 
-private val CalendarCellHeight = 56.dp
+private val CalendarCellHeight = 58.dp
 
 @Composable
 private fun CalendarCell(
@@ -1056,6 +1069,31 @@ private fun CalendarAmount(text: String, color: Color) {
 }
 
 @Composable
+private fun TransactionDayGroupItem(
+    group: DayTransactionGroup,
+    displayMode: TransactionDetailDisplayMode,
+    onEdit: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(group.date.displayName(), style = OmniText.caption, color = mutedContent())
+            Spacer(Modifier.weight(1f))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // 收支语义色和日历、汇总卡同一套，不跟随主题色漂移
+                if (group.incomeTotal != Money.Zero) {
+                    Text("收 ${group.incomeTotal.asCompactRmb()}", color = incomeColor(), style = OmniText.caption)
+                }
+                if (group.expenseTotal != Money.Zero) {
+                    Text("支 ${group.expenseTotal.asCompactRmb()}", color = mutedContent(), style = OmniText.caption)
+                }
+            }
+        }
+        TransactionItems(group.items, displayMode, onEdit)
+    }
+}
+
+@Composable
 private fun TransactionGroups(
     groups: List<DayTransactionGroup>,
     displayMode: TransactionDetailDisplayMode,
@@ -1074,22 +1112,7 @@ private fun TransactionGroups(
     }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
         groups.forEach { group ->
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(group.date.displayName(), style = OmniText.caption, color = mutedContent())
-                    Spacer(Modifier.weight(1f))
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        // 收支语义色和日历、汇总卡同一套，不跟随主题色漂移
-                        if (group.incomeTotal != Money.Zero) {
-                            Text("收 ${group.incomeTotal.asCompactRmb()}", color = incomeColor(), style = OmniText.caption)
-                        }
-                        if (group.expenseTotal != Money.Zero) {
-                            Text("支 ${group.expenseTotal.asCompactRmb()}", color = mutedContent(), style = OmniText.caption)
-                        }
-                    }
-                }
-                TransactionItems(group.items, displayMode, onEdit)
-            }
+            TransactionDayGroupItem(group, displayMode, onEdit)
         }
     }
 }

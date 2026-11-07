@@ -107,15 +107,8 @@ class CsvBillParser {
         ).toInstant(TimeZone.of("Asia/Shanghai"))
     }
 
-    private fun parseMoney(value: String): Money {
-        val normalized = value.trim().removePrefix("¥").replace(",", "")
-        val negative = normalized.startsWith('-')
-        val unsigned = normalized.removePrefix("-")
-        val parts = unsigned.split('.', limit = 2)
-        val yuan = parts[0].toLong()
-        val cents = parts.getOrElse(1) { "" }.padEnd(2, '0').take(2).toLong()
-        return Money((yuan * 100 + cents) * if (negative) -1 else 1)
-    }
+    private fun parseMoney(value: String): Money =
+        Money.parseOrNull(value) ?: error("金额格式有误：$value")
 
     private fun joinNote(vararg values: String?): String? = values
         .mapNotNull { it?.trim()?.takeIf(String::isNotEmpty)?.takeUnless { value -> value == "/" } }
