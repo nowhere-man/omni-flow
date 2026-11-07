@@ -46,6 +46,8 @@ import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
@@ -70,6 +72,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -94,7 +97,9 @@ import com.omniflow.core.domain.model.ThemeColor
 import com.omniflow.core.domain.model.TransactionType
 import com.omniflow.core.parser.ImportFormat
 import com.omniflow.android.WebDavCredentials
+import com.omniflow.android.WebDavSyncAdapter
 import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
@@ -102,6 +107,8 @@ import kotlinx.datetime.toLocalDateTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 
 internal enum class MorePage(val label: String, val icon: ImageVector) {
     HOME("更多", Icons.Default.Settings),
@@ -179,6 +186,7 @@ internal fun MoreScreen(
 
 @Composable
 private fun MoreHome(state: MoreUiState, onPage: (MorePage) -> Unit) {
+    var hideAmount by rememberSaveable { mutableStateOf(false) }
     LazyColumn(
         Modifier.readableContentWidth().fillMaxHeight().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -192,10 +200,31 @@ private fun MoreHome(state: MoreUiState, onPage: (MorePage) -> Unit) {
                 shape = RoundedCornerShape(OmniRadius.medium),
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("净资产", style = OmniText.caption)
-                    Text(state.accountSummary.netAssets.asRmb(), style = OmniText.amountHero, maxLines = 1)
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("净资产", style = OmniText.caption)
+                        IconButton(
+                            onClick = { hideAmount = !hideAmount },
+                            modifier = Modifier.size(24.dp),
+                        ) {
+                            Icon(
+                                if (hideAmount) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = if (hideAmount) "显示金额" else "隐藏金额",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
+                            )
+                        }
+                    }
                     Text(
-                        "资产 ${state.accountSummary.assets.asRmb()} · 负债 ${state.accountSummary.liabilities.asRmb()}",
+                        if (hideAmount) "••••••" else state.accountSummary.netAssets.asRmb(),
+                        style = OmniText.amountHero,
+                        maxLines = 1,
+                    )
+                    Text(
+                        if (hideAmount) "资产 •••••• · 负债 ••••••" else "资产 ${state.accountSummary.assets.asRmb()} · 负债 ${state.accountSummary.liabilities.asRmb()}",
                         style = OmniText.caption,
                     )
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -206,13 +235,22 @@ private fun MoreHome(state: MoreUiState, onPage: (MorePage) -> Unit) {
                 }
             }
         }
-        // 分块本身已经把功能分好了，再顶一行「账本与账户」这种标题只是多一层文字
         item { MoreSection(listOf(MorePage.SETTINGS), state, onPage) }
         item { MoreSection(listOf(MorePage.LEDGERS, MorePage.ACCOUNTS, MorePage.ASSETS), state, onPage) }
         item { MoreSection(listOf(MorePage.IMPORT, MorePage.EXPORT, MorePage.DATA, MorePage.AI), state, onPage) }
         item { MoreSection(listOf(MorePage.CATEGORIES, MorePage.TAGS), state, onPage) }
         item { MoreSection(listOf(MorePage.BUDGETS, MorePage.RULES, MorePage.REMINDERS), state, onPage) }
         state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error, style = OmniText.caption) } }
+        item {
+            Column(
+                Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text("OmniFlow", style = OmniText.titleRow, color = mutedContent())
+                Text("本地优先 · 开源透明 · 隐私至上", style = OmniText.caption, color = mutedContent())
+            }
+        }
         item { Spacer(Modifier.height(88.dp)) }
     }
 }
@@ -228,16 +266,43 @@ private fun MoreSection(pages: List<MorePage>, state: MoreUiState, onPage: (More
                 subtitle = page.description(state),
                 onClick = { onPage(page) },
                 trailing = {
-                    Icon(
-                        Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = mutedContent(),
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        page.badge(state)?.let { badgeText ->
+                            Surface(
+                                shape = RoundedCornerShape(OmniRadius.small),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                            ) {
+                                Text(
+                                    badgeText,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    style = OmniText.caption,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Spacer(Modifier.width(6.dp))
+                        }
+                        Icon(
+                            Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = mutedContent(),
+                        )
+                    }
                 },
             )
         }
     }
+}
+
+private fun MorePage.badge(state: MoreUiState): String? = when (this) {
+    MorePage.LEDGERS -> "${state.ledgers.size}"
+    MorePage.ACCOUNTS -> "${state.accounts.size}"
+    MorePage.CATEGORIES -> "${state.categories.count { it.parentId == null }}"
+    MorePage.TAGS -> if (state.tags.isNotEmpty()) "${state.tags.size}" else null
+    MorePage.RULES -> if (state.rules.isNotEmpty()) "${state.rules.size}" else null
+    MorePage.REMINDERS -> if (state.reminders.isNotEmpty()) "${state.reminders.size}" else null
+    MorePage.DATA -> if (state.syncState.phase == SyncPhase.RUNNING) "同步中" else null
+    else -> null
 }
 
 private fun MorePage.description(state: MoreUiState): String = when (this) {
@@ -245,8 +310,8 @@ private fun MorePage.description(state: MoreUiState): String = when (this) {
     MorePage.DATA -> syncLabel(state)
     MorePage.AI -> "导入时让大模型建议一级分类"
     MorePage.IMPORT -> "从支付宝、微信、银行流水批量导入"
-    MorePage.EXPORT -> "导出账本数据"
-    MorePage.SETTINGS -> "外观、主题色与应用锁"
+    MorePage.EXPORT -> "导出 CSV 表格或 JSON 备份"
+    MorePage.SETTINGS -> "外观、主题色、应用锁与缓存"
     MorePage.LEDGERS -> "账本封面、默认账本与收支概览"
     MorePage.ACCOUNTS -> "账户余额、卡片信息与流水"
     MorePage.ASSETS -> "净资产构成与负债"
@@ -254,7 +319,7 @@ private fun MorePage.description(state: MoreUiState): String = when (this) {
     MorePage.TAGS -> "账本标签"
     MorePage.BUDGETS -> budgetLabel(state)
     MorePage.RULES -> "自动分类和排除规则"
-    MorePage.REMINDERS -> "还款与订阅提醒"
+    MorePage.REMINDERS -> "还款与周期记账提醒"
 }
 
 @Composable
@@ -311,6 +376,8 @@ private fun SettingsPage(
     dynamicColorEnabled: Boolean,
     onDynamicColorChanged: (Boolean) -> Unit,
 ) {
+    val context = LocalContext.current
+    var cacheSubtitle by remember { mutableStateOf("清理导入临时文件与网络缓存") }
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -318,32 +385,35 @@ private fun SettingsPage(
                     title = "应用锁",
                     icon = Icons.Default.Lock,
                     subtitle = "启动或回到前台时验证设备凭据",
-                    shape = groupedOptionShape(0, 4),
+                    shape = groupedOptionShape(0, 5),
                     trailing = { Switch(state.preferences.appLockEnabled, viewModel::setAppLockEnabled) },
                 )
                 GroupedOptionRow(
                     title = "界面外观",
                     icon = Icons.Default.DarkMode,
                     subtitle = "跟随系统、浅色或深色",
-                    shape = groupedOptionShape(1, 4),
+                    shape = groupedOptionShape(1, 5),
                     content = {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            AppearanceMode.entries.forEach { mode ->
-                                FilterChip(
-                                    selected = state.preferences.appearanceMode == mode,
-                                    onClick = { viewModel.setAppearanceMode(mode) },
-                                    modifier = Modifier.weight(1f),
-                                    label = { Text(when (mode) { AppearanceMode.SYSTEM -> "系统"; AppearanceMode.LIGHT -> "浅色"; AppearanceMode.DARK -> "深色" }) },
-                                )
-                            }
-                        }
+                        OmniSegmented(
+                            options = AppearanceMode.entries,
+                            selected = state.preferences.appearanceMode,
+                            label = { mode ->
+                                when (mode) {
+                                    AppearanceMode.SYSTEM -> "系统"
+                                    AppearanceMode.LIGHT -> "浅色"
+                                    AppearanceMode.DARK -> "深色"
+                                }
+                            },
+                            onSelected = { viewModel.setAppearanceMode(it) },
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        )
                     },
                 )
                 GroupedOptionRow(
                     title = "主题色",
                     icon = Icons.Default.Palette,
                     subtitle = "选择按钮和导航的全局强调色",
-                    shape = groupedOptionShape(2, 4),
+                    shape = groupedOptionShape(2, 5),
                     content = {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             items(ThemeColor.entries, key = { it.name }) { color ->
@@ -380,8 +450,26 @@ private fun SettingsPage(
                     title = "动态取色",
                     icon = Icons.Default.Palette,
                     subtitle = "使用 Android 系统壁纸生成 Material 3 配色（Android 12+）",
-                    shape = groupedOptionShape(3, 4),
+                    shape = groupedOptionShape(3, 5),
                     trailing = { Switch(dynamicColorEnabled, onDynamicColorChanged) },
+                )
+                GroupedOptionRow(
+                    title = "清理临时缓存",
+                    icon = Icons.Default.Storage,
+                    subtitle = cacheSubtitle,
+                    shape = groupedOptionShape(4, 5),
+                    trailing = {
+                        OutlinedButton(
+                            onClick = {
+                                val deleted = context.cacheDir.deleteRecursively()
+                                cacheSubtitle = if (deleted) "临时缓存已成功清理" else "清理完成"
+                            },
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                            modifier = Modifier.height(32.dp),
+                        ) {
+                            Text("清理", style = MaterialTheme.typography.labelMedium)
+                        }
+                    },
                 )
             }
         }
@@ -412,6 +500,7 @@ private fun DataManagementPage(
     viewModel: OmniFlowViewModel,
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val secure = remember { context.getSharedPreferences("webdav", Context.MODE_PRIVATE) }
     var endpoint by remember { mutableStateOf(secure.getString("endpoint", "").orEmpty()) }
     var username by remember { mutableStateOf(secure.getString("username", "").orEmpty()) }
@@ -419,6 +508,8 @@ private fun DataManagementPage(
     var retention by remember(state.preferences.backupRetention) { mutableStateOf(state.preferences.backupRetention.toString()) }
     var pendingRestore by remember { mutableStateOf<com.omniflow.core.domain.model.RemoteBackupMeta?>(null) }
     var showPassword by remember { mutableStateOf(false) }
+    var testStatus by remember { mutableStateOf<String?>(null) }
+    var isTesting by remember { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Card(
@@ -428,11 +519,11 @@ private fun DataManagementPage(
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("WebDAV 全量备份", fontWeight = FontWeight.SemiBold)
-                    OutlinedTextField(endpoint, { endpoint = it }, label = { Text("服务器目录 URL") }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(username, { username = it }, label = { Text("用户名") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(endpoint, { endpoint = it; testStatus = null }, label = { Text("服务器目录 URL") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(username, { username = it; testStatus = null }, label = { Text("用户名") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(
                         password,
-                        { password = it },
+                        { password = it; testStatus = null },
                         label = { Text("密码") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
@@ -450,10 +541,37 @@ private fun DataManagementPage(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                     )
-                    Button(onClick = {
-                        WebDavCredentials.save(context, endpoint, username, password)
-                        viewModel.configureSync(SyncTarget.WEBDAV, retention.toIntOrNull() ?: 10)
-                    }) { Text("保存配置") }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                WebDavCredentials.save(context, endpoint, username, password)
+                                viewModel.configureSync(SyncTarget.WEBDAV, retention.toIntOrNull() ?: 10)
+                            },
+                            modifier = Modifier.weight(1f),
+                        ) { Text("保存配置") }
+                        OutlinedButton(
+                            onClick = {
+                                scope.launch {
+                                    isTesting = true
+                                    testStatus = "正在测试连接…"
+                                    val res = WebDavSyncAdapter.testConnection(endpoint, username, password)
+                                    testStatus = if (res.isSuccess) "连接成功！" else "连接失败: ${res.exceptionOrNull()?.message ?: "未知错误"}"
+                                    isTesting = false
+                                }
+                            },
+                            enabled = !isTesting && endpoint.isNotBlank(),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(if (isTesting) "测试中…" else "测试连接")
+                        }
+                    }
+                    testStatus?.let { status ->
+                        Text(
+                            status,
+                            color = if (status.startsWith("连接成功")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                            style = OmniText.caption,
+                        )
+                    }
                     if (state.syncState.phase == SyncPhase.RUNNING) {
                         LinearProgressIndicator(
                             progress = { state.syncState.progress ?: 0f },
@@ -649,10 +767,16 @@ private fun ImportSourceTile(
     }
 }
 
+internal enum class ExportFormatChoice(val label: String, val extension: String, val mimeType: String) {
+    CSV("CSV 表格", "csv", "text/csv"),
+    JSON("JSON 备份", "json", "application/json"),
+}
+
 @Composable
 private fun ExportPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
     val context = LocalContext.current
     var payload by remember { mutableStateOf<String?>(null) }
+    var formatChoice by remember { mutableStateOf(ExportFormatChoice.CSV) }
     val today = remember { Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date }
     var ledgerScope by remember { mutableStateOf<LedgerScope>(LedgerScope.All) }
     var incremental by remember { mutableStateOf(false) }
@@ -660,15 +784,24 @@ private fun ExportPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
     var endDate by remember { mutableStateOf(today) }
     var exportType by remember { mutableStateOf<TransactionType?>(null) }
     val exportDateRange = if (incremental) exportRange(startDate, endDate) else null
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        if (uri != null) context.contentResolver.openOutputStream(uri)?.use { it.write(payload.orEmpty().encodeToByteArray()) }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(formatChoice.mimeType)) { uri ->
+        if (uri != null && payload != null) {
+            context.contentResolver.openOutputStream(uri)?.use { stream ->
+                val content = if (formatChoice == ExportFormatChoice.CSV) {
+                    exportJsonToCsv(payload!!)
+                } else {
+                    payload!!
+                }
+                stream.write(content.toByteArray(Charsets.UTF_8))
+            }
+        }
         payload = null
         viewModel.consumeExportPayload()
     }
     LaunchedEffect(state.exportPayload) {
         state.exportPayload?.let {
             payload = it
-            launcher.launch("OmniFlow-Export.json")
+            launcher.launch("OmniFlow-Export-${today}.${formatChoice.extension}")
         }
     }
     LaunchedEffect(ledgerScope, incremental, startDate, endDate, exportType, state.ledgers) {
@@ -680,6 +813,18 @@ private fun ExportPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            item {
+                Text("导出格式", style = OmniText.caption, color = mutedContent())
+            }
+            item {
+                OmniSegmented(
+                    options = ExportFormatChoice.entries,
+                    selected = formatChoice,
+                    label = { it.label },
+                    onSelected = { formatChoice = it },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
             item {
                 Text("账本", style = OmniText.caption, color = mutedContent())
             }
@@ -820,6 +965,79 @@ internal fun exportRange(first: LocalDate, second: LocalDate): DateRange {
         start.atStartOfDayIn(zone),
         LocalDate(exclusive.year, exclusive.monthValue, exclusive.dayOfMonth).atStartOfDayIn(zone),
     )
+}
+
+internal fun exportJsonToCsv(payload: String): String {
+    val root = JSONObject(payload)
+    val books = mutableMapOf<String, String>()
+    root.optJSONArray("bookJsonString")?.let { arr ->
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            books[obj.optString("id")] = obj.optString("name")
+        }
+    }
+    val accounts = mutableMapOf<String, String>()
+    root.optJSONArray("accountJsonString")?.let { arr ->
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            accounts[obj.optString("identifier")] = obj.optString("name")
+        }
+    }
+    val categories = mutableMapOf<String, Pair<String, String>>()
+    root.optJSONArray("categoryJsonString")?.let { arr ->
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            val typeStr = if (obj.optInt("type") == 0) "收入" else "支出"
+            categories[obj.optString("identifier")] = Pair(obj.optString("name"), typeStr)
+        }
+    }
+    val marks = mutableMapOf<String, String>()
+    root.optJSONArray("markJsonString")?.let { arr ->
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            marks[obj.optString("id")] = obj.optString("name")
+        }
+    }
+
+    val sb = StringBuilder()
+    sb.append("\uFEFF")
+    sb.append("时间,账本,收支类型,分类,账户,金额,标签,备注\n")
+
+    val entries = root.optJSONArray("entryJsonString") ?: JSONArray()
+    for (i in 0 until entries.length()) {
+        val entry = entries.getJSONObject(i)
+        val epochSeconds = entry.optLong("createDate")
+        val timeText = if (epochSeconds > 0) {
+            Instant.fromEpochMilliseconds(epochSeconds * 1000).backupTimeText()
+        } else ""
+        val bookName = books[entry.optString("bookID")] ?: ""
+        val accountName = accounts[entry.optString("accountID")] ?: ""
+        val catInfo = categories[entry.optString("categoryID")]
+        val catName = catInfo?.first ?: ""
+        val typeName = catInfo?.second ?: "支出"
+        val value = entry.optString("value")
+        val markIds = entry.optString("markIDs").split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        val tagsStr = markIds.mapNotNull { marks[it] }.joinToString(";")
+        val note = entry.optString("content")
+
+        sb.append(escapeCsv(timeText)).append(",")
+        sb.append(escapeCsv(bookName)).append(",")
+        sb.append(escapeCsv(typeName)).append(",")
+        sb.append(escapeCsv(catName)).append(",")
+        sb.append(escapeCsv(accountName)).append(",")
+        sb.append(escapeCsv(value)).append(",")
+        sb.append(escapeCsv(tagsStr)).append(",")
+        sb.append(escapeCsv(note)).append("\n")
+    }
+    return sb.toString()
+}
+
+private fun escapeCsv(value: String): String {
+    return if (value.contains(",") || value.contains("\"") || value.contains("\n") || value.contains("\r")) {
+        "\"" + value.replace("\"", "\"\"") + "\""
+    } else {
+        value
+    }
 }
 
 private fun syncLabel(state: MoreUiState): String = when (state.syncState.phase) {

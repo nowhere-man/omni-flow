@@ -55,11 +55,9 @@ private val FlatCategoryIconOptions = listOf(
     CategoryIconOption("gift", "礼物"),
 )
 
-internal val CategoryIconOptions = FlatCategoryIconOptions + FlatCategoryIconOptions.map {
-    CategoryIconOption("fluent-${it.key}", "彩·${it.label}")
-}
+internal val CategoryIconOptions = FlatCategoryIconOptions
 
 private val categoryIconKeys = CategoryIconOptions.mapTo(hashSetOf(), CategoryIconOption::key)
 
 internal fun categoryIconKey(iconKey: String?): String =
-    iconKey?.takeIf(categoryIconKeys::contains) ?: "category"
+    iconKey?.removePrefix("fluent-")?.takeIf(categoryIconKeys::contains) ?: "category"

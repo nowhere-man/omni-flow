@@ -161,9 +161,29 @@ class WebDavSyncAdapter(context: Context) : SyncAdapter {
         }
     }
 
-    private companion object {
-        val HREF = Regex("<[^>]*href[^>]*>(.*?)</[^>]*href>", RegexOption.IGNORE_CASE)
+    companion object {
         const val PROPFIND_BODY = """<?xml version="1.0"?><propfind xmlns="DAV:"><prop><getlastmodified/></prop></propfind>"""
+        val HREF = Regex("<[^>]*href[^>]*>(.*?)</[^>]*href>", RegexOption.IGNORE_CASE)
+
+        suspend fun testConnection(endpoint: String, username: String, password: String): Result<Unit> = withContext(Dispatchers.IO) {
+            runCatching {
+                val client = WebDavHttpClient(
+                    client = OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS).readTimeout(10, TimeUnit.SECONDS).build(),
+                    credentials = { username to password },
+                )
+                val normalized = if (endpoint.endsWith('/')) endpoint else "$endpoint/"
+                client.execute(
+                    normalized,
+                    "PROPFIND",
+                    mapOf("Depth" to "0", "Content-Type" to "application/xml; charset=utf-8"),
+                    PROPFIND_BODY,
+                ).use { response ->
+                    if (!response.isSuccessful && response.code != 207) {
+                        error("服务器响应状态异常：HTTP ${response.code} ${response.message}")
+                    }
+                }
+            }
+        }
     }
 }
 

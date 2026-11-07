@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -596,15 +598,21 @@ private fun CategoryCardRow(
                 TextButton(onClick = onToggle) { Text(if (expanded) "收起" else "展开") }
             }
             if (expanded) {
-                Row(
-                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                FlowRow(
+                    Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     children.forEach { child ->
                         FilterChip(selected = false, onClick = { onEditChild(child) }, label = { Text(child.name, maxLines = 1) })
                     }
-                    TextButton(onClick = onAddChild) { Text("+ 新建") }
+                    OutlinedButton(
+                        onClick = onAddChild,
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                        modifier = Modifier.height(32.dp),
+                    ) {
+                        Text("+ 新建二级", style = MaterialTheme.typography.labelMedium)
+                    }
                 }
                 Spacer(Modifier.height(6.dp))
             }

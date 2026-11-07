@@ -2,6 +2,7 @@ package com.omniflow.android.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -71,6 +74,22 @@ internal fun AiSettingsPage() {
                             )
                         }
                         Switch(enabled, { enabled = it; message = null })
+                    }
+                    Text("常用服务商快速填入", style = OmniText.caption, color = mutedContent())
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(AiPresets) { preset ->
+                            OutlinedButton(
+                                onClick = {
+                                    baseUrl = preset.baseUrl
+                                    model = preset.model
+                                    message = "已填入 ${preset.name} 预设"
+                                },
+                                shape = RoundedCornerShape(OmniRadius.small),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                            ) {
+                                Text(preset.name, style = OmniText.caption)
+                            }
+                        }
                     }
                     OutlinedTextField(
                         baseUrl,
@@ -156,3 +175,14 @@ internal fun AiSettingsPage() {
         item { Spacer(Modifier.height(24.dp)) }
     }
 }
+
+private data class AiPreset(val name: String, val baseUrl: String, val model: String)
+
+private val AiPresets = listOf(
+    AiPreset("DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat"),
+    AiPreset("通义千问", "https://dashscope.aliyuncs.com/compatible-mode/v1", "qwen-plus"),
+    AiPreset("智谱 GLM", "https://open.bigmodel.cn/api/paas/v4", "glm-4-flash"),
+    AiPreset("Kimi", "https://api.moonshot.cn/v1", "moonshot-v1-8k"),
+    AiPreset("OpenAI", "https://api.openai.com/v1", "gpt-4o-mini"),
+    AiPreset("Ollama 本地", "http://10.0.2.2:11434/v1", "qwen2.5:7b"),
+)
