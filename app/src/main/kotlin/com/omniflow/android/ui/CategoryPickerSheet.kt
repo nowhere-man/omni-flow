@@ -17,6 +17,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -61,16 +64,20 @@ internal fun CategoryPickerSheet(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2)
-            OmniSegmented(
-                options = TransactionType.entries,
-                selected = type,
-                label = { if (it == TransactionType.EXPENSE) "支出" else "收入" },
-                onSelected = {
-                    type = it
-                    primaryId = null
-                },
-                modifier = Modifier.fillMaxWidth(),
-            )
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                val options = listOf(TransactionType.EXPENSE, TransactionType.INCOME)
+                options.forEachIndexed { index, opt ->
+                    SegmentedButton(
+                        selected = type == opt,
+                        onClick = {
+                            type = opt
+                            primaryId = null
+                        },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                        label = { Text(if (opt == TransactionType.EXPENSE) "支出" else "收入") },
+                    )
+                }
+            }
             if (primaryCategories.isEmpty()) {
                 Text("当前账本还没有该类型的分类", color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {

@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
  * FilterChip 每个都自带边框和勾选图标，几个并排就显得碎；分段控件只有一个外框，
  * 选中态是容器内的一块，视觉上更整。
  */
+@Deprecated("全面使用 M3 原生 SingleChoiceSegmentedButtonRow + SegmentedButton 替代自绘 OmniSegmented")
 @Composable
 internal fun <T> OmniSegmented(
     options: List<T>,

@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
 import com.omniflow.android.ui.feature.batch.BatchActionBar
 import com.omniflow.android.ui.feature.batch.BatchAccountPickerDialog
 import com.omniflow.android.ui.feature.batch.BatchDeleteConfirmDialog
@@ -143,13 +144,13 @@ internal fun SearchScreen(
                         onClick = onClear,
                         enabled = hasInput || state.result != null,
                         modifier = Modifier.weight(1f).height(FieldHeight),
-                        shape = RoundedCornerShape(OmniRadius.small),
+                        shape = OmniShapeTokens.outlinedButton,
                     ) { Text("清除") }
                     Button(
                         onClick = { focusManager.clearFocus(); onSearch() },
                         enabled = hasInput,
                         modifier = Modifier.weight(1f).height(FieldHeight),
-                        shape = RoundedCornerShape(OmniRadius.small),
+                        shape = OmniShapeTokens.filledButton,
                     ) { Text("搜索") }
                 }
             }
@@ -315,7 +316,7 @@ internal fun SearchScreen(
 private fun KeywordField(value: String, onValue: (String) -> Unit, onSearch: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth().height(48.dp),
-        shape = CircleShape,
+        shape = OmniShapeTokens.searchBar,
         color = surfaceInset(),
     ) {
         Row(Modifier.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {

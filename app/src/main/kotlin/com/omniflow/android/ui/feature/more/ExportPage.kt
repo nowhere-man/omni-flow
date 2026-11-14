@@ -21,6 +21,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -39,7 +42,6 @@ import com.omniflow.android.ui.LedgerScopePill
 import com.omniflow.android.ui.MoreUiState
 import com.omniflow.android.ui.OmniFlowViewModel
 import com.omniflow.android.ui.OmniRadius
-import com.omniflow.android.ui.OmniSegmented
 import com.omniflow.android.ui.OmniText
 import com.omniflow.android.ui.designsystem.components.OmniExpressiveSwitch
 import com.omniflow.android.ui.exportRange
@@ -109,13 +111,17 @@ fun ExportPage(
                 Text("导出格式", style = OmniText.caption, color = mutedContent())
             }
             item {
-                OmniSegmented(
-                    options = ExportFormatChoice.entries,
-                    selected = formatChoice,
-                    label = { it.label },
-                    onSelected = { formatChoice = it },
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    val formats = ExportFormatChoice.entries
+                    formats.forEachIndexed { index, format ->
+                        SegmentedButton(
+                            selected = formatChoice == format,
+                            onClick = { formatChoice = format },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = formats.size),
+                            label = { Text(format.label) },
+                        )
+                    }
+                }
             }
             item {
                 Text("账本", style = OmniText.caption, color = mutedContent())
@@ -171,20 +177,26 @@ fun ExportPage(
                 Text("类别", style = OmniText.caption, color = mutedContent())
             }
             item {
-                OmniSegmented(
-                    options = listOf<TransactionType?>(null, TransactionType.INCOME, TransactionType.EXPENSE, TransactionType.TRANSFER),
-                    selected = exportType,
-                    label = { type ->
-                        when (type) {
-                            null -> "全部"
-                            TransactionType.INCOME -> "收入"
-                            TransactionType.EXPENSE -> "支出"
-                            TransactionType.TRANSFER -> "转账"
-                        }
-                    },
-                    onSelected = { exportType = it },
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    val types = listOf<TransactionType?>(null, TransactionType.INCOME, TransactionType.EXPENSE, TransactionType.TRANSFER)
+                    types.forEachIndexed { index, type ->
+                        SegmentedButton(
+                            selected = exportType == type,
+                            onClick = { exportType = type },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = types.size),
+                            label = {
+                                Text(
+                                    when (type) {
+                                        null -> "全部"
+                                        TransactionType.INCOME -> "收入"
+                                        TransactionType.EXPENSE -> "支出"
+                                        TransactionType.TRANSFER -> "转账"
+                                    }
+                                )
+                            },
+                        )
+                    }
+                }
             }
             item {
                 Surface(

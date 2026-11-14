@@ -25,6 +25,9 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,9 +43,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.OmniRadius
-import com.omniflow.android.ui.OmniSegmented
 import com.omniflow.android.ui.OmniText
 import com.omniflow.android.ui.designsystem.components.OmniDatePickerDialog
+import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
 import com.omniflow.android.ui.designsystem.tokens.categoryBadgeColors
 import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
 import com.omniflow.android.ui.mutedContent
@@ -79,28 +82,34 @@ fun SearchFilterPanel(
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(OmniRadius.medium),
+        shape = OmniShapeTokens.card,
         color = surfaceCard(),
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // 类型选择
-            OmniSegmented(
-                options = SearchTypeOptions,
-                selected = state.query.type,
-                label = {
-                    when (it) {
-                        null -> "全部"
-                        TransactionType.EXPENSE -> "支出"
-                        TransactionType.INCOME -> "收入"
-                        TransactionType.TRANSFER -> "转账"
-                    }
-                },
-                onSelected = onType,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            // 类型选择：M3 SingleChoiceSegmentedButtonRow
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                SearchTypeOptions.forEachIndexed { index, opt ->
+                    SegmentedButton(
+                        selected = state.query.type == opt,
+                        onClick = { onType(opt) },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = SearchTypeOptions.size),
+                        label = {
+                            Text(
+                                when (opt) {
+                                    null -> "全部"
+                                    TransactionType.EXPENSE -> "支出"
+                                    TransactionType.INCOME -> "收入"
+                                    TransactionType.TRANSFER -> "转账"
+                                },
+                                maxLines = 1,
+                            )
+                        },
+                    )
+                }
+            }
 
             // 账本与账户
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -141,7 +150,7 @@ fun SearchFilterPanel(
             Surface(
                 onClick = { showCategoryPicker = true },
                 modifier = Modifier.fillMaxWidth().height(FieldHeight),
-                shape = RoundedCornerShape(OmniRadius.small),
+                shape = OmniShapeTokens.mediumSmall,
                 color = surfaceInset(),
             ) {
                 Row(
@@ -225,20 +234,8 @@ fun SearchFilterPanel(
 
             // 最低与最高金额
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterField(
-                    "最低金额",
-                    state.minimumAmountText,
-                    { onAmount(it, state.maximumAmountText) },
-                    Modifier.weight(1f),
-                    KeyboardType.Decimal,
-                )
-                FilterField(
-                    "最高金额",
-                    state.maximumAmountText,
-                    { onAmount(state.minimumAmountText, it) },
-                    Modifier.weight(1f),
-                    KeyboardType.Decimal,
-                )
+                FilterField("最低金额", state.minimumAmountText, { onAmount(it, state.maximumAmountText) }, Modifier.weight(1f), KeyboardType.Decimal)
+                FilterField("最高金额", state.maximumAmountText, { onAmount(state.minimumAmountText, it) }, Modifier.weight(1f), KeyboardType.Decimal)
             }
 
             // 日期范围
@@ -270,7 +267,7 @@ fun FilterField(
 ) {
     Surface(
         modifier = modifier.height(FieldHeight),
-        shape = RoundedCornerShape(OmniRadius.small),
+        shape = OmniShapeTokens.textField,
         color = surfaceInset(),
     ) {
         Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -307,7 +304,7 @@ fun <T> FilterMenu(
         Surface(
             onClick = { expanded = true },
             modifier = Modifier.fillMaxWidth().height(FieldHeight),
-            shape = RoundedCornerShape(OmniRadius.small),
+            shape = OmniShapeTokens.mediumSmall,
             color = surfaceInset(),
         ) {
             Row(Modifier.padding(start = 12.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -339,15 +336,14 @@ private fun DateFilterRow(range: DateRange?, onRange: (DateRange?) -> Unit) {
     var pickingStart by remember { mutableStateOf(false) }
     var pickingEnd by remember { mutableStateOf(false) }
 
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        DateFilterButton(start?.toString() ?: "开始日期", Modifier.weight(1f)) {
-            pickingStart = true
-        }
-        DateFilterButton(end?.toString() ?: "结束日期", Modifier.weight(1f)) {
-            pickingEnd = true
-        }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        DateFilterButton(start?.toString() ?: "开始日期", Modifier.weight(1f)) { pickingStart = true }
+        DateFilterButton(end?.toString() ?: "结束日期", Modifier.weight(1f)) { pickingEnd = true }
         if (range != null || start != null || end != null) {
-            TextButton(onClick = { start = null; end = null; onRange(null) }) {
+            TextButton(
+                onClick = { start = null; end = null; onRange(null) },
+                shape = OmniShapeTokens.textButton,
+            ) {
                 Text("清除", style = OmniText.caption)
             }
         }
@@ -381,7 +377,7 @@ private fun DateFilterButton(label: String, modifier: Modifier, onClick: () -> U
     Surface(
         onClick = onClick,
         modifier = modifier.height(FieldHeight),
-        shape = RoundedCornerShape(OmniRadius.small),
+        shape = OmniShapeTokens.button,
         color = surfaceInset(),
     ) {
         Box(Modifier.padding(horizontal = 12.dp), contentAlignment = Alignment.CenterStart) {
