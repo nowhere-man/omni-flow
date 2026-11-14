@@ -1,12 +1,10 @@
 package com.omniflow.android.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.Rule
 import androidx.compose.material.icons.filled.AccountBalance
@@ -22,8 +20,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,10 +27,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.omniflow.android.ui.feature.account.AccountListScreen
 import com.omniflow.android.ui.feature.account.AccountViewModel
@@ -45,12 +39,14 @@ import com.omniflow.android.ui.feature.ledger.LedgerListScreen
 import com.omniflow.android.ui.feature.ledger.LedgerViewModel
 import com.omniflow.android.ui.feature.ledger.LedgerViewModelFactory
 import com.omniflow.android.ui.feature.more.AboutPage
+import com.omniflow.android.ui.feature.more.AiSettingsPage
 import com.omniflow.android.ui.feature.more.DataManagementPage
 import com.omniflow.android.ui.feature.more.ExportPage
 import com.omniflow.android.ui.feature.more.ImportPage
 import com.omniflow.android.ui.feature.more.MoreHomeScreen
 import com.omniflow.android.ui.feature.more.SettingsPage
 import com.omniflow.android.ui.feature.reminder.ReminderScreen
+import com.omniflow.android.ui.feature.rule.RuleScreen
 import com.omniflow.android.ui.feature.tag.TagScreen
 
 enum class MorePage(val label: String, val icon: ImageVector) {
@@ -86,26 +82,7 @@ internal fun MoreScreen(
     ledgerViewModel: LedgerViewModel = viewModel(factory = LedgerViewModelFactory(viewModel.sharedApp)),
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier.fillMaxSize()) {
-        val hasOwnScaffold = page in setOf(
-            MorePage.HOME,
-            MorePage.ABOUT,
-            MorePage.LEDGERS,
-            MorePage.ACCOUNTS,
-            MorePage.ASSETS,
-            MorePage.CATEGORIES,
-            MorePage.TAGS,
-            MorePage.BUDGETS,
-            MorePage.REMINDERS,
-        )
-        if (!hasOwnScaffold) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = mutedContent())
-                }
-                Text(page.label, style = OmniText.titleRow)
-            }
-        }
+    Box(modifier.fillMaxSize()) {
         when (page) {
             MorePage.HOME -> MoreHomeScreen(
                 state = state,
@@ -113,15 +90,12 @@ internal fun MoreScreen(
                 onSaveName = { viewModel.setUserName(it) },
             )
             MorePage.ABOUT -> AboutPage(onBack = onBack)
-            MorePage.SETTINGS -> SettingsPage(
-                state,
-                viewModel,
-            )
-            MorePage.DATA -> DataManagementPage(state, viewModel)
-            MorePage.AI -> AiSettingsPage()
+            MorePage.SETTINGS -> SettingsPage(state, viewModel, onBack = onBack)
+            MorePage.DATA -> DataManagementPage(state, viewModel, onBack = onBack)
+            MorePage.AI -> AiSettingsPage(onBack = onBack)
             MorePage.BUDGETS -> BudgetPage(state, viewModel, onBack = onBack)
-            MorePage.IMPORT -> ImportPage(state, viewModel)
-            MorePage.EXPORT -> ExportPage(state, viewModel)
+            MorePage.IMPORT -> ImportPage(state, viewModel, onBack = onBack)
+            MorePage.EXPORT -> ExportPage(state, viewModel, onBack = onBack)
             MorePage.LEDGERS -> LedgerListScreen(ledgerViewModel, onOpenLedger = onOpenLedger, onBack = onBack)
             MorePage.ACCOUNTS -> AccountListScreen(accountViewModel, onOpenAccount = onOpenAccount, onBack = onBack)
             MorePage.ASSETS -> AssetScreen(state, onBack = onBack, onPage = onPage)
@@ -133,15 +107,7 @@ internal fun MoreScreen(
                 onRequestNotificationPermission = onRequestNotificationPermission,
                 onBack = onBack,
             )
-            MorePage.RULES -> ManagementPage(
-                page,
-                state,
-                viewModel,
-                onPage = onPage,
-                onRequestNotificationPermission = onRequestNotificationPermission,
-                onOpenAccount = onOpenAccount,
-                onOpenCategory = onOpenCategory,
-            )
+            MorePage.RULES -> RuleScreen(state, viewModel, onBack = onBack)
         }
     }
 }
