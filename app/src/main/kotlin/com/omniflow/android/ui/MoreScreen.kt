@@ -83,7 +83,7 @@ internal fun MoreScreen(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxSize()) {
-        if (page != MorePage.HOME && page != MorePage.ABOUT) {
+        if (page != MorePage.HOME && page != MorePage.ABOUT && page != MorePage.LEDGERS) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = mutedContent())
@@ -107,7 +107,7 @@ internal fun MoreScreen(
             MorePage.BUDGETS -> BudgetPage(state, viewModel)
             MorePage.IMPORT -> ImportPage(state, viewModel)
             MorePage.EXPORT -> ExportPage(state, viewModel)
-            MorePage.LEDGERS -> LedgerListScreen(ledgerViewModel, onOpenLedger = onOpenLedger)
+            MorePage.LEDGERS -> LedgerListScreen(ledgerViewModel, onOpenLedger = onOpenLedger, onBack = onBack)
             MorePage.ACCOUNTS -> AccountListScreen(accountViewModel, onOpenAccount = onOpenAccount)
             MorePage.RULES,
             MorePage.REMINDERS,

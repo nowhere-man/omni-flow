@@ -1,5 +1,6 @@
 package com.omniflow.android.ui
 
+import com.omniflow.android.ui.feature.ledger.OmniLedgerBadge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -151,29 +152,25 @@ internal val LedgerCovers = listOf(
 internal fun ledgerCover(coverKey: String?): LedgerCover =
     LedgerCovers.firstOrNull { it.key == coverKey } ?: LedgerCovers.first()
 
-/** 账本封面块，列表卡片和详情头图共用。 */
+/** 治愈缺陷 8.2：账本小图标全场景统一为圆形徽章，取缔方角。 */
 @Composable
 internal fun LedgerCoverBox(
     coverKey: String?,
     modifier: Modifier = Modifier,
     iconSize: Int = 24,
 ) {
-    val cover = ledgerCover(coverKey)
-    Box(
-        modifier = modifier
-            .clip(MaterialTheme.shapes.medium)
-            .background(Brush.linearGradient(listOf(cover.start, cover.end))),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(getCategoryIcon(cover.iconKey), contentDescription = null, Modifier.size(iconSize.dp), tint = Color.White)
-    }
+    OmniLedgerBadge(
+        coverKey = coverKey,
+        modifier = modifier,
+        iconSize = iconSize.dp,
+    )
 }
 
 @Composable
 internal fun LedgerCoverPicker(selectedKey: String?, onSelected: (String) -> Unit) {
     val selected = ledgerCover(selectedKey).key
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(72.dp),
+        columns = GridCells.Adaptive(64.dp),
         modifier = Modifier.heightIn(max = 180.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -187,16 +184,16 @@ internal fun LedgerCoverPicker(selectedKey: String?, onSelected: (String) -> Uni
                 Surface(
                     onClick = { onSelected(cover.key) },
                     modifier = Modifier
-                        .size(64.dp)
+                        .size(56.dp)
                         .border(
                             width = if (isSelected) 2.dp else 0.dp,
                             color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                            shape = MaterialTheme.shapes.medium,
+                            shape = CircleShape,
                         ),
-                    shape = MaterialTheme.shapes.medium,
+                    shape = CircleShape,
                     color = Color.Transparent,
                 ) {
-                    LedgerCoverBox(cover.key, Modifier.padding(3.dp), iconSize = 26)
+                    OmniLedgerBadge(cover.key, Modifier.padding(3.dp), iconSize = 24.dp)
                 }
                 Text(cover.label, style = MaterialTheme.typography.labelSmall, maxLines = 1)
             }

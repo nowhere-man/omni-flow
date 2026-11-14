@@ -112,6 +112,29 @@ object OmniColorTokens {
     val LedgerCoverFitnessEnd = Color(0xFFAEDD9F)
     val LedgerCoverInvestStart = Color(0xFFD4AD62)
     val LedgerCoverInvestEnd = Color(0xFFEED08E)
+
+    val ShelfPlankLight = Color(0xFFDCC8B0)
+    val ShelfPlankDark = Color(0xFF332D26)
+    val ShelfPlankShadowLight = Color(0x336B5237)
+    val ShelfPlankShadowDark = Color(0x66000000)
+}
+
+fun ledgerCoverGradient(colorKey: String): Pair<Color, Color> = when (colorKey) {
+    "family" -> Pair(OmniColorTokens.LedgerCoverFamilyStart, OmniColorTokens.LedgerCoverFamilyEnd)
+    "travel" -> Pair(OmniColorTokens.LedgerCoverTravelStart, OmniColorTokens.LedgerCoverTravelEnd)
+    "work" -> Pair(OmniColorTokens.LedgerCoverWorkStart, OmniColorTokens.LedgerCoverWorkEnd)
+    "study" -> Pair(OmniColorTokens.LedgerCoverStudyStart, OmniColorTokens.LedgerCoverStudyEnd)
+    "car" -> Pair(OmniColorTokens.LedgerCoverCarStart, OmniColorTokens.LedgerCoverCarEnd)
+    "fitness" -> Pair(OmniColorTokens.LedgerCoverFitnessStart, OmniColorTokens.LedgerCoverFitnessEnd)
+    "invest" -> Pair(OmniColorTokens.LedgerCoverInvestStart, OmniColorTokens.LedgerCoverInvestEnd)
+    else -> Pair(OmniColorTokens.LedgerCoverDailyStart, OmniColorTokens.LedgerCoverDailyEnd)
+}
+
+@Composable
+@ReadOnlyComposable
+fun ledgerBadgeColors(colorKey: String): Pair<Color, Color> {
+    val gradient = ledgerCoverGradient(colorKey)
+    return Pair(gradient.first.copy(alpha = 0.25f), gradient.first)
 }
 
 enum class SemanticBadgeType {
