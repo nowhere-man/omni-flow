@@ -66,6 +66,102 @@ class SqlDelightTransactionRepositoryTest {
         assertEquals(null, repository.activeTransaction("transaction"))
     }
 
+    @Test
+    fun createsTransferTransactionAndUpdatesBothAccountsAtomically() = runBlocking {
+        val database = createJvmDatabase()
+        seed(database)
+        database.accountQueries.insertAccount(
+            "second-account", "微信零钱", "E_WALLET", "wallet", null, null, 500, 1, 1, 1,
+        )
+        val repository = SqlDelightTransactionRepository(database)
+
+        val transfer = Transaction(
+            id = "transfer-1",
+            ledgerId = "ledger",
+            accountId = "account",
+            targetAccountId = "second-account",
+            categoryId = "",
+            amount = Money(200),
+            type = TransactionType.TRANSFER,
+            occurredAt = Instant.fromEpochMilliseconds(1_000),
+            note = "转账测试",
+            isExcluded = false,
+            source = null,
+            externalId = null,
+        )
+        repository.create(transfer)
+
+        val balance1 = database.accountQueries.activeAccountBalance("account").executeAsOne()
+        val balance2 = database.accountQueries.activeAccountBalance("second-account").executeAsOne()
+        assertEquals(-200L, balance1)
+        assertEquals(700L, balance2)
+
+        val saved = repository.activeTransaction("transfer-1")
+        assertEquals(TransactionType.TRANSFER, saved?.type)
+        assertEquals("second-account", saved?.targetAccountId)
+        assertEquals(true, saved?.isExcluded)
+    }
+
+    @Test
+    fun archivesTransferTransactionAndRevertsBothAccountBalances() = runBlocking {
+        val database = createJvmDatabase()
+        seed(database)
+        database.accountQueries.insertAccount(
+            "second-account", "微信零钱", "E_WALLET", "wallet", null, null, 1000, 1, 1, 1,
+        )
+        val repository = SqlDelightTransactionRepository(database)
+
+        val transfer = Transaction(
+            id = "transfer-2",
+            ledgerId = "ledger",
+            accountId = "account",
+            targetAccountId = "second-account",
+            categoryId = "",
+            amount = Money(300),
+            type = TransactionType.TRANSFER,
+            occurredAt = Instant.fromEpochMilliseconds(1_000),
+            note = null,
+            isExcluded = false,
+            source = null,
+            externalId = null,
+        )
+        repository.create(transfer)
+        assertEquals(-300L, database.accountQueries.activeAccountBalance("account").executeAsOne())
+        assertEquals(1300L, database.accountQueries.activeAccountBalance("second-account").executeAsOne())
+
+        repository.archive("transfer-2")
+        assertEquals(0L, database.accountQueries.activeAccountBalance("account").executeAsOne())
+        assertEquals(1000L, database.accountQueries.activeAccountBalance("second-account").executeAsOne())
+    }
+
+    @Test
+    fun rejectsTransferWithSameFromAndToAccount() = runBlocking {
+        val database = createJvmDatabase()
+        seed(database)
+        val repository = SqlDelightTransactionRepository(database)
+
+        val invalid = Transaction(
+            id = "invalid-transfer",
+            ledgerId = "ledger",
+            accountId = "account",
+            targetAccountId = "account",
+            categoryId = "",
+            amount = Money(100),
+            type = TransactionType.TRANSFER,
+            occurredAt = Instant.fromEpochMilliseconds(1_000),
+            note = null,
+            isExcluded = false,
+            source = null,
+            externalId = null,
+        )
+        try {
+            repository.create(invalid)
+            fail("Expected failure when from and to accounts are identical")
+        } catch (e: IllegalArgumentException) {
+            assertEquals("转出账户与转入账户不能相同", e.message)
+        }
+    }
+
     private fun seed(database: com.omniflow.core.db.OmniFlowDatabase) {
         database.ledgerQueries.insertLedger("ledger", "账本", null, 1, 1)
         database.ledgerQueries.insertLedger("other-ledger", "其他账本", null, 1, 1)

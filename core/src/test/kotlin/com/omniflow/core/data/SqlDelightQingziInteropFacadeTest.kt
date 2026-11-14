@@ -18,7 +18,7 @@ class SqlDelightQingziInteropFacadeTest {
         database.categoryQueries.insertCategory("category", "ledger", null, "餐饮", "utensils", "EXPENSE", 1, 1)
         database.transactionQueries.insertTransaction(
             "transaction", "ledger", "account", "category", 1_234, "EXPENSE", 1_000,
-            "午餐", 0, null, null, 1, 1,
+            "午餐", 0, null, null, 1, 1, null,
         )
 
         val exported = SqlDelightQingziInteropFacade(database).export().getOrThrow()
@@ -40,15 +40,15 @@ class SqlDelightQingziInteropFacadeTest {
         database.categoryQueries.insertCategory("other-expense", "other-ledger", null, "交通", "car", "EXPENSE", 1, 1)
         database.transactionQueries.insertTransaction(
             "expense", "ledger", "account", "expense", 100, "EXPENSE", 1_000,
-            null, 0, null, null, 1, 1,
+            null, 0, null, null, 1, 1, null,
         )
         database.transactionQueries.insertTransaction(
             "income", "ledger", "account", "income", 200, "INCOME", 1_000,
-            null, 0, null, null, 1, 1,
+            null, 0, null, null, 1, 1, null,
         )
         database.transactionQueries.insertTransaction(
             "other-expense", "other-ledger", "account", "other-expense", 300, "EXPENSE", 1_000,
-            null, 0, null, null, 1, 1,
+            null, 0, null, null, 1, 1, null,
         )
 
         val exported = SqlDelightQingziInteropFacade(database).export(

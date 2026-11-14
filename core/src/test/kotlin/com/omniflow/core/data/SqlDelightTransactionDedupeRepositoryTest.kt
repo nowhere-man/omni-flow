@@ -16,7 +16,7 @@ class SqlDelightTransactionDedupeRepositoryTest {
         database.categoryQueries.insertCategory("food", "ledger", null, "餐饮", "utensils", "EXPENSE", 1, 1)
         database.transactionQueries.insertTransaction(
             "transaction", "ledger", "account", "food", 1200, "EXPENSE", 10_000,
-            "星巴克咖啡上海店", 0, null, null, 1, 1,
+            "星巴克咖啡上海店", 0, null, null, 1, 1, null,
         )
 
         assertTrue(

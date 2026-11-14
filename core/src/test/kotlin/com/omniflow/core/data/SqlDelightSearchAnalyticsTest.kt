@@ -346,7 +346,7 @@ class SqlDelightSearchAnalyticsTest {
     ) {
         database.transactionQueries.insertTransaction(
             id, ledgerId, accountId, categoryId, amount, type, occurredAt, note,
-            if (excluded) 1 else 0, null, null, occurredAt, occurredAt,
+            if (excluded) 1 else 0, null, null, occurredAt, occurredAt, null,
         )
     }
 }
