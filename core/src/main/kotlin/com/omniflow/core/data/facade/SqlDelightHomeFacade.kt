@@ -45,6 +45,7 @@ class SqlDelightHomeFacade(
                         when (item.type) {
                             TransactionType.EXPENSE -> total.copy(expenseTotal = total.expenseTotal + item.amount)
                             TransactionType.INCOME -> total.copy(incomeTotal = total.incomeTotal + item.amount)
+                            TransactionType.TRANSFER -> total
                         }
                     },
                 items = items,
@@ -127,6 +128,8 @@ class SqlDelightHomeFacade(
         note = row.note,
         isExcluded = row.is_excluded != 0L,
         source = row.external_source?.let(TransactionSource::valueOf),
+        targetAccountId = row.target_account_id,
+        targetAccountName = row.target_account_name,
     )
 
     private fun LedgerScope.ledgerIdOrNull(): String? = when (this) {

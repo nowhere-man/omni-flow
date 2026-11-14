@@ -2,8 +2,10 @@ package com.omniflow.core.data.repository
 
 import com.omniflow.core.db.OmniFlowDatabase
 import com.omniflow.core.domain.model.AppTimeZone
+import com.omniflow.core.domain.model.Money
 import com.omniflow.core.domain.model.Transaction
 import com.omniflow.core.domain.model.TransactionId
+import com.omniflow.core.domain.model.TransactionSource
 import com.omniflow.core.domain.model.TransactionType
 import com.omniflow.core.domain.repository.CategoryMemoryEntry
 import com.omniflow.core.domain.repository.ImportCommitRepository
@@ -12,7 +14,6 @@ import com.omniflow.core.domain.repository.TransactionRepository
 import com.omniflow.core.domain.util.UuidGenerator
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
-import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toLocalDateTime
 
@@ -31,15 +32,16 @@ class SqlDelightTransactionRepository(
             ledgerId = row.ledger_id,
             accountId = row.account_id,
             categoryId = row.category_id,
-            amount = com.omniflow.core.domain.model.Money(row.amount_minor),
+            amount = Money(row.amount_minor),
             type = TransactionType.valueOf(row.type),
             occurredAt = Instant.fromEpochMilliseconds(row.occurred_at),
             note = row.note,
             isExcluded = row.is_excluded != 0L,
-            source = row.external_source?.let(com.omniflow.core.domain.model.TransactionSource::valueOf),
+            source = row.external_source?.let(TransactionSource::valueOf),
             externalId = row.external_id,
             tagIds = database.tagQueries.tagsForTransaction(transactionId).executeAsList().toSet(),
             deletedAt = row.deleted_at?.let(Instant::fromEpochMilliseconds),
+            targetAccountId = row.target_account_id,
         )
     }
 
@@ -103,32 +105,35 @@ class SqlDelightTransactionRepository(
         val timestamp = now().toEpochMilliseconds()
         database.transaction {
             val existing = findActiveTransaction(transaction.id) ?: error("交易不存在或已删除")
-            validateUpdatedTransaction(existing, transaction)
-            database.transactionQueries.updateTransaction(
-                ledger_id = transaction.ledgerId,
-                account_id = transaction.accountId,
-                category_id = transaction.categoryId,
-                amount_minor = transaction.amount.minor,
-                type = transaction.type.name,
-                occurred_at = transaction.occurredAt.toEpochMilliseconds(),
-                note = transaction.note,
-                is_excluded = if (transaction.isExcluded) 1L else 0L,
-                external_source = transaction.source?.name,
-                external_id = transaction.externalId,
-                updated_at = timestamp,
-                id = transaction.id,
-            )
-            replaceTags(transaction.id, transaction.tagIds)
-            if (existing.accountId == transaction.accountId) {
-                adjustBalance(
-                    accountId = transaction.accountId,
-                    delta = balanceDelta(transaction) - balanceDelta(existing),
-                    timestamp = timestamp,
-                )
+            val resolvedCategoryId = if (transaction.type == TransactionType.TRANSFER && transaction.categoryId.isBlank()) {
+                findOrCreateTransferCategory(transaction.ledgerId, timestamp)
             } else {
-                adjustBalance(existing.accountId, -balanceDelta(existing), timestamp)
-                adjustBalance(transaction.accountId, balanceDelta(transaction), timestamp)
+                transaction.categoryId
             }
+            val toUpdate = if (transaction.type == TransactionType.TRANSFER) {
+                transaction.copy(categoryId = resolvedCategoryId, isExcluded = true)
+            } else {
+                transaction.copy(categoryId = resolvedCategoryId)
+            }
+            validateUpdatedTransaction(existing, toUpdate)
+            database.transactionQueries.updateTransaction(
+                ledger_id = toUpdate.ledgerId,
+                account_id = toUpdate.accountId,
+                category_id = toUpdate.categoryId,
+                amount_minor = toUpdate.amount.minor,
+                type = toUpdate.type.name,
+                occurred_at = toUpdate.occurredAt.toEpochMilliseconds(),
+                note = toUpdate.note,
+                is_excluded = if (toUpdate.isExcluded) 1L else 0L,
+                external_source = toUpdate.source?.name,
+                external_id = toUpdate.externalId,
+                updated_at = timestamp,
+                target_account_id = toUpdate.targetAccountId,
+                id = toUpdate.id,
+            )
+            replaceTags(toUpdate.id, toUpdate.tagIds)
+            revertBalanceEffects(existing, timestamp)
+            applyBalanceEffects(toUpdate, timestamp)
         }
     }
 
@@ -136,9 +141,28 @@ class SqlDelightTransactionRepository(
         val timestamp = now().toEpochMilliseconds()
         database.transaction {
             val existing = findActiveTransaction(transactionId) ?: error("交易不存在或已删除")
-            adjustBalance(existing.accountId, -balanceDelta(existing), timestamp)
+            revertBalanceEffects(existing, timestamp)
             database.transactionQueries.archiveTransaction(timestamp, transactionId)
         }
+    }
+
+    private fun findOrCreateTransferCategory(ledgerId: String, timestamp: Long): String {
+        val existing = database.categoryQueries.activeCategoriesForLedger(ledgerId)
+            .executeAsList()
+            .firstOrNull { it.type == TransactionType.TRANSFER.name }
+        if (existing != null) return existing.id
+        val newId = ids.next()
+        database.categoryQueries.insertCategory(
+            id = newId,
+            ledger_id = ledgerId,
+            parent_id = null,
+            name = "内部转账",
+            icon_key = "arrow-left-right",
+            type = TransactionType.TRANSFER.name,
+            created_at = timestamp,
+            updated_at = timestamp,
+        )
+        return newId
     }
 
     private fun validateNewTransaction(transaction: Transaction) {
@@ -149,11 +173,19 @@ class SqlDelightTransactionRepository(
         require(database.accountQueries.activeAccountId(transaction.accountId).executeAsOneOrNull() != null) {
             "账户不存在或已删除"
         }
-        require(database.categoryQueries.activeCategoryTypeForLedger(
-            id = transaction.categoryId,
-            ledger_id = transaction.ledgerId,
-        ).executeAsOneOrNull() == transaction.type.name) {
-            "分类不存在、已删除或与交易类型不一致"
+        if (transaction.type == TransactionType.TRANSFER) {
+            require(transaction.targetAccountId != null) { "转账必须指定转入账户" }
+            require(transaction.targetAccountId != transaction.accountId) { "转出账户与转入账户不能相同" }
+            require(database.accountQueries.activeAccountId(transaction.targetAccountId).executeAsOneOrNull() != null) {
+                "转入账户不存在或已删除"
+            }
+        } else {
+            require(database.categoryQueries.activeCategoryTypeForLedger(
+                id = transaction.categoryId,
+                ledger_id = transaction.ledgerId,
+            ).executeAsOneOrNull() == transaction.type.name) {
+                "分类不存在、已删除或与交易类型不一致"
+            }
         }
         transaction.tagIds.forEach { tagId ->
             require(database.tagQueries.activeTagIdForLedger(tagId, transaction.ledgerId).executeAsOneOrNull() != null) {
@@ -163,24 +195,35 @@ class SqlDelightTransactionRepository(
     }
 
     private fun createInTransaction(transaction: Transaction, timestamp: Long) {
-        validateNewTransaction(transaction)
+        val resolvedCategoryId = if (transaction.type == TransactionType.TRANSFER && transaction.categoryId.isBlank()) {
+            findOrCreateTransferCategory(transaction.ledgerId, timestamp)
+        } else {
+            transaction.categoryId
+        }
+        val toInsert = if (transaction.type == TransactionType.TRANSFER) {
+            transaction.copy(categoryId = resolvedCategoryId, isExcluded = true)
+        } else {
+            transaction.copy(categoryId = resolvedCategoryId)
+        }
+        validateNewTransaction(toInsert)
         database.transactionQueries.insertTransaction(
-            id = transaction.id,
-            ledger_id = transaction.ledgerId,
-            account_id = transaction.accountId,
-            category_id = transaction.categoryId,
-            amount_minor = transaction.amount.minor,
-            type = transaction.type.name,
-            occurred_at = transaction.occurredAt.toEpochMilliseconds(),
-            note = transaction.note,
-            is_excluded = if (transaction.isExcluded) 1L else 0L,
-            external_source = transaction.source?.name,
-            external_id = transaction.externalId,
+            id = toInsert.id,
+            ledger_id = toInsert.ledgerId,
+            account_id = toInsert.accountId,
+            category_id = toInsert.categoryId,
+            amount_minor = toInsert.amount.minor,
+            type = toInsert.type.name,
+            occurred_at = toInsert.occurredAt.toEpochMilliseconds(),
+            note = toInsert.note,
+            is_excluded = if (toInsert.isExcluded) 1L else 0L,
+            external_source = toInsert.source?.name,
+            external_id = toInsert.externalId,
             created_at = timestamp,
             updated_at = timestamp,
+            target_account_id = toInsert.targetAccountId,
         )
-        replaceTags(transaction.id, transaction.tagIds)
-        adjustBalance(transaction.accountId, balanceDelta(transaction), timestamp)
+        replaceTags(toInsert.id, toInsert.tagIds)
+        applyBalanceEffects(toInsert, timestamp)
     }
 
     private fun validateUpdatedTransaction(existing: Transaction, updated: Transaction) {
@@ -193,15 +236,23 @@ class SqlDelightTransactionRepository(
                 "账户不存在或已删除"
             }
         }
-        if (updated.ledgerId != existing.ledgerId ||
-            updated.categoryId != existing.categoryId ||
-            updated.type != existing.type
-        ) {
-            require(database.categoryQueries.activeCategoryTypeForLedger(
-                id = updated.categoryId,
-                ledger_id = updated.ledgerId,
-            ).executeAsOneOrNull() == updated.type.name) {
-                "分类不存在、已删除或与交易类型不一致"
+        if (updated.type == TransactionType.TRANSFER) {
+            require(updated.targetAccountId != null) { "转账必须指定转入账户" }
+            require(updated.targetAccountId != updated.accountId) { "转出账户与转入账户不能相同" }
+            require(database.accountQueries.activeAccountId(updated.targetAccountId).executeAsOneOrNull() != null) {
+                "转入账户不存在或已删除"
+            }
+        } else {
+            if (updated.ledgerId != existing.ledgerId ||
+                updated.categoryId != existing.categoryId ||
+                updated.type != existing.type
+            ) {
+                require(database.categoryQueries.activeCategoryTypeForLedger(
+                    id = updated.categoryId,
+                    ledger_id = updated.ledgerId,
+                ).executeAsOneOrNull() == updated.type.name) {
+                    "分类不存在、已删除或与交易类型不一致"
+                }
             }
         }
 
@@ -222,9 +273,26 @@ class SqlDelightTransactionRepository(
         tagIds.forEach { tagId -> database.tagQueries.insertTransactionTag(transactionId, tagId) }
     }
 
-    private fun balanceDelta(transaction: Transaction): Long = when (transaction.type) {
-        TransactionType.INCOME -> transaction.amount.minor
-        TransactionType.EXPENSE -> -transaction.amount.minor
+    private fun applyBalanceEffects(transaction: Transaction, timestamp: Long) {
+        when (transaction.type) {
+            TransactionType.INCOME -> adjustBalance(transaction.accountId, transaction.amount.minor, timestamp)
+            TransactionType.EXPENSE -> adjustBalance(transaction.accountId, -transaction.amount.minor, timestamp)
+            TransactionType.TRANSFER -> {
+                adjustBalance(transaction.accountId, -transaction.amount.minor, timestamp)
+                transaction.targetAccountId?.let { adjustBalance(it, transaction.amount.minor, timestamp) }
+            }
+        }
+    }
+
+    private fun revertBalanceEffects(transaction: Transaction, timestamp: Long) {
+        when (transaction.type) {
+            TransactionType.INCOME -> adjustBalance(transaction.accountId, -transaction.amount.minor, timestamp)
+            TransactionType.EXPENSE -> adjustBalance(transaction.accountId, transaction.amount.minor, timestamp)
+            TransactionType.TRANSFER -> {
+                adjustBalance(transaction.accountId, transaction.amount.minor, timestamp)
+                transaction.targetAccountId?.let { adjustBalance(it, -transaction.amount.minor, timestamp) }
+            }
+        }
     }
 
     private fun adjustBalance(accountId: String, delta: Long, timestamp: Long) {

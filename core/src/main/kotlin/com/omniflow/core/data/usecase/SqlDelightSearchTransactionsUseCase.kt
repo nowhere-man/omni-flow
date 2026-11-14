@@ -90,6 +90,7 @@ class SqlDelightSearchTransactionsUseCase(
             when (item.transaction.type) {
                 TransactionType.EXPENSE -> total.copy(expenseTotal = total.expenseTotal + item.transaction.amount)
                 TransactionType.INCOME -> total.copy(incomeTotal = total.incomeTotal + item.transaction.amount)
+                TransactionType.TRANSFER -> total
             }
         }
 
@@ -110,6 +111,8 @@ class SqlDelightSearchTransactionsUseCase(
             note = row.note,
             isExcluded = row.is_excluded != 0L,
             source = row.external_source?.let(TransactionSource::valueOf),
+            targetAccountId = row.target_account_id,
+            targetAccountName = row.target_account_name,
         ),
         primaryCategoryId = row.primary_category_id,
         primaryCategoryName = row.primary_category_name,

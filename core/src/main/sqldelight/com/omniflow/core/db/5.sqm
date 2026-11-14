@@ -1,0 +1,1 @@
+ALTER TABLE transaction_record ADD COLUMN target_account_id TEXT REFERENCES account(id);
