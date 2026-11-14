@@ -13,6 +13,7 @@ import com.omniflow.core.domain.model.AnalyticsDashboardState
 import com.omniflow.core.domain.model.AnalyticsQuery
 import com.omniflow.core.domain.model.AppPreferences
 import com.omniflow.core.domain.model.AppearanceMode
+import com.omniflow.core.domain.model.BatchOperationResult
 import com.omniflow.core.domain.model.BudgetProgress
 import com.omniflow.core.domain.model.AppTimeZone
 import com.omniflow.core.domain.model.buildBudgetProgress
@@ -386,6 +387,42 @@ class OmniFlowViewModel(
     fun setSearchAccount(accountId: String?) = searchController.setSearchAccount(accountId)
     fun clearSearch() = searchController.clearSearch()
     fun runSearch() = searchController.runSearch()
+
+    fun batchDeleteTransactions(ids: List<String>, onComplete: (BatchOperationResult) -> Unit = {}) {
+        viewModelScope.launch {
+            sharedApp.batchTransactions.delete(ids).onSuccess {
+                onComplete(it)
+                searchController.runSearch()
+            }
+        }
+    }
+
+    fun batchUpdateTransactionAccount(ids: List<String>, targetAccountId: String, onComplete: (BatchOperationResult) -> Unit = {}) {
+        viewModelScope.launch {
+            sharedApp.batchTransactions.updateAccount(ids, targetAccountId).onSuccess {
+                onComplete(it)
+                searchController.runSearch()
+            }
+        }
+    }
+
+    fun batchUpdateTransactionCategory(ids: List<String>, targetCategoryId: String, onComplete: (BatchOperationResult) -> Unit = {}) {
+        viewModelScope.launch {
+            sharedApp.batchTransactions.updateCategory(ids, targetCategoryId).onSuccess {
+                onComplete(it)
+                searchController.runSearch()
+            }
+        }
+    }
+
+    fun batchUpdateTransactionLedger(ids: List<String>, targetLedgerId: String, onComplete: (BatchOperationResult) -> Unit = {}) {
+        viewModelScope.launch {
+            sharedApp.batchTransactions.updateLedger(ids, targetLedgerId).onSuccess {
+                onComplete(it)
+                searchController.runSearch()
+            }
+        }
+    }
 
     /**
      * 账本 / 账户 / 分类详情。全部走已有的 search 用例，core 不需要新增查询能力。

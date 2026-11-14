@@ -106,6 +106,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.omniflow.android.ui.feature.batch.BatchActionBar
+import com.omniflow.android.ui.feature.batch.BatchAccountPickerDialog
+import com.omniflow.android.ui.feature.batch.BatchDeleteConfirmDialog
+import com.omniflow.android.ui.feature.batch.BatchLedgerPickerDialog
+import com.omniflow.android.ui.feature.batch.rememberBatchSelectionState
+import com.omniflow.android.ui.feature.home.CalendarMonth
+import com.omniflow.android.ui.feature.home.TransactionDayGroupItem
+import com.omniflow.android.ui.feature.home.TransactionItems
+import com.omniflow.core.domain.model.Account
+import com.omniflow.core.domain.model.BatchOperationResult
+import com.omniflow.core.domain.model.Category
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
@@ -213,6 +224,14 @@ fun OmniFlowApp(
         AppearanceMode.DARK -> true
     }
     val context = LocalContext.current
+    val showBatchResultToast: (BatchOperationResult, String) -> Unit = { result, actionName ->
+        val msg = if (result.skippedCount > 0) {
+            "已成功$actionName ${result.processedCount} 笔（跳过 ${result.skippedCount} 笔转账）"
+        } else {
+            "已成功$actionName ${result.processedCount} 笔"
+        }
+        android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+    }
     val view = LocalView.current
     val dynamicColorEnabled = remember {
         mutableStateOf(context.getSharedPreferences("android_ui", 0).getBoolean("dynamic_color", false))
@@ -333,6 +352,8 @@ fun OmniFlowApp(
             when (key) {
                 OmniRoute.Home -> HomeScreen(
                     state = homeState,
+                    accounts = moreState.accounts,
+                    categories = moreState.categories,
                     onPreviousMonth = viewModel::previousMonth,
                     onNextMonth = viewModel::nextMonth,
                     onLedgerSelected = viewModel::selectLedger,
@@ -352,6 +373,18 @@ fun OmniFlowApp(
                     onManageLedgers = {
                         navigationState.navigate(OmniRoute.More)
                         navigationState.navigate(OmniRoute.MoreLedgers)
+                    },
+                    onBatchDelete = { ids ->
+                        viewModel.batchDeleteTransactions(ids) { showBatchResultToast(it, "删除") }
+                    },
+                    onBatchChangeCategory = { ids, categoryId ->
+                        viewModel.batchUpdateTransactionCategory(ids, categoryId) { showBatchResultToast(it, "修改分类") }
+                    },
+                    onBatchChangeAccount = { ids, accountId ->
+                        viewModel.batchUpdateTransactionAccount(ids, accountId) { showBatchResultToast(it, "修改账户") }
+                    },
+                    onBatchChangeLedger = { ids, ledgerId ->
+                        viewModel.batchUpdateTransactionLedger(ids, ledgerId) { showBatchResultToast(it, "修改账本") }
                     },
                     modifier = Modifier.padding(padding),
                 )
@@ -414,6 +447,18 @@ fun OmniFlowApp(
                     onClear = viewModel::clearSearch,
                     onEditTransaction = { transactionId ->
                         navigationState.navigate(OmniRoute.TransactionDetail(transactionId))
+                    },
+                    onBatchDelete = { ids ->
+                        viewModel.batchDeleteTransactions(ids) { showBatchResultToast(it, "删除") }
+                    },
+                    onBatchChangeCategory = { ids, categoryId ->
+                        viewModel.batchUpdateTransactionCategory(ids, categoryId) { showBatchResultToast(it, "修改分类") }
+                    },
+                    onBatchChangeAccount = { ids, accountId ->
+                        viewModel.batchUpdateTransactionAccount(ids, accountId) { showBatchResultToast(it, "修改账户") }
+                    },
+                    onBatchChangeLedger = { ids, ledgerId ->
+                        viewModel.batchUpdateTransactionLedger(ids, ledgerId) { showBatchResultToast(it, "修改账本") }
                     },
                     modifier = Modifier.padding(padding),
                 )
@@ -865,6 +910,8 @@ private fun AppLockGate(enabled: Boolean, content: @Composable () -> Unit) {
 @Composable
 private fun HomeScreen(
     state: HomeUiState,
+    accounts: List<Account>,
+    categories: List<Category>,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onLedgerSelected: (LedgerScope) -> Unit,
@@ -874,9 +921,22 @@ private fun HomeScreen(
     onToggleDisplayMode: () -> Unit,
     onEdit: (String) -> Unit,
     onManageLedgers: () -> Unit,
+    onBatchDelete: (List<String>) -> Unit,
+    onBatchChangeCategory: (List<String>, String) -> Unit,
+    onBatchChangeAccount: (List<String>, String) -> Unit,
+    onBatchChangeLedger: (List<String>, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val home = state.home
+    val selectionState = rememberBatchSelectionState()
+    val allTransactionIds = home?.groups?.flatMap { it.items }?.map { it.id }.orEmpty()
+    val isAllSelected = selectionState.count == allTransactionIds.size && allTransactionIds.isNotEmpty()
+
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showAccountPicker by remember { mutableStateOf(false) }
+    var showCategoryPicker by remember { mutableStateOf(false) }
+    var showLedgerPicker by remember { mutableStateOf(false) }
+
     Box(modifier.fillMaxSize()) {
         when {
             state.isLoading && home == null -> LoadingState()
@@ -955,13 +1015,85 @@ private fun HomeScreen(
                     }
                 } else {
                     items(home.groups, key = { it.date.toString() }) { group ->
-                        TransactionDayGroupItem(group, state.displayMode, onEdit)
+                        TransactionDayGroupItem(group, state.displayMode, selectionState, onEdit)
                     }
                 }
                 // 给右下角的悬浮记账按钮让位，避免压住最后一条明细
                 item { Spacer(Modifier.height(88.dp)) }
             }
         }
+
+        if (selectionState.isActive) {
+            BatchActionBar(
+                selectedCount = selectionState.count,
+                totalCount = allTransactionIds.size,
+                isAllSelected = isAllSelected,
+                onSelectAllToggle = {
+                    if (isAllSelected) selectionState.deselectAll() else selectionState.selectAll(allTransactionIds)
+                },
+                onBatchDelete = { showDeleteConfirm = true },
+                onBatchChangeCategory = { showCategoryPicker = true },
+                onBatchChangeAccount = { showAccountPicker = true },
+                onBatchChangeLedger = { showLedgerPicker = true },
+                onExit = { selectionState.clear() },
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
+    }
+
+    if (showDeleteConfirm) {
+        BatchDeleteConfirmDialog(
+            count = selectionState.count,
+            onConfirm = {
+                val ids = selectionState.selectedIds.toList()
+                showDeleteConfirm = false
+                selectionState.clear()
+                onBatchDelete(ids)
+            },
+            onDismiss = { showDeleteConfirm = false },
+        )
+    }
+
+    if (showAccountPicker) {
+        BatchAccountPickerDialog(
+            accounts = accounts,
+            onSelect = { accountId ->
+                val ids = selectionState.selectedIds.toList()
+                showAccountPicker = false
+                selectionState.clear()
+                onBatchChangeAccount(ids, accountId)
+            },
+            onDismiss = { showAccountPicker = false },
+        )
+    }
+
+    if (showLedgerPicker) {
+        BatchLedgerPickerDialog(
+            ledgers = state.ledgers,
+            onSelect = { ledgerId ->
+                val ids = selectionState.selectedIds.toList()
+                showLedgerPicker = false
+                selectionState.clear()
+                onBatchChangeLedger(ids, ledgerId)
+            },
+            onDismiss = { showLedgerPicker = false },
+        )
+    }
+
+    if (showCategoryPicker) {
+        CategoryPickerSheet(
+            title = "批量修改分类",
+            categories = categories,
+            selectedCategoryId = null,
+            initialType = TransactionType.EXPENSE,
+            onDismiss = { showCategoryPicker = false },
+            onSelected = { categoryId, _ ->
+                val ids = selectionState.selectedIds.toList()
+                showCategoryPicker = false
+                selectionState.clear()
+                onBatchChangeCategory(ids, categoryId)
+            },
+        )
     }
 }
 
@@ -996,212 +1128,6 @@ private fun HomeEmptyState(
     }
 }
 
-@Composable
-private fun CalendarMonth(
-    month: LocalDate,
-    summaries: List<CalendarDaySummary>,
-    onDateSelected: (LocalDate) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val totals = remember(summaries) { summaries.associateBy(CalendarDaySummary::date) }
-    val today = remember { Clock.System.now().toLocalDateTime(AppTimeZone).date }
-    val first = JavaLocalDate.of(month.year, month.monthNumber, 1)
-    val leading = first.dayOfWeek.value % 7
-    val cells = List(leading) { null } + (1..first.lengthOfMonth()).map { day ->
-        LocalDate(month.year, month.monthNumber, day)
-    }
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(1.dp)) {
-        Row(Modifier.fillMaxWidth()) {
-            listOf("日", "一", "二", "三", "四", "五", "六").forEach { weekday ->
-                Text(
-                    weekday,
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.labelSmall,
-                )
-            }
-        }
-        cells.chunked(7).forEach { week ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                week.forEach { date ->
-                    CalendarCell(date, date == today, date?.let(totals::get), onDateSelected, Modifier.weight(1f))
-                }
-                repeat(7 - week.size) { Spacer(Modifier.weight(1f).height(CalendarCellHeight)) }
-            }
-        }
-    }
-}
-
-private val CalendarCellHeight = 58.dp
-
-@Composable
-private fun CalendarCell(
-    date: LocalDate?,
-    isToday: Boolean,
-    summary: CalendarDaySummary?,
-    onDateSelected: (LocalDate) -> Unit,
-    modifier: Modifier,
-) {
-    if (date == null) {
-        Spacer(modifier.height(CalendarCellHeight))
-        return
-    }
-    Column(
-        modifier = modifier
-            .height(CalendarCellHeight)
-            .clip(RoundedCornerShape(6.dp))
-            .clickable { onDateSelected(date) }
-            .padding(vertical = 1.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(26.dp)
-                .background(
-                    if (isToday) MaterialTheme.colorScheme.primary else Color.Transparent,
-                    CircleShape,
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                date.dayOfMonth.toString(),
-                color = if (isToday) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp),
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-        // 收入在上、支出在下，只显示整数，超过 1000 走 x.xk；金额为 0 的那一行不占位
-        summary?.incomeTotal?.takeIf { it.minor > 0 }?.let {
-            CalendarAmount(it.calendarAmountText(), incomeColor())
-        }
-        summary?.expenseTotal?.takeIf { it.minor > 0 }?.let {
-            CalendarAmount(it.calendarAmountText(), expenseColor())
-        }
-    }
-}
-
-@Composable
-private fun CalendarAmount(text: String, color: Color) {
-    Text(
-        text,
-        color = color,
-        maxLines = 1,
-        softWrap = false,
-        overflow = TextOverflow.Clip,
-        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 12.sp),
-    )
-}
-
-@Composable
-private fun TransactionDayGroupItem(
-    group: DayTransactionGroup,
-    displayMode: TransactionDetailDisplayMode,
-    onEdit: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(group.date.displayName(), style = OmniText.caption, color = mutedContent())
-            Spacer(Modifier.weight(1f))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                // 收支语义色和日历、汇总卡同一套，不跟随主题色漂移
-                if (group.incomeTotal != Money.Zero) {
-                    Text("收 ${group.incomeTotal.asCompactRmb()}", color = incomeColor(), style = OmniText.caption)
-                }
-                if (group.expenseTotal != Money.Zero) {
-                    Text("支 ${group.expenseTotal.asCompactRmb()}", color = mutedContent(), style = OmniText.caption)
-                }
-            }
-        }
-        TransactionItems(group.items, displayMode, onEdit)
-    }
-}
-
-@Composable
-private fun TransactionGroups(
-    groups: List<DayTransactionGroup>,
-    displayMode: TransactionDetailDisplayMode,
-    onEdit: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    if (groups.isEmpty()) {
-        Text(
-            "暂无账单",
-            modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
-            textAlign = TextAlign.Center,
-            style = OmniText.caption,
-            color = mutedContent(),
-        )
-        return
-    }
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        groups.forEach { group ->
-            TransactionDayGroupItem(group, displayMode, onEdit)
-        }
-    }
-}
-
-@Composable
-private fun TransactionItems(
-    items: List<TransactionListItem>,
-    displayMode: TransactionDetailDisplayMode,
-    onEdit: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    when (displayMode) {
-        TransactionDetailDisplayMode.LIST -> Surface(
-            modifier = modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(OmniRadius.medium),
-            color = surfaceCard(),
-        ) {
-            Column(Modifier.padding(horizontal = 12.dp)) {
-                items.forEachIndexed { index, item ->
-                    TransactionListRow(item, onEdit)
-                    if (index != items.lastIndex) {
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                    }
-                }
-            }
-        }
-
-        TransactionDetailDisplayMode.CARD -> Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items.chunked(2).forEach { row ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    row.forEach { item -> TransactionCard(item, Modifier.weight(1f), onEdit) }
-                    repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TransactionListRow(item: TransactionListItem, onEdit: (String) -> Unit) {
-    TransactionRow(
-        iconKey = item.categoryIconKey,
-        title = item.categoryDisplayName,
-        subtitle = item.note,
-        amount = item.amount,
-        type = item.type,
-        timeText = item.occurredAt.hourMinuteText(),
-        onClick = { onEdit(item.id) },
-    )
-}
-
-@Composable
-private fun TransactionCard(item: TransactionListItem, modifier: Modifier = Modifier, onEdit: (String) -> Unit) {
-    TransactionTile(
-        iconKey = item.categoryIconKey,
-        title = item.categoryDisplayName,
-        subtitle = item.note,
-        amount = item.amount,
-        type = item.type,
-        timeText = item.occurredAt.hourMinuteText(),
-        modifier = modifier,
-        onClick = { onEdit(item.id) },
-    )
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
