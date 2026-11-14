@@ -143,6 +143,7 @@ class SqlDelightAnalyticsFacade(
             when (TransactionType.valueOf(row.type)) {
                 TransactionType.EXPENSE -> total.copy(expenseTotal = total.expenseTotal + Money(row.amount_minor))
                 TransactionType.INCOME -> total.copy(incomeTotal = total.incomeTotal + Money(row.amount_minor))
+                TransactionType.TRANSFER -> total
             }
         }
 

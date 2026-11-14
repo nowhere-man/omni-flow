@@ -136,6 +136,7 @@ class SharedApp(
     val getTransaction = GetTransactionUseCase(transactions)
     val updateTransaction = UpdateTransactionUseCase(transactions)
     val deleteTransaction = DeleteTransactionUseCase(transactions)
+    val evaluateAmount = com.omniflow.core.domain.usecase.EvaluateAmountUseCase()
 
     suspend fun getTransactionRecordDetail(transactionId: TransactionId): Result<TransactionRecordDetail?> = runCatching {
         transactions.activeTransaction(transactionId)?.let { transaction ->
