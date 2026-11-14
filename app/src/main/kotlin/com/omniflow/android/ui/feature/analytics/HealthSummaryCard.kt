@@ -56,9 +56,12 @@ fun HealthSummaryCard(
 
     ElevatedCard(
         modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+        elevation = CardDefaults.elevatedCardElevation(
+            defaultElevation = 0.5.dp,
         ),
     ) {
         Column(

@@ -78,10 +78,10 @@ fun SideBySideBarChart(
         ) {
             if (selectedPoint != null) {
                 Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    tonalElevation = 4.dp,
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    tonalElevation = 1.dp,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 12.dp)
