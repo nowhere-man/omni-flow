@@ -53,6 +53,7 @@ class SqlDelightSearchTransactionsUseCase(
         if (query.primaryCategoryId != null && item.primaryCategoryId != query.primaryCategoryId) return false
         if (query.secondaryCategoryId != null && transaction.categoryId != query.secondaryCategoryId) return false
         if (query.tagId != null && item.tags.none { it.id == query.tagId }) return false
+        if (query.tagNames.isNotEmpty() && item.tags.none { tag -> query.tagNames.contains(tag.name) }) return false
         if (query.accountId != null && transaction.accountId != query.accountId) return false
         if (!matchesAmount(query, transaction.amount)) return false
         if (!contains(transaction.primaryCategoryName, query.primaryCategoryText)) return false

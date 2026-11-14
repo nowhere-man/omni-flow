@@ -26,6 +26,7 @@ data class TransactionSearchQuery(
     val primaryCategoryId: CategoryId? = null,
     val secondaryCategoryId: CategoryId? = null,
     val tagId: TagId? = null,
+    val tagNames: Set<String> = emptySet(),
     val accountId: AccountId? = null,
     val amount: AmountFilter = AmountFilter(),
     val dateRange: DateRange? = null,
@@ -34,7 +35,7 @@ data class TransactionSearchQuery(
         get() = scope is LedgerScope.Single || keyword.isNotBlank() || primaryCategoryText.isNotBlank() ||
             secondaryCategoryText.isNotBlank() || tagText.isNotBlank() || noteText.isNotBlank() ||
             type != null || primaryCategoryId != null ||
-            secondaryCategoryId != null || tagId != null || accountId != null ||
+            secondaryCategoryId != null || tagId != null || tagNames.isNotEmpty() || accountId != null ||
             amount.exact != null || amount.minimum != null || amount.maximum != null || dateRange != null
 }
 

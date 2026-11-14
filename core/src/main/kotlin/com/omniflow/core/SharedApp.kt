@@ -3,6 +3,7 @@ package com.omniflow.core
 import app.cash.sqldelight.db.SqlDriver
 import com.omniflow.core.data.facade.SqlDelightAnalyticsFacade
 import com.omniflow.core.data.facade.SqlDelightAppPreferenceFacade
+import com.omniflow.core.data.facade.SqlDelightBatchTransactionFacade
 import com.omniflow.core.data.facade.SqlDelightHomeFacade
 import com.omniflow.core.data.facade.SqlDelightImportWorkflow
 import com.omniflow.core.data.facade.SqlDelightManagementFacade
@@ -28,6 +29,7 @@ import com.omniflow.core.data.sync.SyncAdapter
 import com.omniflow.core.domain.ai.CategorySuggester
 import com.omniflow.core.domain.facade.AnalyticsFacade
 import com.omniflow.core.domain.facade.AppPreferenceFacade
+import com.omniflow.core.domain.facade.BatchTransactionFacade
 import com.omniflow.core.domain.facade.HomeFacade
 import com.omniflow.core.domain.facade.ImportWorkflow
 import com.omniflow.core.domain.facade.ManagementFacade
@@ -98,6 +100,7 @@ class SharedApp(
         adapters = syncAdapters,
     )
     val search: SearchTransactionsUseCase = SqlDelightSearchTransactionsUseCase(database)
+    val batchTransactions: BatchTransactionFacade = SqlDelightBatchTransactionFacade(database)
     val imports: ImportWorkflow = SqlDelightImportWorkflow(
         sessions = SqlDelightImportSessionRepository(database),
         commits = transactions,
