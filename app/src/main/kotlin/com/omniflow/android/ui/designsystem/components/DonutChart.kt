@@ -42,7 +42,7 @@ fun DonutChart(
 ) {
     val density = LocalDensity.current
     val strokeWidthPx = with(density) { strokeWidth.toPx() }
-    val emptyRingColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    val emptyRingColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
 
     Box(
         modifier = modifier.size(chartSize),

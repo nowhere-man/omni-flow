@@ -41,6 +41,7 @@ import com.omniflow.android.ui.OmniFlowViewModel
 import com.omniflow.android.ui.OmniRadius
 import com.omniflow.android.ui.OmniSegmented
 import com.omniflow.android.ui.OmniText
+import com.omniflow.android.ui.designsystem.components.OmniExpressiveSwitch
 import com.omniflow.android.ui.exportRange
 import com.omniflow.android.ui.mutedContent
 import com.omniflow.android.ui.surfaceCard
@@ -133,8 +134,8 @@ fun ExportPage(
             item {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(OmniRadius.medium),
-                    color = surfaceCard(),
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
                 ) {
                     Column(
                         Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -155,7 +156,7 @@ fun ExportPage(
                                     color = mutedContent(),
                                 )
                             }
-                            Switch(incremental, { incremental = it })
+                            OmniExpressiveSwitch(checked = incremental, onCheckedChange = { incremental = it })
                         }
                         if (incremental) {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -188,7 +189,7 @@ fun ExportPage(
             item {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(OmniRadius.medium),
+                    shape = RoundedCornerShape(24.dp),
                     color = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 ) {

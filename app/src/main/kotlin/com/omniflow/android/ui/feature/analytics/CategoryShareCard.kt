@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -41,23 +42,11 @@ import com.omniflow.android.ui.CategoryIcon
 import com.omniflow.android.ui.asRmb
 import com.omniflow.android.ui.designsystem.components.DonutChart
 import com.omniflow.android.ui.designsystem.components.DonutSliceData
+import com.omniflow.android.ui.designsystem.tokens.chartColors
 import com.omniflow.core.domain.model.CategoryBreakdownItem
 import com.omniflow.core.domain.model.Money
 import com.omniflow.core.domain.model.TransactionType
 import java.util.Locale
-
-private val CategoryPalette = listOf(
-    Color(0xFF4E79A7),
-    Color(0xFFF28E2B),
-    Color(0xFFE15759),
-    Color(0xFF76B7B2),
-    Color(0xFF59A14F),
-    Color(0xFFEDC948),
-    Color(0xFFB07AA1),
-    Color(0xFFFF9DA7),
-    Color(0xFF9C755F),
-    Color(0xFFBAB0AC),
-)
 
 private data class DisplayCategoryRow(
     val categoryId: String,
@@ -79,12 +68,13 @@ fun CategoryShareCard(
 ) {
     var includeSecondary by remember { mutableStateOf(false) }
     var selectedSliceId by remember { mutableStateOf<String?>(null) }
+    val palette = chartColors()
 
     val totalAmount = remember(categoryBreakdowns) {
         categoryBreakdowns.fold(Money.Zero) { acc, item -> acc + item.amount }
     }
 
-    val displayRows = remember(categoryBreakdowns, includeSecondary) {
+    val displayRows = remember(categoryBreakdowns, includeSecondary, palette) {
         if (!includeSecondary) {
             categoryBreakdowns.mapIndexed { index, item ->
                 DisplayCategoryRow(
@@ -94,7 +84,7 @@ fun CategoryShareCard(
                     amount = item.amount,
                     ratio = item.shareRatio.toFloat(),
                     percentageText = String.format(Locale.US, "%.1f%%", item.shareRatio * 100),
-                    color = CategoryPalette[index % CategoryPalette.size],
+                    color = palette[index % palette.size],
                 )
             }
         } else {
@@ -110,7 +100,7 @@ fun CategoryShareCard(
                             amount = primary.amount,
                             ratio = primary.shareRatio.toFloat(),
                             percentageText = String.format(Locale.US, "%.1f%%", primary.shareRatio * 100),
-                            color = CategoryPalette[colorIdx % CategoryPalette.size],
+                            color = palette[colorIdx % palette.size],
                         ),
                     )
                     colorIdx++
@@ -124,7 +114,7 @@ fun CategoryShareCard(
                                 amount = sec.amount,
                                 ratio = sec.shareRatio.toFloat(),
                                 percentageText = String.format(Locale.US, "%.1f%%", sec.shareRatio * 100),
-                                color = CategoryPalette[colorIdx % CategoryPalette.size],
+                                color = palette[colorIdx % palette.size],
                             ),
                         )
                         colorIdx++
@@ -148,7 +138,13 @@ fun CategoryShareCard(
 
     ElevatedCard(
         modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+        elevation = CardDefaults.elevatedCardElevation(
+            defaultElevation = 0.5.dp,
+        ),
     ) {
         Column(
             modifier = Modifier

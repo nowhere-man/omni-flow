@@ -43,6 +43,7 @@ import com.omniflow.android.ui.OmniRadius
 import com.omniflow.android.ui.OmniSegmented
 import com.omniflow.android.ui.OmniText
 import com.omniflow.android.ui.designsystem.components.OmniDatePickerDialog
+import com.omniflow.android.ui.designsystem.tokens.categoryBadgeColors
 import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
 import com.omniflow.android.ui.mutedContent
 import com.omniflow.android.ui.surfaceCard
@@ -152,7 +153,7 @@ fun SearchFilterPanel(
                             imageVector = getCategoryIcon(categoryIconKey),
                             contentDescription = null,
                             modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = categoryBadgeColors(categoryIconKey).content,
                         )
                         Spacer(Modifier.width(8.dp))
                     } else {

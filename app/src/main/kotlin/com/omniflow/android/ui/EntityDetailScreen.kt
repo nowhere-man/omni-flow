@@ -99,7 +99,7 @@ internal fun EntityDetailScreen(
 
             else -> {
                 item {
-                    Surface(shape = RoundedCornerShape(OmniRadius.medium), color = surfaceCard()) {
+                    Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
                         Column(Modifier.padding(horizontal = 12.dp)) {
                             recent.forEachIndexed { index, item ->
                                 TransactionRow(
@@ -133,8 +133,8 @@ internal fun EntityDetailScreen(
 private fun EntityDetailHeader(state: EntityDetailUiState, moreState: MoreUiState) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        color = surfaceCard(),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             when (state.kind) {
@@ -221,7 +221,7 @@ private fun EntityDetailHeader(state: EntityDetailUiState, moreState: MoreUiStat
 
 @Composable
 private fun SummaryTile(label: String, amount: Money, color: androidx.compose.ui.graphics.Color, modifier: Modifier) {
-    Surface(modifier = modifier, shape = MaterialTheme.shapes.medium, color = surfaceCard()) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
         Column(Modifier.padding(horizontal = 12.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(label, style = OmniText.caption, color = mutedContent())
             Text(

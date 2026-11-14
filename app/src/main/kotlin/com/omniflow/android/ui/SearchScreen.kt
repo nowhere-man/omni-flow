@@ -193,8 +193,8 @@ internal fun SearchScreen(
                                         selectionState.startSelection(item.transaction.id)
                                     },
                                 ),
-                            shape = RoundedCornerShape(OmniRadius.medium),
-                            color = surfaceCard(),
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),

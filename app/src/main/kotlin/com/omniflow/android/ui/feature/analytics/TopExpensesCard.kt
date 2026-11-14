@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -32,11 +33,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.CategoryIcon
 import com.omniflow.android.ui.asRmb
+import com.omniflow.android.ui.designsystem.tokens.OmniColorTokens
 import com.omniflow.android.ui.designsystem.tokens.expenseColor
 import com.omniflow.android.ui.designsystem.tokens.incomeColor
 import com.omniflow.core.domain.model.AppTimeZone
@@ -60,7 +63,13 @@ fun TopExpensesCard(
 
     ElevatedCard(
         modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+        elevation = CardDefaults.elevatedCardElevation(
+            defaultElevation = 0.5.dp,
+        ),
     ) {
         Column(
             modifier = Modifier
@@ -121,17 +130,15 @@ fun TopExpensesCard(
                 ) {
                     displayedItems.forEachIndexed { index, item ->
                         val rank = index + 1
-                        val badgeBg = when (rank) {
-                            1 -> Color(0xFFFFD700).copy(alpha = 0.25f)
-                            2 -> Color(0xFFC0C0C0).copy(alpha = 0.25f)
-                            3 -> Color(0xFFCD7F32).copy(alpha = 0.25f)
-                            else -> MaterialTheme.colorScheme.surfaceContainerHigh
-                        }
-                        val badgeColor = when (rank) {
-                            1 -> Color(0xFFD4AF37)
-                            2 -> Color(0xFF5A6B7C)
-                            3 -> Color(0xFFCD7F32)
-                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                        val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+                        val (badgeBg, badgeColor) = when (rank) {
+                            1 -> (if (isDark) OmniColorTokens.RankGoldContainerDark else OmniColorTokens.RankGoldContainerLight) to
+                                (if (isDark) OmniColorTokens.RankGoldContentDark else OmniColorTokens.RankGoldContentLight)
+                            2 -> (if (isDark) OmniColorTokens.RankSilverContainerDark else OmniColorTokens.RankSilverContainerLight) to
+                                (if (isDark) OmniColorTokens.RankSilverContentDark else OmniColorTokens.RankSilverContentLight)
+                            3 -> (if (isDark) OmniColorTokens.RankBronzeContainerDark else OmniColorTokens.RankBronzeContainerLight) to
+                                (if (isDark) OmniColorTokens.RankBronzeContentDark else OmniColorTokens.RankBronzeContentLight)
+                            else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
                         }
 
                         val dt = item.occurredAt.toLocalDateTime(AppTimeZone)

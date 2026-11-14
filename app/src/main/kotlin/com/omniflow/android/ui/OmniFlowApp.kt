@@ -78,11 +78,8 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
-import androidx.compose.material3.darkColorScheme
+import com.omniflow.android.ui.designsystem.tokens.omniColorScheme
+import com.omniflow.android.ui.designsystem.tokens.themePrimaryColor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
@@ -675,117 +672,8 @@ private fun sheetMetadata(key: NavKey): Map<String, Any> = when (key) {
     else -> emptyMap()
 }
 
-internal fun themePrimaryColor(themeColor: ThemeColor, darkTheme: Boolean): Color = when (themeColor) {
-    ThemeColor.MIST_BLUE -> Color(if (darkTheme) 0xFF9CC3E5 else 0xFF52779A)
-    ThemeColor.SAGE -> Color(if (darkTheme) 0xFF9BC8A8 else 0xFF4F765B)
-    ThemeColor.LAVENDER -> Color(if (darkTheme) 0xFFC2B5E5 else 0xFF75679D)
-    ThemeColor.SOFT_CORAL -> Color(if (darkTheme) 0xFFE7AAA4 else 0xFFA95850)
-    ThemeColor.WARM_AMBER -> Color(if (darkTheme) 0xFFD8B778 else 0xFF8A6532)
-    ThemeColor.GRAPHITE -> Color(if (darkTheme) 0xFFF5F5F5 else 0xFF171717)
-}
-
-private fun themePrimaryContainerColor(themeColor: ThemeColor, darkTheme: Boolean): Color = when (themeColor) {
-    ThemeColor.MIST_BLUE -> Color(if (darkTheme) 0xFF28445E else 0xFFDCEBF7)
-    ThemeColor.SAGE -> Color(if (darkTheme) 0xFF2D4935 else 0xFFDDECE1)
-    ThemeColor.LAVENDER -> Color(if (darkTheme) 0xFF40375D else 0xFFE9E3F5)
-    ThemeColor.SOFT_CORAL -> Color(if (darkTheme) 0xFF5E332F else 0xFFF6E2DF)
-    ThemeColor.WARM_AMBER -> Color(if (darkTheme) 0xFF523F24 else 0xFFF2E7D3)
-    ThemeColor.GRAPHITE -> Color(if (darkTheme) 0xFF2A2A2A else 0xFFE7E7E7)
-}
-
-private fun themeSecondaryColor(themeColor: ThemeColor, darkTheme: Boolean): Color = when (themeColor) {
-    ThemeColor.MIST_BLUE -> Color(if (darkTheme) 0xFFB4C7D8 else 0xFF456274)
-    ThemeColor.SAGE -> Color(if (darkTheme) 0xFFB6CCBB else 0xFF476653)
-    ThemeColor.LAVENDER -> Color(if (darkTheme) 0xFFC7BEDB else 0xFF5D5577)
-    ThemeColor.SOFT_CORAL -> Color(if (darkTheme) 0xFFF0BDB7 else 0xFF7B4A45)
-    ThemeColor.WARM_AMBER -> Color(if (darkTheme) 0xFFE2C28F else 0xFF6D552D)
-    ThemeColor.GRAPHITE -> Color(if (darkTheme) 0xFFD0C5D0 else 0xFF625A62)
-}
-
-private fun themeTertiaryColor(themeColor: ThemeColor, darkTheme: Boolean): Color = when (themeColor) {
-    ThemeColor.MIST_BLUE -> Color(if (darkTheme) 0xFFD4B9B0 else 0xFF795651)
-    ThemeColor.SAGE -> Color(if (darkTheme) 0xFFD2C39D else 0xFF705E2D)
-    ThemeColor.LAVENDER -> Color(if (darkTheme) 0xFFE7B9C7 else 0xFF7A4B5E)
-    ThemeColor.SOFT_CORAL -> Color(if (darkTheme) 0xFFD1C0E5 else 0xFF654A75)
-    ThemeColor.WARM_AMBER -> Color(if (darkTheme) 0xFFC4C8E8 else 0xFF4F587D)
-    ThemeColor.GRAPHITE -> Color(if (darkTheme) 0xFFBBCBD5 else 0xFF4B5F6B)
-}
-
-private fun omniColorScheme(
-    themeColor: ThemeColor,
-    darkTheme: Boolean,
-    dynamicColorEnabled: Boolean,
-    context: android.content.Context,
-): ColorScheme {
-    if (dynamicColorEnabled && android.os.Build.VERSION.SDK_INT >= 31) {
-        return if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-    }
-    val primary = themePrimaryColor(themeColor, darkTheme)
-    val primaryContainer = themePrimaryContainerColor(themeColor, darkTheme)
-    val secondary = themeSecondaryColor(themeColor, darkTheme)
-    val tertiary = themeTertiaryColor(themeColor, darkTheme)
-    val scheme = if (darkTheme) {
-        darkColorScheme(
-            primary = primary,
-            onPrimary = Color(0xFF111111),
-            primaryContainer = primaryContainer,
-            onPrimaryContainer = primary,
-            secondary = secondary,
-            onSecondary = Color(0xFF172027),
-            secondaryContainer = Color(0xFF334853),
-            onSecondaryContainer = Color(0xFFD8E9F1),
-            tertiary = tertiary,
-            onTertiary = Color(0xFF251A22),
-            tertiaryContainer = Color(0xFF513B49),
-            onTertiaryContainer = Color(0xFFFFD9E8),
-            surface = Color(0xFF17171A),
-            surfaceVariant = Color(0xFF232327),
-            background = Color(0xFF0C0C0E),
-            onSurface = Color(0xFFF5F5F5),
-            onSurfaceVariant = Color(0xFFB9B9B9),
-            outline = Color(0xFF8F8F8F),
-            outlineVariant = Color(0xFF454545),
-        )
-    } else {
-        lightColorScheme(
-            primary = primary,
-            onPrimary = Color.White,
-            primaryContainer = primaryContainer,
-            onPrimaryContainer = primary,
-            secondary = secondary,
-            onSecondary = Color.White,
-            secondaryContainer = Color(0xFFD9E8EF),
-            onSecondaryContainer = Color(0xFF1A313C),
-            tertiary = tertiary,
-            onTertiary = Color.White,
-            tertiaryContainer = Color(0xFFF4DCE8),
-            onTertiaryContainer = Color(0xFF321624),
-            surface = Color.White,
-            surfaceVariant = Color(0xFFECECF0),
-            background = Color(0xFFF4F4F6),
-            onSurface = Color(0xFF171717),
-            onSurfaceVariant = Color(0xFF656565),
-            outline = Color(0xFF656565),
-            outlineVariant = Color(0xFFD2D2D2),
-        )
-    }
-    return scheme.copy(
-        error = if (darkTheme) Color(0xFFFFB4AB) else Color(0xFFBA1A1A),
-        onError = if (darkTheme) Color(0xFF690005) else Color.White,
-        errorContainer = if (darkTheme) Color(0xFF93000A) else Color(0xFFFFDAD6),
-        onErrorContainer = if (darkTheme) Color(0xFFFFDAD6) else Color(0xFF410002),
-        surfaceDim = if (darkTheme) Color(0xFF0C0C0E) else Color(0xFFE4E4E9),
-        surfaceBright = if (darkTheme) Color(0xFF2E2E33) else Color.White,
-        surfaceContainerLowest = if (darkTheme) Color(0xFF08080A) else Color.White,
-        surfaceContainerLow = if (darkTheme) Color(0xFF141417) else Color(0xFFFAFAFC),
-        surfaceContainer = if (darkTheme) Color(0xFF17171A) else Color.White,
-        surfaceContainerHigh = if (darkTheme) Color(0xFF232327) else Color(0xFFECECF0),
-        surfaceContainerHighest = if (darkTheme) Color(0xFF2C2C31) else Color(0xFFE4E4E9),
-        inverseSurface = if (darkTheme) Color(0xFFE6E1E5) else Color(0xFF303030),
-        inverseOnSurface = if (darkTheme) Color(0xFF303030) else Color(0xFFF5F5F5),
-        inversePrimary = if (darkTheme) primary else primaryContainer,
-    )
-}
+internal fun themePrimaryColor(themeColor: ThemeColor, darkTheme: Boolean): Color =
+    com.omniflow.android.ui.designsystem.tokens.themePrimaryColor(themeColor, darkTheme)
 
 @Composable
 private fun PrimaryNavigation(

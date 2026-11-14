@@ -8,6 +8,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.omniflow.android.ui.designsystem.tokens.chartColors
 
 /**
  * 全局设计 token。
@@ -124,22 +125,4 @@ object OmniText {
  * 换成低饱和的沙 / 鼠尾草 / 珊瑚 / 雾蓝一组。
  */
 @Composable
-internal fun chartPalette(): List<Color> = if (isDarkUi()) {
-    listOf(
-        Color(0xFFD9CBB0),
-        Color(0xFF97B3A4),
-        Color(0xFFD98A80),
-        Color(0xFF8FA6BD),
-        Color(0xFFC2A9C8),
-        Color(0xFFC9B98C),
-    )
-} else {
-    listOf(
-        Color(0xFFE5D9C3),
-        Color(0xFFA8C0B0),
-        Color(0xFFE8938A),
-        Color(0xFF9BB2C9),
-        Color(0xFFCDB6D3),
-        Color(0xFFD8C79A),
-    )
-}
+internal fun chartPalette(): List<Color> = chartColors()

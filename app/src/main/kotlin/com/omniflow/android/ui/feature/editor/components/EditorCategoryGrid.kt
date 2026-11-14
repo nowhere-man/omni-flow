@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.omniflow.android.ui.designsystem.tokens.categoryBadgeColors
 import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
 import com.omniflow.android.ui.surfaceInset
 import com.omniflow.core.domain.model.Category
@@ -235,17 +236,18 @@ fun CategoryTile(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
             ) {
+                val badgeColors = categoryBadgeColors(category.iconKey)
                 Surface(
                     modifier = Modifier.size(40.dp),
                     shape = CircleShape,
-                    color = if (selected) Color.Transparent else surfaceInset(),
+                    color = if (selected) Color.Transparent else badgeColors.container,
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = getCategoryIcon(category.iconKey),
                             contentDescription = null,
                             modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = if (selected) MaterialTheme.colorScheme.primary else badgeColors.content,
                         )
                     }
                 }
