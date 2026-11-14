@@ -51,8 +51,9 @@ import com.omniflow.android.ui.OmniText
 import com.omniflow.android.ui.OmniTextField
 import com.omniflow.android.ui.backupTimeText
 import com.omniflow.android.ui.designsystem.components.OmniBadgeIcon
-import com.omniflow.android.ui.designsystem.tokens.OmniColorTokens
+import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
 import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
+import com.omniflow.android.ui.designsystem.tokens.semanticBadgeColors
 import com.omniflow.android.ui.mutedContent
 import com.omniflow.core.domain.model.RemoteBackupMeta
 import com.omniflow.core.domain.model.SyncPhase
@@ -64,6 +65,8 @@ internal fun SyncStatusHubCard(
     onSyncNow: () -> Unit,
     onLoadBackups: () -> Unit,
 ) {
+    val systemColors = semanticBadgeColors(SemanticBadgeType.SYSTEM)
+
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -99,7 +102,7 @@ internal fun SyncStatusHubCard(
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         strokeWidth = 2.5.dp,
-                        color = OmniColorTokens.BadgeSystemContentLight,
+                        color = systemColors.content,
                     )
                 }
             }
@@ -112,7 +115,7 @@ internal fun SyncStatusHubCard(
                 Button(
                     onClick = onSyncNow,
                     enabled = state.syncState.phase != SyncPhase.RUNNING && canBackup,
-                    shape = RoundedCornerShape(20.dp),
+                    shape = OmniShapeTokens.button,
                     modifier = Modifier.weight(1f).height(46.dp),
                 ) {
                     Icon(Icons.Default.CloudSync, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -121,7 +124,7 @@ internal fun SyncStatusHubCard(
                 }
                 OutlinedButton(
                     onClick = onLoadBackups,
-                    shape = RoundedCornerShape(20.dp),
+                    shape = OmniShapeTokens.button,
                     modifier = Modifier.weight(1f).height(46.dp),
                 ) {
                     Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -150,6 +153,8 @@ internal fun WebDavConfigCard(
     onSave: () -> Unit,
     onTest: () -> Unit,
 ) {
+    val systemColors = semanticBadgeColors(SemanticBadgeType.SYSTEM)
+
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -225,8 +230,8 @@ internal fun WebDavConfigCard(
                                     label = { Text("${count}份") },
                                     shape = RoundedCornerShape(12.dp),
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = OmniColorTokens.BadgeSystemContainerLight,
-                                        selectedLabelColor = OmniColorTokens.BadgeSystemContentLight,
+                                        selectedContainerColor = systemColors.container,
+                                        selectedLabelColor = systemColors.content,
                                     ),
                                 )
                             }
@@ -236,7 +241,7 @@ internal fun WebDavConfigCard(
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Button(
                             onClick = onSave,
-                            shape = RoundedCornerShape(20.dp),
+                            shape = OmniShapeTokens.button,
                             modifier = Modifier.weight(1f).height(46.dp),
                         ) {
                             Text("保存配置")
@@ -244,7 +249,7 @@ internal fun WebDavConfigCard(
                         OutlinedButton(
                             onClick = onTest,
                             enabled = !isTesting && endpoint.isNotBlank(),
-                            shape = RoundedCornerShape(20.dp),
+                            shape = OmniShapeTokens.button,
                             modifier = Modifier.weight(1f).height(46.dp),
                         ) {
                             Text(if (isTesting) "测试中…" else "测试连接")
@@ -276,6 +281,8 @@ internal fun CloudSnapshotRow(
     backup: RemoteBackupMeta,
     onRestore: () -> Unit,
 ) {
+    val systemColors = semanticBadgeColors(SemanticBadgeType.SYSTEM)
+
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
@@ -291,13 +298,13 @@ internal fun CloudSnapshotRow(
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .background(OmniColorTokens.BadgeSystemContainerLight, CircleShape),
+                    .background(systemColors.container, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     Icons.Default.CloudDone,
                     contentDescription = null,
-                    tint = OmniColorTokens.BadgeSystemContentLight,
+                    tint = systemColors.content,
                     modifier = Modifier.size(20.dp),
                 )
             }
@@ -313,7 +320,7 @@ internal fun CloudSnapshotRow(
             }
             OutlinedButton(
                 onClick = onRestore,
-                shape = RoundedCornerShape(16.dp),
+                shape = OmniShapeTokens.button,
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                 modifier = Modifier.height(34.dp),
             ) {

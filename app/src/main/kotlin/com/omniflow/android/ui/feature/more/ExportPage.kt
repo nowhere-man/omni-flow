@@ -43,6 +43,7 @@ import com.omniflow.android.ui.OmniFlowViewModel
 import com.omniflow.android.ui.OmniText
 import com.omniflow.android.ui.designsystem.components.OmniExpressiveSwitch
 import com.omniflow.android.ui.designsystem.components.OmniSubPageScaffold
+import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
 import com.omniflow.android.ui.exportRange
 import com.omniflow.android.ui.mutedContent
 import com.omniflow.core.data.export.JsonToCsvExporter
@@ -323,7 +324,7 @@ fun ExportPage(
             Button(
                 onClick = { viewModel.prepareExport(ledgerScope, exportDateRange, exportType) },
                 enabled = canExport,
-                shape = RoundedCornerShape(24.dp),
+                shape = OmniShapeTokens.button,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 12.dp)

@@ -48,8 +48,9 @@ import com.omniflow.android.ui.OmniText
 import com.omniflow.android.ui.OmniTextField
 import com.omniflow.android.ui.designsystem.components.OmniBadgeIcon
 import com.omniflow.android.ui.designsystem.components.OmniSubPageScaffold
-import com.omniflow.android.ui.designsystem.tokens.OmniColorTokens
+import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
 import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
+import com.omniflow.android.ui.designsystem.tokens.semanticBadgeColors
 import com.omniflow.android.ui.mutedContent
 import kotlinx.coroutines.launch
 
@@ -71,6 +72,7 @@ fun AiSettingsPage(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val aiColors = semanticBadgeColors(SemanticBadgeType.AI)
     val saved = remember { AiCredentials.load(context) }
     var enabled by remember { mutableStateOf(saved.enabled) }
     var baseUrl by remember { mutableStateOf(saved.baseUrl) }
@@ -198,8 +200,8 @@ fun AiSettingsPage(
                                     label = { Text(vendor.title) },
                                     shape = RoundedCornerShape(12.dp),
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = OmniColorTokens.BadgeAiContainerLight,
-                                        selectedLabelColor = OmniColorTokens.BadgeAiContentLight,
+                                        selectedContainerColor = aiColors.container,
+                                        selectedLabelColor = aiColors.content,
                                     ),
                                 )
                             }
@@ -244,7 +246,7 @@ fun AiSettingsPage(
                                     AiCredentials.save(context, config)
                                     message = "配置已保存"
                                 },
-                                shape = RoundedCornerShape(20.dp),
+                                shape = OmniShapeTokens.button,
                                 modifier = Modifier.weight(1f).height(46.dp),
                             ) {
                                 Text("保存配置")
@@ -260,7 +262,7 @@ fun AiSettingsPage(
                                     }
                                 },
                                 enabled = !testing && baseUrl.isNotBlank() && model.isNotBlank(),
-                                shape = RoundedCornerShape(20.dp),
+                                shape = OmniShapeTokens.button,
                                 modifier = Modifier.weight(1f).height(46.dp),
                             ) {
                                 Text(if (testing) "测试中…" else "测试连通性")
@@ -270,13 +272,13 @@ fun AiSettingsPage(
                         message?.let { msg ->
                             Surface(
                                 shape = RoundedCornerShape(OmniRadius.small),
-                                color = if (msg.contains("失败")) MaterialTheme.colorScheme.errorContainer else OmniColorTokens.BadgeAiContainerLight,
+                                color = if (msg.contains("失败")) MaterialTheme.colorScheme.errorContainer else aiColors.container,
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Text(
                                     msg,
                                     style = OmniText.caption,
-                                    color = if (msg.contains("失败")) MaterialTheme.colorScheme.onErrorContainer else OmniColorTokens.BadgeAiContentLight,
+                                    color = if (msg.contains("失败")) MaterialTheme.colorScheme.onErrorContainer else aiColors.content,
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                                 )
                             }

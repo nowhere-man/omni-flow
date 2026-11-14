@@ -59,9 +59,10 @@ import com.omniflow.android.ui.OmniFlowViewModel
 import com.omniflow.android.ui.asRmb
 import com.omniflow.android.ui.designsystem.components.OmniEmptyState
 import com.omniflow.android.ui.designsystem.components.OmniSubPageScaffold
-import com.omniflow.android.ui.designsystem.tokens.OmniColorTokens
+import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
 import com.omniflow.android.ui.designsystem.tokens.categoryBadgeColors
 import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
+import com.omniflow.android.ui.designsystem.tokens.semanticBadgeColors
 import com.omniflow.android.ui.expenseColor
 import com.omniflow.android.ui.label
 import com.omniflow.core.domain.model.AppTimeZone
@@ -130,7 +131,7 @@ internal fun ReminderScreen(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                        color = OmniColorTokens.BadgePlanningContainerLight.copy(alpha = 0.25f),
+                        color = semanticBadgeColors(SemanticBadgeType.PLANNING).container.copy(alpha = 0.25f),
                     ) {
                         Row(
                             modifier = Modifier
@@ -235,7 +236,7 @@ internal fun ReminderScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
-                                    text = "已停用提醒 (${pausedReminders.size})",
+                                    text = "已停用提醒",
                                     style = MaterialTheme.typography.labelLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )

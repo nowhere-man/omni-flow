@@ -48,9 +48,10 @@ import com.omniflow.android.ui.designsystem.components.OmniEmptyState
 import com.omniflow.android.ui.designsystem.components.OmniProgressRing
 import com.omniflow.android.ui.designsystem.components.OmniSheetScaffold
 import com.omniflow.android.ui.designsystem.components.OmniSubPageScaffold
-import com.omniflow.android.ui.designsystem.tokens.OmniColorTokens
+import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
 import com.omniflow.android.ui.designsystem.tokens.categoryBadgeColors
 import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
+import com.omniflow.android.ui.designsystem.tokens.semanticBadgeColors
 import com.omniflow.core.domain.model.AppTimeZone
 import com.omniflow.core.domain.model.BudgetProgress
 import com.omniflow.core.domain.model.Category
@@ -190,11 +191,13 @@ private fun BudgetHeroRingCard(
         calculateDailyAllowance(progress.remaining, today)
     }
 
+    val planningContainer = semanticBadgeColors(SemanticBadgeType.PLANNING).container
+
     // Health color: pastel green (< 0.8) -> warning orange (0.8..1.0) -> desaturated red (> 1.0)
     val ringColor = when {
-        progress.isOverspent -> OmniColorTokens.ExpenseLight
-        progress.ratio >= 0.8f -> OmniColorTokens.BadgePlanningContainerLight
-        else -> OmniColorTokens.IncomeLight
+        progress.isOverspent -> expenseColor()
+        progress.ratio >= 0.8f -> planningContainer
+        else -> incomeColor()
     }
 
     Surface(
@@ -259,7 +262,7 @@ private fun BudgetHeroRingCard(
             // 「今日可花」 daily-allowance capsule
             Surface(
                 shape = CircleShape,
-                color = if (progress.isOverspent) OmniColorTokens.ExpenseLight.copy(alpha = 0.2f) else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                color = if (progress.isOverspent) expenseColor().copy(alpha = 0.2f) else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
             ) {
                 Text(
                     text = if (progress.isOverspent) {

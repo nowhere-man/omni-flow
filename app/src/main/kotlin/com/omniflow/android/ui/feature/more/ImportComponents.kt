@@ -34,7 +34,9 @@ import androidx.compose.ui.unit.dp
 import com.omniflow.android.R
 import com.omniflow.android.ui.OmniRadius
 import com.omniflow.android.ui.OmniText
-import com.omniflow.android.ui.designsystem.tokens.OmniColorTokens
+import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
+import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
+import com.omniflow.android.ui.designsystem.tokens.semanticBadgeColors
 import com.omniflow.android.ui.mutedContent
 import com.omniflow.core.parser.ImportFormat
 
@@ -49,6 +51,8 @@ internal fun ImportStepperHeader(
     currentStep: ImportStep,
     modifier: Modifier = Modifier,
 ) {
+    val importBadgeColors = semanticBadgeColors(SemanticBadgeType.IMPORT_EXPORT)
+
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -73,7 +77,7 @@ internal fun ImportStepperHeader(
                             .background(
                                 when {
                                     isActive -> MaterialTheme.colorScheme.primary
-                                    isCompleted -> OmniColorTokens.BadgePlanningContainerLight
+                                    isCompleted -> importBadgeColors.container
                                     else -> MaterialTheme.colorScheme.surfaceVariant
                                 },
                             ),
@@ -84,7 +88,7 @@ internal fun ImportStepperHeader(
                                 Icons.Default.Check,
                                 contentDescription = null,
                                 modifier = Modifier.size(14.dp),
-                                tint = OmniColorTokens.BadgePlanningContentLight,
+                                tint = importBadgeColors.content,
                             )
                         } else {
                             Text(
@@ -200,6 +204,8 @@ internal fun RecentImportReceiptCard(
     onContinue: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val importBadgeColors = semanticBadgeColors(SemanticBadgeType.IMPORT_EXPORT)
+
     ElevatedCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -218,13 +224,13 @@ internal fun RecentImportReceiptCard(
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .background(OmniColorTokens.BadgePlanningContainerLight, CircleShape),
+                    .background(importBadgeColors.container, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     Icons.Default.CheckCircle,
                     contentDescription = null,
-                    tint = OmniColorTokens.BadgePlanningContentLight,
+                    tint = importBadgeColors.content,
                     modifier = Modifier.size(28.dp),
                 )
             }
@@ -243,7 +249,7 @@ internal fun RecentImportReceiptCard(
 
             Surface(
                 onClick = onContinue,
-                shape = RoundedCornerShape(20.dp),
+                shape = OmniShapeTokens.button,
                 color = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.padding(top = 4.dp),

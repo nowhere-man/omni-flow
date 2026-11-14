@@ -34,9 +34,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.omniflow.android.ui.OmniText
 import com.omniflow.android.ui.designsystem.tokens.CategoryBadgeColors
-import com.omniflow.android.ui.designsystem.tokens.OmniColorTokens
+import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
 import com.omniflow.android.ui.designsystem.tokens.categoryBadgeColors
 import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
+import com.omniflow.android.ui.designsystem.tokens.semanticBadgeColors
 import com.omniflow.android.ui.mutedContent
 import com.omniflow.core.domain.model.Category
 import com.omniflow.core.domain.model.Rule
@@ -61,11 +62,12 @@ internal fun RuleSentenceCard(
         categories.firstOrNull { it.id == rule.actionValue }
     } else null
 
+    val planningColors = semanticBadgeColors(SemanticBadgeType.PLANNING)
     val badgeColors = when (rule.actionType) {
         RuleActionType.SET_CATEGORY -> categoryBadgeColors(targetCategory?.iconKey)
         RuleActionType.SET_EXCLUDED, RuleActionType.EXCLUDE -> CategoryBadgeColors(
-            container = OmniColorTokens.BadgePlanningContainerLight,
-            content = OmniColorTokens.BadgePlanningContentLight,
+            container = planningColors.container,
+            content = planningColors.content,
         )
     }
 

@@ -15,11 +15,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +42,7 @@ import com.omniflow.android.WebDavSyncAdapter
 import com.omniflow.android.ui.MoreUiState
 import com.omniflow.android.ui.OmniFlowViewModel
 import com.omniflow.android.ui.OmniText
+import com.omniflow.android.ui.designsystem.components.OmniEmptyState
 import com.omniflow.android.ui.designsystem.components.OmniSubPageScaffold
 import com.omniflow.android.ui.mutedContent
 import com.omniflow.core.domain.model.RemoteBackupMeta
@@ -155,22 +155,16 @@ fun DataManagementPage(
 
             if (state.backups.isEmpty()) {
                 item {
-                    ElevatedCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                        ),
-                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
-                    ) {
-                        Text(
-                            if (state.syncState.lastBackupAt == null) "配置 WebDAV 后点击「立即备份」创建第一个云端快照" else "暂无云端快照，点击右上角刷新拉取",
-                            style = OmniText.caption,
-                            color = mutedContent(),
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp, horizontal = 16.dp),
-                            textAlign = TextAlign.Center,
-                        )
-                    }
+                    OmniEmptyState(
+                        icon = Icons.Default.CloudQueue,
+                        message = "暂无云端快照",
+                        subtitle = if (state.syncState.lastBackupAt == null) {
+                            "配置 WebDAV 后点击「立即备份」创建第一个云端快照"
+                        } else {
+                            "点击右上角刷新拉取云端快照"
+                        },
+                        modifier = Modifier.padding(vertical = 16.dp),
+                    )
                 }
             } else {
                 items(state.backups, key = { "${it.deviceId}-${it.backupId}" }) { backup ->

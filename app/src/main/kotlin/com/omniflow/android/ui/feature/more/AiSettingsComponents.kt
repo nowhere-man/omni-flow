@@ -38,7 +38,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.OmniRadius
 import com.omniflow.android.ui.OmniText
-import com.omniflow.android.ui.designsystem.tokens.OmniColorTokens
+import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
+import com.omniflow.android.ui.designsystem.tokens.semanticBadgeColors
 import com.omniflow.android.ui.mutedContent
 import com.omniflow.android.ui.surfaceInset
 
@@ -47,6 +48,9 @@ internal fun AiPlayableDemoBox(
     modifier: Modifier = Modifier,
 ) {
     var inputText by remember { mutableStateOf("午饭在麦当劳吃了 38.5 元微信支付") }
+    val aiColors = semanticBadgeColors(SemanticBadgeType.AI)
+    val planningColors = semanticBadgeColors(SemanticBadgeType.PLANNING)
+    val systemColors = semanticBadgeColors(SemanticBadgeType.SYSTEM)
 
     ElevatedCard(
         modifier = modifier.fillMaxWidth(),
@@ -64,14 +68,14 @@ internal fun AiPlayableDemoBox(
                 Box(
                     modifier = Modifier
                         .size(32.dp)
-                        .background(OmniColorTokens.BadgeAiContainerLight, CircleShape),
+                        .background(aiColors.container, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         Icons.Default.AutoAwesome,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
-                        tint = OmniColorTokens.BadgeAiContentLight,
+                        tint = aiColors.content,
                     )
                 }
                 Spacer(Modifier.width(10.dp))
@@ -109,9 +113,9 @@ internal fun AiPlayableDemoBox(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("识别结果：", style = OmniText.caption, color = mutedContent())
-                DemoResultChip(label = amount, containerColor = OmniColorTokens.BadgePlanningContainerLight, contentColor = OmniColorTokens.BadgePlanningContentLight)
-                DemoResultChip(label = category, containerColor = OmniColorTokens.BadgeAiContainerLight, contentColor = OmniColorTokens.BadgeAiContentLight)
-                DemoResultChip(label = account, containerColor = OmniColorTokens.BadgeSystemContainerLight, contentColor = OmniColorTokens.BadgeSystemContentLight)
+                DemoResultChip(label = amount, containerColor = planningColors.container, contentColor = planningColors.content)
+                DemoResultChip(label = category, containerColor = aiColors.container, contentColor = aiColors.content)
+                DemoResultChip(label = account, containerColor = systemColors.container, contentColor = systemColors.content)
             }
         }
     }
@@ -199,6 +203,8 @@ private fun DecisionStepNode(
     desc: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
 ) {
+    val aiColors = semanticBadgeColors(SemanticBadgeType.AI)
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -206,10 +212,10 @@ private fun DecisionStepNode(
         Box(
             modifier = Modifier
                 .size(36.dp)
-                .background(OmniColorTokens.BadgeAiContainerLight, CircleShape),
+                .background(aiColors.container, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = OmniColorTokens.BadgeAiContentLight)
+            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = aiColors.content)
         }
         Text(title, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold))
         Text(desc, style = OmniText.caption, color = mutedContent())
@@ -218,6 +224,8 @@ private fun DecisionStepNode(
 
 @Composable
 internal fun AiPrivacyCard(modifier: Modifier = Modifier) {
+    val aiColors = semanticBadgeColors(SemanticBadgeType.AI)
+
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -230,7 +238,7 @@ internal fun AiPrivacyCard(modifier: Modifier = Modifier) {
             Icon(
                 Icons.Default.Security,
                 contentDescription = null,
-                tint = OmniColorTokens.BadgeAiContentLight,
+                tint = aiColors.content,
                 modifier = Modifier.size(20.dp),
             )
             Spacer(Modifier.width(12.dp))

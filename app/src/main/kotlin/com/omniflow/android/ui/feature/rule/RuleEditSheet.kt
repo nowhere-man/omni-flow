@@ -30,7 +30,7 @@ import com.omniflow.android.ui.OmniRadius
 import com.omniflow.android.ui.OmniText
 import com.omniflow.android.ui.OmniTextField
 import com.omniflow.android.ui.designsystem.components.OmniSheetScaffold
-import com.omniflow.android.ui.designsystem.tokens.OmniColorTokens
+import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
 import com.omniflow.android.ui.mutedContent
 import com.omniflow.android.ui.surfaceInset
 import com.omniflow.core.domain.model.Rule
@@ -273,7 +273,7 @@ internal fun RuleEditSheet(
                         onDismiss()
                     },
                     modifier = Modifier.fillMaxWidth().height(48.dp),
-                    shape = RoundedCornerShape(20.dp),
+                    shape = OmniShapeTokens.button,
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 ) {
                     Text("删除此规则")

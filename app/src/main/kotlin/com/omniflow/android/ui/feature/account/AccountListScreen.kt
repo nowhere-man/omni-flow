@@ -157,7 +157,7 @@ internal fun AccountListScreen(
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        text = "不计入总资产 (${excludedAccounts.size})",
+                                        text = "不计入总资产",
                                         style = MaterialTheme.typography.labelLarge,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )

@@ -33,9 +33,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.omniflow.android.ui.designsystem.tokens.OmniColorTokens
+import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
 import com.omniflow.android.ui.designsystem.tokens.categoryBadgeColors
 import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
+import com.omniflow.android.ui.designsystem.tokens.semanticBadgeColors
 import com.omniflow.core.domain.model.BudgetProgress
 
 @Composable
@@ -45,9 +46,10 @@ internal fun CategoryBudgetBarCard(
     onDelete: () -> Unit,
 ) {
     val badgeColors = categoryBadgeColors(progress.iconKey)
+    val planningContainer = semanticBadgeColors(SemanticBadgeType.PLANNING).container
     val barColor = when {
         progress.isOverspent -> expenseColor()
-        progress.ratio >= 0.8f -> OmniColorTokens.BadgePlanningContainerLight
+        progress.ratio >= 0.8f -> planningContainer
         else -> incomeColor()
     }
 

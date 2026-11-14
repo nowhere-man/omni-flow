@@ -43,8 +43,8 @@ import com.omniflow.android.ui.OmniFlowViewModel
 import com.omniflow.android.ui.OmniText
 import com.omniflow.android.ui.designsystem.components.OmniBadgeIcon
 import com.omniflow.android.ui.designsystem.components.OmniSubPageScaffold
-import com.omniflow.android.ui.designsystem.tokens.OmniColorTokens
 import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
+import com.omniflow.android.ui.designsystem.tokens.semanticBadgeColors
 import com.omniflow.android.ui.designsystem.tokens.themePrimaryColor
 import com.omniflow.android.ui.mutedContent
 import com.omniflow.core.domain.model.AppearanceMode
@@ -65,6 +65,7 @@ fun SettingsPage(
     modifier: Modifier = Modifier,
 ) {
     val systemInDark = isSystemInDarkTheme()
+    val systemColors = semanticBadgeColors(SemanticBadgeType.SYSTEM)
     val isPreviewDark = when (state.preferences.appearanceMode) {
         AppearanceMode.SYSTEM -> systemInDark
         AppearanceMode.LIGHT -> false
@@ -292,7 +293,7 @@ fun SettingsPage(
                             Icon(
                                 Icons.Default.CloudDone,
                                 contentDescription = null,
-                                tint = OmniColorTokens.BadgeSystemContentLight,
+                                tint = systemColors.content,
                                 modifier = Modifier.size(20.dp),
                             )
                             Spacer(Modifier.width(10.dp))
@@ -313,7 +314,7 @@ fun SettingsPage(
                             Icon(
                                 Icons.Default.Alarm,
                                 contentDescription = null,
-                                tint = OmniColorTokens.BadgeSystemContentLight,
+                                tint = systemColors.content,
                                 modifier = Modifier.size(20.dp),
                             )
                             Spacer(Modifier.width(10.dp))
