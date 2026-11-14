@@ -151,7 +151,7 @@ Material 3 Expressive 全面采用**物理弹簧动效（Physics-based Spring An
 
 | 问题类别 | 涉及文件路径 | 现有实现方式与证据 | 违背规范说明 |
 | :--- | :--- | :--- | :--- |
-| **自绘分段控件** | [OmniSegmented.kt](file:///home/hatch/Repos/omni-flow/app/src/main/kotlin/com/omniflow/android/ui/OmniSegmented.kt#L27-L72) | 使用 `Surface(shape = CircleShape)` + `Row` + 内部 `Surface` 循环手工拼装药丸滑动块。调用点多达 12 处（统计页、记账页、更多页等）。 | 违背 M3 `SingleChoiceSegmentedButtonRow` 原生规范，无无障碍语义标注，缺失弹性形变动画。 |
+| **自绘分段控件** | 旧版自绘分段控件（已废除并删除） | 使用 `Surface(shape = CircleShape)` + `Row` + 内部 `Surface` 循环手工拼装药丸滑动块。调用点多达 12 处（统计页、记账页、更多页等）。 | 违背 M3 `SingleChoiceSegmentedButtonRow` 原生规范，无无障碍语义标注，缺失弹性形变动画。 |
 | **遗留 View 对话框** | [AnalyticsScreen.kt#L566](file:///home/hatch/Repos/omni-flow/app/src/main/kotlin/com/omniflow/android/ui/AnalyticsScreen.kt#L566)<br>[TransactionEditorScreen.kt#L672, L694](file:///home/hatch/Repos/omni-flow/app/src/main/kotlin/com/omniflow/android/ui/TransactionEditorScreen.kt#L672)<br>[MoreScreen.kt#L1045](file:///home/hatch/Repos/omni-flow/app/src/main/kotlin/com/omniflow/android/ui/MoreScreen.kt#L1045) | 直接使用 `android.app.DatePickerDialog` 和 `android.app.TimePickerDialog` 命令式弹窗。 | 彻底打破 Compose 声明式渲染，无法继承 MaterialTheme 动态色彩与深色模式，视觉完全割裂。 |
 | **手写设置列表行** | [MoreScreen.kt#L327-L370](file:///home/hatch/Repos/omni-flow/app/src/main/kotlin/com/omniflow/android/ui/MoreScreen.kt#L327-L370) | `GroupedOptionRow` 使用 `Surface` + `Row` + `clickable` 手工绘制，并通过 `groupedOptionShape` 手算第一项、中间项、末项的圆角。 | 放弃 M3 原生 `ListItem` 槽位标准与无障碍规范，圆角算法脆弱且难以维护。 |
 | **数字键盘与保存混杂** | [TransactionEditorScreen.kt#L779-L827](file:///home/hatch/Repos/omni-flow/app/src/main/kotlin/com/omniflow/android/ui/TransactionEditorScreen.kt#L779-L827) | `Keypad` 采用 4x4 网格，第四列将加减运算符与“再记”、“完成”两个核心操作按钮强行混在数字矩阵内，高度写死 48dp。 | 操作动线混乱，“再记”与“完成”缺乏语义层级与 Split Button 结构，极易误触。 |
@@ -257,7 +257,7 @@ flowchart TD
   * *验证标准*：`./gradlew :core:test :app:lintRelease assembleRelease` 全绿通过，全 App 零运行时崩溃。
 * **阶段二（Token 与共享控件，独立验证发版）**：
   * 重塑 `OmniTokens.kt`，接入 M3 标准 Shapes、Tonal Containers 及 Tabular Figures。
-  * 将 `OmniSegmented` 迁移为 `SingleChoiceSegmentedButtonRow`。
+  * 将自绘分段控件迁移为 `SingleChoiceSegmentedButtonRow`。
   * 根除旧版 `android.app.DatePickerDialog`，封装 Compose M3 `OmniDatePickerDialog`。
   * *验证标准*：单元测试通过，首页和搜索页样式完全不受负面影响。
 * **阶段三（三页核心落地，业务交付）**：
@@ -294,7 +294,7 @@ flowchart TD
 ```
 
 1. **分段切换组件**：
-   * **组件选用**：全面使用 `SingleChoiceSegmentedButtonRow` + `SegmentedButton` 替换自绘 `OmniSegmented`。
+   * **组件选用**：全面使用 `SingleChoiceSegmentedButtonRow` + `SegmentedButton` 替换旧版自绘分段控件。
    * **配置参数**：
      * 容器高度：`40.dp`，外框形状使用 `SegmentedButtonDefaults.itemShape(index = index, count = total)`。
      * 色彩 Token：轨道使用 `surfaceContainerHigh`，激活项使用 `secondaryContainer`，文字采用 `onSecondaryContainer`（加粗 FontWeight.SemiBold）。
@@ -422,7 +422,7 @@ flowchart TD
 
 1. 🚫 **禁止使用 `android.app.DatePickerDialog` 与 `android.app.TimePickerDialog`**：
    * 严禁在 Compose 页面中弹出任何 View 时代的遗留对话框，必须统一使用 Compose M3 `DatePickerDialog` / `DatePicker` / `TimePicker`。
-2. 🚫 **禁止手写自绘药丸分段控件（如 `OmniSegmented`）**：
+2. 🚫 **禁止手写自绘药丸分段控件**：
    * 所有二选一、三选一及多选分段切换，一律统一调用 M3 `SingleChoiceSegmentedButtonRow` / `MultiChoiceSegmentedButtonRow`。
 3. 🚫 **禁止手写 `GroupedOptionRow` 拼接设置项**：
    * 严禁手写 `Surface + Row + clickable` 并靠算法计算 item 顶底圆角（`groupedOptionShape`）。必须使用标准 `ElevatedCard` 包裹 M3 `ListItem` 与 `HorizontalDivider`。

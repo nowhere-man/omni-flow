@@ -30,7 +30,7 @@
     - 统一视图状态中枢：`OmniFlowViewModel`（汇聚暴露 8 组 `StateFlow`，管理所有协程调度与 UI 状态）。
     - 导航系统：基于 AndroidX Navigation 3（`androidx.navigation3`）的单 Activity 拓扑（`AppNavigation.kt`、`OmniNavigationState`）。
     - 系统服务适配器：`ReminderScheduler`（AlarmManager + 状态栏通知）、`WebDavSyncAdapter`（HTTP WebDAV 客户端）、`AiCategoryAdapter`（OpenAI 兼容协议客户端与 Keystore 加密凭据存储）。
-    - 视觉系统：`OmniTokens.kt`（全局设计令牌）、`OmniSegmented.kt`、`SvgIcon.kt`、`CategoryIconCatalog.kt`。
+    - 视觉系统：`OmniTokens.kt`（全局设计令牌）、`SvgIcon.kt`、`CategoryIconCatalog.kt`。
 
 ### 1.3 核心数据流架构
 系统遵循响应式单向数据流（UDF / MVI）与数据库作为单一真实可信源（Single Source of Truth）：
