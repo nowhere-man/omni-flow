@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.OmniRadius
 import com.omniflow.android.ui.OmniText
+import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
 
 @Composable
 fun BatchActionBar(
@@ -69,7 +70,10 @@ fun BatchActionBar(
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Spacer(Modifier.weight(1f))
-                TextButton(onClick = onSelectAllToggle) {
+                TextButton(
+                    onClick = onSelectAllToggle,
+                    shape = OmniShapeTokens.textButton,
+                ) {
                     Text(if (isAllSelected) "取消全选" else "全选")
                 }
                 IconButton(onClick = onExit, modifier = Modifier.size(32.dp)) {
@@ -92,7 +96,7 @@ fun BatchActionBar(
                     onClick = onBatchChangeCategory,
                     enabled = selectedCount > 0,
                     modifier = Modifier.height(36.dp),
-                    shape = RoundedCornerShape(OmniRadius.small),
+                    shape = OmniShapeTokens.outlinedButton,
                 ) {
                     Text("改分类", style = OmniText.caption)
                 }
@@ -101,7 +105,7 @@ fun BatchActionBar(
                     onClick = onBatchChangeAccount,
                     enabled = selectedCount > 0,
                     modifier = Modifier.height(36.dp),
-                    shape = RoundedCornerShape(OmniRadius.small),
+                    shape = OmniShapeTokens.outlinedButton,
                 ) {
                     Text("改账户", style = OmniText.caption)
                 }
@@ -110,7 +114,7 @@ fun BatchActionBar(
                     onClick = onBatchChangeLedger,
                     enabled = selectedCount > 0,
                     modifier = Modifier.height(36.dp),
-                    shape = RoundedCornerShape(OmniRadius.small),
+                    shape = OmniShapeTokens.outlinedButton,
                 ) {
                     Text("改账本", style = OmniText.caption)
                 }
@@ -120,7 +124,7 @@ fun BatchActionBar(
                     enabled = selectedCount > 0,
                     modifier = Modifier.height(36.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                    shape = RoundedCornerShape(OmniRadius.small),
+                    shape = OmniShapeTokens.filledButton,
                 ) {
                     Text("批量删除", style = OmniText.caption)
                 }

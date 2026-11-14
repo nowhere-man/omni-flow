@@ -90,7 +90,7 @@ fun ImportPage(
         }
         LazyColumn(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item {
                 LedgerPickerBar(state.ledgers, ledgerId) { ledgerId = it; viewModel.selectMoreLedger(it) }

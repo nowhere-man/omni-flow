@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.ArrowBackIosNew
+import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -160,13 +161,15 @@ fun AnalyticsControlHeader(
                                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                             )
                             if (showReset) {
-                                TextButton(
+                                IconButton(
                                     onClick = onResetRange,
-                                    modifier = Modifier.height(28.dp),
+                                    modifier = Modifier.size(28.dp),
                                 ) {
-                                    Text(
-                                        text = "回到当前",
-                                        style = MaterialTheme.typography.labelSmall,
+                                    Icon(
+                                        imageVector = Icons.Default.Today,
+                                        contentDescription = "回到当前",
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.primary,
                                     )
                                 }
                             }

@@ -34,6 +34,9 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import com.omniflow.android.ui.designsystem.components.OmniExpressiveSwitch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -96,7 +99,7 @@ private fun AssetManagement(state: MoreUiState, onOpenAccount: (String) -> Unit)
     val assetTotal = assets.fold(Money.Zero) { total, account -> total + account.balance }
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
             Surface(
@@ -150,12 +153,7 @@ private fun AssetManagement(state: MoreUiState, onOpenAccount: (String) -> Unit)
         }
         if (state.accounts.isEmpty()) {
             item {
-                Text(
-                    "还没有账户，先去「账户」里创建一个",
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Text("还没有账户，先去「账户」里创建一个", Modifier.fillMaxWidth().padding(vertical = 32.dp), textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         item { Spacer(Modifier.height(88.dp)) }
@@ -200,6 +198,25 @@ private fun AssetRow(
 }
 
 @Composable
+private fun CategoryTypeSegmented(
+    selected: TransactionType,
+    onSelect: (TransactionType) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val options = listOf(TransactionType.EXPENSE, TransactionType.INCOME)
+    SingleChoiceSegmentedButtonRow(modifier = modifier) {
+        options.forEachIndexed { index, opt ->
+            SegmentedButton(
+                selected = selected == opt,
+                onClick = { onSelect(opt) },
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                label = { Text(opt.label) },
+            )
+        }
+    }
+}
+
+@Composable
 private fun CategoryManagement(state: MoreUiState, viewModel: OmniFlowViewModel, onOpen: (String) -> Unit) {
     var editing by remember { mutableStateOf<Category?>(null) }
     var newParentId by remember { mutableStateOf<String?>(null) }
@@ -209,17 +226,11 @@ private fun CategoryManagement(state: MoreUiState, viewModel: OmniFlowViewModel,
     val primaries = state.categories.filter { it.parentId == null && it.type == type }
     Column(Modifier.fillMaxSize()) {
         LedgerPickerBar(state.ledgers, state.selectedLedgerId) { viewModel.selectMoreLedger(it) }
-        OmniSegmented(
-            options = TransactionType.entries,
-            selected = type,
-            label = { it.label },
-            onSelected = { type = it },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        )
+        CategoryTypeSegmented(type, { type = it }, Modifier.fillMaxWidth().padding(horizontal = 16.dp))
         Spacer(Modifier.height(8.dp))
         LazyColumn(
             Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item {
                 Button(onClick = { newParentId = null; showNew = true }, modifier = Modifier.fillMaxWidth()) {
@@ -229,12 +240,7 @@ private fun CategoryManagement(state: MoreUiState, viewModel: OmniFlowViewModel,
             state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
             if (primaries.isEmpty()) {
                 item {
-                    Text(
-                        "该账本还没有${type.label}分类",
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Text("该账本还没有${type.label}分类", Modifier.fillMaxWidth().padding(vertical = 32.dp), textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             items(primaries, key = { it.id }) { primary ->
@@ -356,16 +362,7 @@ private fun CategorySheet(
         onSave = { onSave(parentId, name.trim(), if (parentId == null) icon else null, type) },
         saveEnabled = name.isNotBlank(),
     ) {
-        OmniSegmented(
-            options = TransactionType.entries,
-            selected = type,
-            label = { it.label },
-            onSelected = {
-                type = it
-                parentId = null
-            },
-            modifier = Modifier.fillMaxWidth(),
-        )
+        CategoryTypeSegmented(type, { type = it; parentId = null }, Modifier.fillMaxWidth())
         NullableValueMenu(
             label = parents.firstOrNull { it.id == parentId }?.name ?: "作为一级分类",
             allLabel = "作为一级分类",
@@ -408,7 +405,7 @@ private fun TagManagement(state: MoreUiState, viewModel: OmniFlowViewModel) {
         LedgerPickerBar(state.ledgers, state.selectedLedgerId) { viewModel.selectMoreLedger(it) }
         LazyColumn(
             Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item { Button(onClick = { showNew = true }, modifier = Modifier.fillMaxWidth()) { Text("新建标签") } }
             state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
@@ -485,7 +482,7 @@ private fun RuleManagement(state: MoreUiState, viewModel: OmniFlowViewModel) {
         LedgerPickerBar(state.ledgers, state.selectedLedgerId) { viewModel.selectMoreLedger(it) }
         LazyColumn(
             Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item { Button(onClick = { showNew = true }, modifier = Modifier.fillMaxWidth()) { Text("新建规则") } }
             state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
@@ -647,7 +644,7 @@ private fun ReminderManagement(
     var confirmDelete by remember { mutableStateOf<Reminder?>(null) }
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item { Button(onClick = { showNew = true }, modifier = Modifier.fillMaxWidth()) { Text("新建提醒") } }
         state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }

@@ -75,7 +75,7 @@ internal fun AiSettingsPage() {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         OmniBadgeIcon(
                             icon = Icons.Default.AutoAwesome,
-                            badgeType = SemanticBadgeType.AI,
+                            badgeType = SemanticBadgeType.DATA_SYNC,
                         )
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
@@ -119,7 +119,6 @@ internal fun AiSettingsPage() {
                                 AiCredentials.save(context, config)
                                 message = "已保存"
                             },
-                            shape = RoundedCornerShape(OmniRadius.medium),
                             modifier = Modifier.weight(1f).height(46.dp),
                         ) { Text("保存配置") }
                         OutlinedButton(
@@ -133,7 +132,6 @@ internal fun AiSettingsPage() {
                                 }
                             },
                             enabled = !testing && baseUrl.isNotBlank() && model.isNotBlank(),
-                            shape = RoundedCornerShape(OmniRadius.medium),
                             modifier = Modifier.weight(1f).height(46.dp),
                         ) { Text(if (testing) "测试中…" else "测试连接") }
                     }

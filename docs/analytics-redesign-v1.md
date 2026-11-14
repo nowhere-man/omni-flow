@@ -196,7 +196,7 @@ flowchart TD
 ### 2.2 控制器与切换组件收纳规格
 
 #### (1) 现状问题严查
-当前页面堆砌了**三个整行全宽的自绘控件（OmniSegmented）**：
+当前页面堆砌了**三个整行全宽的自绘控件**：
 1. 时间范围切换（周/月/年/范围）占满一行；
 2. 支出/收入切换占满一行；
 3. YearBars 内的“上下(DIVERGING)/并排(SIDE_BY_SIDE)”切换占了一整块控件。  
@@ -413,7 +413,7 @@ gantt
 | 改动项 | 涉及模块 | 改动内容简述 | 依赖基线 | 工作量 |
 | :--- | :--- | :--- | :--- | :--- |
 | **数据层扩展** | `:core` | `SqlDelightAnalyticsFacade` 补充 `categoryDiffs` 计算与单元测试 | 无 | **M** |
-| **控制器瘦身** | `:app` | 废除自绘 `OmniSegmented`；引入 M3 `SingleChoiceSegmentedButtonRow`；**彻底删除“上下/并排”切换按键** | M3 1.4.0 Tokens | **S** |
+| **控制器瘦身** | `:app` | 废除自绘分段控件；引入 M3 `SingleChoiceSegmentedButtonRow`；**彻底删除“上下/并排”切换按键** | M3 1.4.0 Tokens | **S** |
 | **收支健康度卡片** | `:app` | 汇总卡重构：净结余、结余率 Badge、总收、总支、日均支出 | 无 | **S** |
 | **统一趋势图** | `:app` | 统一为并排双柱图；适配周/月/年；点击高亮显示 Tooltip | 无 | **S** |
 | **分类支出增减卡片** | `:app` | 水平双向发散条形图（少花绿/多花红）+ Top 4 差异排行 | `categoryDiffs` 数据 | **M** |

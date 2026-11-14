@@ -17,6 +17,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -28,7 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.omniflow.android.ui.OmniSegmented
+import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
 import com.omniflow.android.ui.feature.editor.components.CategoryTile
 import com.omniflow.core.domain.model.Category
 import com.omniflow.core.domain.model.TransactionType
@@ -95,23 +98,28 @@ internal fun SearchCategoryPickerSheet(
                         onSelected(null, null)
                         onDismiss()
                     },
+                    shape = OmniShapeTokens.textButton,
                 ) {
                     Text("清除分类")
                 }
             }
 
             if (initialType == null || initialType == TransactionType.EXPENSE || initialType == TransactionType.INCOME) {
-                OmniSegmented(
-                    options = listOf(TransactionType.EXPENSE, TransactionType.INCOME),
-                    selected = type,
-                    label = { if (it == TransactionType.EXPENSE) "支出" else "收入" },
-                    onSelected = {
-                        type = it
-                        selectedPrimary = null
-                        selectedSecondary = null
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    val options = listOf(TransactionType.EXPENSE, TransactionType.INCOME)
+                    options.forEachIndexed { index, opt ->
+                        SegmentedButton(
+                            selected = type == opt,
+                            onClick = {
+                                type = opt
+                                selectedPrimary = null
+                                selectedSecondary = null
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                            label = { Text(if (opt == TransactionType.EXPENSE) "支出" else "收入") },
+                        )
+                    }
+                }
             }
 
             if (primaryCategories.isEmpty()) {

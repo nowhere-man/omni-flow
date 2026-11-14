@@ -97,7 +97,7 @@ fun DataManagementPage(
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         OmniBadgeIcon(
                             icon = Icons.Default.CloudSync,
-                            badgeType = SemanticBadgeType.DATA_SYNC,
+                            badgeType = SemanticBadgeType.SYSTEM,
                         )
                         Spacer(Modifier.width(12.dp))
                         Column {
@@ -145,7 +145,6 @@ fun DataManagementPage(
                                 viewModel.configureSync(SyncTarget.WEBDAV, retention.toIntOrNull() ?: 10)
                                 testStatus = "配置已保存"
                             },
-                            shape = RoundedCornerShape(OmniRadius.medium),
                             modifier = Modifier.weight(1f).height(46.dp),
                         ) { Text("保存配置") }
                         OutlinedButton(
@@ -159,7 +158,6 @@ fun DataManagementPage(
                                 }
                             },
                             enabled = !isTesting && endpoint.isNotBlank(),
-                            shape = RoundedCornerShape(OmniRadius.medium),
                             modifier = Modifier.weight(1f).height(46.dp),
                         ) {
                             Text(if (isTesting) "测试中…" else "测试连接")
@@ -222,7 +220,6 @@ fun DataManagementPage(
                         Button(
                             onClick = viewModel::syncNow,
                             enabled = state.syncState.phase != SyncPhase.RUNNING && endpoint.isNotBlank(),
-                            shape = RoundedCornerShape(OmniRadius.medium),
                             modifier = Modifier.weight(1f).height(46.dp),
                         ) {
                             Icon(Icons.Default.CloudSync, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -231,7 +228,6 @@ fun DataManagementPage(
                         }
                         OutlinedButton(
                             onClick = viewModel::loadBackups,
-                            shape = RoundedCornerShape(OmniRadius.medium),
                             modifier = Modifier.weight(1f).height(46.dp),
                         ) {
                             Text("刷新列表")
@@ -290,7 +286,6 @@ fun DataManagementPage(
                     }
                     OutlinedButton(
                         onClick = { pendingRestore = backup },
-                        shape = RoundedCornerShape(OmniRadius.small),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                         modifier = Modifier.height(32.dp),
                     ) { Text("恢复") }

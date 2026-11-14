@@ -3,11 +3,17 @@ package com.omniflow.android.ui.feature.analytics
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -23,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.asRmb
 import com.omniflow.android.ui.designsystem.components.SideBySideBarChart
 import com.omniflow.android.ui.designsystem.components.SideBySideBarPoint
+import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
 import com.omniflow.android.ui.designsystem.tokens.expenseColor
 import com.omniflow.android.ui.designsystem.tokens.incomeColor
 import com.omniflow.core.domain.model.AppTimeZone
@@ -106,7 +113,16 @@ fun TrendBarChartCard(
                 }
 
                 if (rangeMode == AnalyticsRangeMode.YEAR && onViewStatementTable != null) {
-                    TextButton(onClick = onViewStatementTable) {
+                    TextButton(
+                        onClick = onViewStatementTable,
+                        shape = OmniShapeTokens.textButton,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.TableChart,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(Modifier.width(4.dp))
                         Text(
                             text = "年度对账表",
                             style = MaterialTheme.typography.labelMedium,
