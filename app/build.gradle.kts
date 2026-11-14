@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+
 val appVersionName = providers.gradleProperty("versionName").orElse("0.0.0-dev")
 val appVersionCode = providers.gradleProperty("versionCode").map { it.toInt() }.orElse(
     providers.provider {
@@ -69,6 +70,7 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.compose.material.icons)
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.navigation3.ui)

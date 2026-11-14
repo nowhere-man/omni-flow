@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.sqldelight)
 }
 
+
+
 android {
     namespace = "com.omniflow.core"
     compileSdk = 36
