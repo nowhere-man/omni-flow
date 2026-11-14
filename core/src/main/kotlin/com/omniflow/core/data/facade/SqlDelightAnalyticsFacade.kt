@@ -46,13 +46,21 @@ class SqlDelightAnalyticsFacade(
     override fun observeDashboard(query: AnalyticsQuery): Flow<Result<AnalyticsDashboardState>> {
         val year = query.range.startInclusive.toLocalDateTime(AppTimeZone).year
         val previousRange = previousRange(query.range)
+        val trendRange = query.trendRange ?: query.range
+        val trendFlow = if (trendRange == query.range) {
+            kotlinx.coroutines.flow.flowOf(emptyList())
+        } else {
+            observeRows(query.scope, trendRange)
+        }
         return combine(
             observeRows(query.scope, query.range),
             observeRows(query.scope, previousRange),
             observeRows(query.scope, yearRange(year)),
             observeTags(query.scope, query.range),
-        ) { currentRows, previousRows, yearRows, tagRows ->
+            trendFlow,
+        ) { currentRows, previousRows, yearRows, tagRows, trendRows ->
             runCatching {
+                val actualTrendRows = if (trendRange == query.range) currentRows else trendRows
                 val currentSummary = summary(currentRows)
                 val previousSummary = summary(previousRows)
                 val healthSummary = FinancialHealthSummary(
@@ -75,7 +83,7 @@ class SqlDelightAnalyticsFacade(
                     query = query,
                     summary = currentSummary,
                     previousSummary = previousSummary,
-                    trend = chartData(currentRows, query.range, query.trendGranularity),
+                    trend = chartData(actualTrendRows, trendRange, query.trendGranularity),
                     ranking = rankings,
                     categoryBreakdowns = breakdowns,
                     tagAnalysis = tagAnalysis(currentRows, tagRows, query.tagAnalysisType),
