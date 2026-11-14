@@ -117,40 +117,26 @@ fun MoreHomeScreen(
             }
         }
 
-        // 分组 1：数据与备份
+        // 分组 1：{通用设置、数据与同步} — 配色：SYSTEM
         item {
             OmniSettingsGroup {
                 MoreOptionItem(
+                    page = MorePage.SETTINGS,
+                    badgeType = SemanticBadgeType.SYSTEM,
+                    state = state,
+                    onClick = { onPage(MorePage.SETTINGS) },
+                )
+                OmniSettingsDivider()
+                MoreOptionItem(
                     page = MorePage.DATA,
-                    badgeType = SemanticBadgeType.DATA_SYNC,
+                    badgeType = SemanticBadgeType.SYSTEM,
                     state = state,
                     onClick = { onPage(MorePage.DATA) },
-                )
-                OmniSettingsDivider()
-                MoreOptionItem(
-                    page = MorePage.AI,
-                    badgeType = SemanticBadgeType.AI,
-                    state = state,
-                    onClick = { onPage(MorePage.AI) },
-                )
-                OmniSettingsDivider()
-                MoreOptionItem(
-                    page = MorePage.IMPORT,
-                    badgeType = SemanticBadgeType.IMPORT_EXPORT,
-                    state = state,
-                    onClick = { onPage(MorePage.IMPORT) },
-                )
-                OmniSettingsDivider()
-                MoreOptionItem(
-                    page = MorePage.EXPORT,
-                    badgeType = SemanticBadgeType.IMPORT_EXPORT,
-                    state = state,
-                    onClick = { onPage(MorePage.EXPORT) },
                 )
             }
         }
 
-        // 分组 2：账本与资产
+        // 分组 2：{账本管理、账户管理、资产管理} — 配色：FINANCIAL
         item {
             OmniSettingsGroup {
                 MoreOptionItem(
@@ -173,7 +159,45 @@ fun MoreHomeScreen(
                     state = state,
                     onClick = { onPage(MorePage.ASSETS) },
                 )
+            }
+        }
+
+        // 分组 3：{导入账单、智能分类、规则管理、导出账单} — 配色：DATA_SYNC
+        item {
+            OmniSettingsGroup {
+                MoreOptionItem(
+                    page = MorePage.IMPORT,
+                    badgeType = SemanticBadgeType.DATA_SYNC,
+                    state = state,
+                    onClick = { onPage(MorePage.IMPORT) },
+                )
                 OmniSettingsDivider()
+                MoreOptionItem(
+                    page = MorePage.AI,
+                    badgeType = SemanticBadgeType.DATA_SYNC,
+                    state = state,
+                    onClick = { onPage(MorePage.AI) },
+                )
+                OmniSettingsDivider()
+                MoreOptionItem(
+                    page = MorePage.RULES,
+                    badgeType = SemanticBadgeType.DATA_SYNC,
+                    state = state,
+                    onClick = { onPage(MorePage.RULES) },
+                )
+                OmniSettingsDivider()
+                MoreOptionItem(
+                    page = MorePage.EXPORT,
+                    badgeType = SemanticBadgeType.DATA_SYNC,
+                    state = state,
+                    onClick = { onPage(MorePage.EXPORT) },
+                )
+            }
+        }
+
+        // 分组 4：{分类管理、标签管理} — 配色：CATEGORY
+        item {
+            OmniSettingsGroup {
                 MoreOptionItem(
                     page = MorePage.CATEGORIES,
                     badgeType = SemanticBadgeType.CATEGORY,
@@ -190,40 +214,21 @@ fun MoreHomeScreen(
             }
         }
 
-        // 分组 3：规划与规则
+        // 分组 5：{提醒、预算管理} — 配色：PLANNING
         item {
             OmniSettingsGroup {
-                MoreOptionItem(
-                    page = MorePage.BUDGETS,
-                    badgeType = SemanticBadgeType.PLANNING,
-                    state = state,
-                    onClick = { onPage(MorePage.BUDGETS) },
-                )
-                OmniSettingsDivider()
-                MoreOptionItem(
-                    page = MorePage.RULES,
-                    badgeType = SemanticBadgeType.PLANNING,
-                    state = state,
-                    onClick = { onPage(MorePage.RULES) },
-                )
-                OmniSettingsDivider()
                 MoreOptionItem(
                     page = MorePage.REMINDERS,
                     badgeType = SemanticBadgeType.PLANNING,
                     state = state,
                     onClick = { onPage(MorePage.REMINDERS) },
                 )
-            }
-        }
-
-        // 分组 4：系统设置
-        item {
-            OmniSettingsGroup {
+                OmniSettingsDivider()
                 MoreOptionItem(
-                    page = MorePage.SETTINGS,
-                    badgeType = SemanticBadgeType.SYSTEM,
+                    page = MorePage.BUDGETS,
+                    badgeType = SemanticBadgeType.PLANNING,
                     state = state,
-                    onClick = { onPage(MorePage.SETTINGS) },
+                    onClick = { onPage(MorePage.BUDGETS) },
                 )
             }
         }
@@ -273,31 +278,25 @@ private fun MoreOptionItem(
 }
 
 private fun MorePage.badge(state: MoreUiState): String? = when (this) {
-    MorePage.LEDGERS -> "${state.ledgers.size}"
-    MorePage.ACCOUNTS -> "${state.accounts.size}"
-    MorePage.CATEGORIES -> "${state.categories.count { it.parentId == null }}"
-    MorePage.TAGS -> if (state.tags.isNotEmpty()) "${state.tags.size}" else null
-    MorePage.RULES -> if (state.rules.isNotEmpty()) "${state.rules.size}" else null
-    MorePage.REMINDERS -> if (state.reminders.isNotEmpty()) "${state.reminders.size}" else null
     MorePage.DATA -> if (state.syncState.phase == SyncPhase.RUNNING) "同步中" else null
     else -> null
 }
 
 private fun MorePage.description(state: MoreUiState): String = when (this) {
     MorePage.HOME -> ""
-    MorePage.DATA -> syncLabel(state)
-    MorePage.AI -> "导入时让大模型建议一级分类"
-    MorePage.IMPORT -> "从支付宝、微信、银行流水批量导入"
-    MorePage.EXPORT -> "导出 CSV 表格或 JSON 备份"
     MorePage.SETTINGS -> "外观、主题色、应用锁与缓存"
+    MorePage.DATA -> syncLabel(state)
     MorePage.LEDGERS -> "账本封面、默认账本与收支概览"
     MorePage.ACCOUNTS -> "账户余额、卡片信息与流水"
     MorePage.ASSETS -> "净资产构成与负债"
+    MorePage.IMPORT -> "从支付宝、微信、银行流水批量导入"
+    MorePage.AI -> "导入时让大模型建议一级分类"
+    MorePage.RULES -> "自动分类和排除规则"
+    MorePage.EXPORT -> "导出 CSV 表格或 JSON 备份"
     MorePage.CATEGORIES -> "收支分类、图标与排序"
     MorePage.TAGS -> "账本标签"
-    MorePage.BUDGETS -> budgetLabel(state)
-    MorePage.RULES -> "自动分类和排除规则"
     MorePage.REMINDERS -> "还款与周期记账提醒"
+    MorePage.BUDGETS -> budgetLabel(state)
 }
 
 private fun budgetLabel(state: MoreUiState): String {

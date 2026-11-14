@@ -49,19 +49,19 @@ import com.omniflow.android.ui.feature.more.SettingsPage
 
 enum class MorePage(val label: String, val icon: ImageVector) {
     HOME("更多", Icons.Default.Settings),
-    SETTINGS("设置", Icons.Default.Settings),
+    SETTINGS("通用设置", Icons.Default.Settings),
     DATA("数据与同步", Icons.Default.CloudSync),
-    AI("AI 助手", Icons.Default.AutoAwesome),
+    LEDGERS("账本管理", Icons.Default.AccountBalance),
+    ACCOUNTS("账户管理", Icons.Default.Wallet),
+    ASSETS("资产管理", Icons.Default.Savings),
     IMPORT("导入账单", Icons.Default.FileUpload),
-    EXPORT("导出数据", Icons.Default.FileDownload),
-    RULES("规则", Icons.AutoMirrored.Filled.Rule),
+    AI("智能分类", Icons.Default.AutoAwesome),
+    RULES("规则管理", Icons.AutoMirrored.Filled.Rule),
+    EXPORT("导出账单", Icons.Default.FileDownload),
+    CATEGORIES("分类管理", Icons.Default.Category),
+    TAGS("标签管理", Icons.AutoMirrored.Filled.Label),
     REMINDERS("提醒", Icons.Default.Notifications),
-    BUDGETS("预算", Icons.Default.Savings),
-    LEDGERS("账本", Icons.Default.AccountBalance),
-    ACCOUNTS("账户", Icons.Default.Wallet),
-    ASSETS("资产", Icons.Default.Savings),
-    CATEGORIES("分类", Icons.Default.Category),
-    TAGS("标签", Icons.AutoMirrored.Filled.Label),
+    BUDGETS("预算管理", Icons.Default.Savings),
 }
 
 @Composable

@@ -59,7 +59,7 @@ internal fun BudgetPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
         LedgerPickerBar(state.ledgers, state.selectedLedgerId) { viewModel.selectMoreLedger(it) }
         LazyColumn(
             Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item {
                 Button(onClick = { creating = true }, modifier = Modifier.fillMaxWidth()) {

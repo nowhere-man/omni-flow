@@ -96,7 +96,7 @@ private fun AssetManagement(state: MoreUiState, onOpenAccount: (String) -> Unit)
     val assetTotal = assets.fold(Money.Zero) { total, account -> total + account.balance }
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
             Surface(
@@ -219,7 +219,7 @@ private fun CategoryManagement(state: MoreUiState, viewModel: OmniFlowViewModel,
         Spacer(Modifier.height(8.dp))
         LazyColumn(
             Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item {
                 Button(onClick = { newParentId = null; showNew = true }, modifier = Modifier.fillMaxWidth()) {
@@ -408,7 +408,7 @@ private fun TagManagement(state: MoreUiState, viewModel: OmniFlowViewModel) {
         LedgerPickerBar(state.ledgers, state.selectedLedgerId) { viewModel.selectMoreLedger(it) }
         LazyColumn(
             Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item { Button(onClick = { showNew = true }, modifier = Modifier.fillMaxWidth()) { Text("新建标签") } }
             state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
@@ -485,7 +485,7 @@ private fun RuleManagement(state: MoreUiState, viewModel: OmniFlowViewModel) {
         LedgerPickerBar(state.ledgers, state.selectedLedgerId) { viewModel.selectMoreLedger(it) }
         LazyColumn(
             Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item { Button(onClick = { showNew = true }, modifier = Modifier.fillMaxWidth()) { Text("新建规则") } }
             state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
@@ -647,7 +647,7 @@ private fun ReminderManagement(
     var confirmDelete by remember { mutableStateOf<Reminder?>(null) }
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item { Button(onClick = { showNew = true }, modifier = Modifier.fillMaxWidth()) { Text("新建提醒") } }
         state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
