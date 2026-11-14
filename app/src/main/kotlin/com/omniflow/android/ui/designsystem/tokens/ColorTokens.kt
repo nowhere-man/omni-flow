@@ -22,71 +22,72 @@ object OmniColorTokens {
     val WarningLight = Color(0xFF8B6012)
     val WarningDark = Color(0xFFE8B661)
 
-    // Tonal Surface 暖调容器阶梯规范 (对标 Gmail M3 Expressive)
-    val SurfaceBackgroundLight = Color(0xFFF7F2EB)
-    val SurfaceBackgroundDark = Color(0xFF171512)
+    // Tonal Surface 暖调容器阶梯规范 (对标 Gmail M3 Expressive & Google Account M3E Dark)
+    val SurfaceBackgroundLight = Color(0xFFF5EDE0)
+    val SurfaceBackgroundDark = Color(0xFF1E1F21)
 
-    val SurfaceContainerLowLight = Color(0xFFFFFFFF)
-    val SurfaceContainerLowDark = Color(0xFF22201D)
+    val SurfaceContainerLowLight = Color(0xFFFFFDF8)
+    val SurfaceContainerLowDark = Color(0xFF38393B)
 
-    val SurfaceContainerLight = Color(0xFFF2ECE2)
-    val SurfaceContainerDark = Color(0xFF292622)
+    val SurfaceContainerLight = Color(0xFFEFE6D8)
+    val SurfaceContainerDark = Color(0xFF2B2C2E)
 
-    val SurfaceContainerHighLight = Color(0xFFEBE5DB)
-    val SurfaceContainerHighDark = Color(0xFF302D29)
+    val SurfaceContainerHighLight = Color(0xFFE8DECF)
+    val SurfaceContainerHighDark = Color(0xFF444547)
+    val SurfaceContainerHighestDark = Color(0xFF4E5052)
 
     // Expressive 语义徽章色彩（容器色 + 图标色）对
-    // Light: Pastel 容器 + 同色相柔和深色图标（不再近黑）；Dark: 暗色调容器 + 同色相粉彩浅色图标
+    // 浅/深两模式统一为「亮粉彩圆盘 + 同色相深色 glyph」，深色模式不再使用深底浅图标
     val BadgeSystemContainerLight = Color(0xFFEDE4FF)
-    val BadgeSystemContentLight = Color(0xFF5A3E85)
-    val BadgeSystemContainerDark = Color(0xFF382A52)
-    val BadgeSystemContentDark = Color(0xFFD6C2FF)
+    val BadgeSystemContentLight = Color(0xFF5529A4)
+    val BadgeSystemContainerDark = Color(0xFFD8BAFA)
+    val BadgeSystemContentDark = Color(0xFF5529A4)
 
     val BadgeDataSyncContainerLight = Color(0xFFD8E6FA)
-    val BadgeDataSyncContentLight = Color(0xFF26528D)
-    val BadgeDataSyncContainerDark = Color(0xFF1E3554)
-    val BadgeDataSyncContentDark = Color(0xFFBBD7FD)
+    val BadgeDataSyncContentLight = Color(0xFF014A75)
+    val BadgeDataSyncContainerDark = Color(0xFF7ECEFD)
+    val BadgeDataSyncContentDark = Color(0xFF014A75)
 
     val BadgeFinancialContainerLight = Color(0xFFD3EED9)
-    val BadgeFinancialContentLight = Color(0xFF206337)
-    val BadgeFinancialContainerDark = Color(0xFF1A3D25)
-    val BadgeFinancialContentDark = Color(0xFFB4E8C2)
+    val BadgeFinancialContentLight = Color(0xFF09421A)
+    val BadgeFinancialContainerDark = Color(0xFF64C881)
+    val BadgeFinancialContentDark = Color(0xFF09421A)
 
-    val BadgePlanningContainerLight = Color(0xFFFFE5C4)
-    val BadgePlanningContentLight = Color(0xFF7D4E15)
-    val BadgePlanningContainerDark = Color(0xFF4A3215)
-    val BadgePlanningContentDark = Color(0xFFFED8A7)
+    val BadgePlanningContainerLight = Color(0xFFFEDEC5)
+    val BadgePlanningContentLight = Color(0xFF763404)
+    val BadgePlanningContainerDark = Color(0xFFFDB481)
+    val BadgePlanningContentDark = Color(0xFF763404)
 
-    val BadgeAiContainerLight = Color(0xFFF3DEFA)
-    val BadgeAiContentLight = Color(0xFF6B2F86)
-    val BadgeAiContainerDark = Color(0xFF3E204E)
-    val BadgeAiContentDark = Color(0xFFE9BFF7)
+    val BadgeAiContainerLight = Color(0xFFFDE4EC)
+    val BadgeAiContentLight = Color(0xFF8E0054)
+    val BadgeAiContainerDark = Color(0xFFFDADE2)
+    val BadgeAiContentDark = Color(0xFF8E0054)
 
     val BadgeCategoryContainerLight = Color(0xFFFFDFE8)
-    val BadgeCategoryContentLight = Color(0xFF852E4B)
-    val BadgeCategoryContainerDark = Color(0xFF48202F)
-    val BadgeCategoryContentDark = Color(0xFFFDC2D3)
+    val BadgeCategoryContentLight = Color(0xFF8E0054)
+    val BadgeCategoryContainerDark = Color(0xFFFDADE2)
+    val BadgeCategoryContentDark = Color(0xFF8E0054)
 
-    val BadgeImportExportContainerLight = Color(0xFFD7F0FA)
-    val BadgeImportExportContentLight = Color(0xFF165F7B)
-    val BadgeImportExportContainerDark = Color(0xFF153B4A)
-    val BadgeImportExportContentDark = Color(0xFFB6E6F7)
+    val BadgeImportExportContainerLight = Color(0xFFAEF0FE)
+    val BadgeImportExportContentLight = Color(0xFF004D5A)
+    val BadgeImportExportContainerDark = Color(0xFF6EDEF4)
+    val BadgeImportExportContentDark = Color(0xFF004D5A)
 
-    // 统计排行榜金银铜奖牌色（柔和粉彩版）
+    // 统计排行榜金银铜奖牌色（柔和粉彩版，深色模式统一亮粉彩+深色前景）
     val RankGoldContainerLight = Color(0xFFFEF3D6)
     val RankGoldContentLight = Color(0xFF7E5B10)
-    val RankGoldContainerDark = Color(0xFF473612)
-    val RankGoldContentDark = Color(0xFFFCE19B)
+    val RankGoldContainerDark = Color(0xFFFDD663)
+    val RankGoldContentDark = Color(0xFF6B4605)
 
     val RankSilverContainerLight = Color(0xFFEAEBED)
     val RankSilverContentLight = Color(0xFF4C5563)
-    val RankSilverContainerDark = Color(0xFF2C323B)
-    val RankSilverContentDark = Color(0xFFCFD5DE)
+    val RankSilverContainerDark = Color(0xFFD3D7DD)
+    val RankSilverContentDark = Color(0xFF2C323B)
 
     val RankBronzeContainerLight = Color(0xFFF7E8DD)
     val RankBronzeContentLight = Color(0xFF7A4A28)
-    val RankBronzeContainerDark = Color(0xFF422817)
-    val RankBronzeContentDark = Color(0xFFE8BCA0)
+    val RankBronzeContainerDark = Color(0xFFFDB481)
+    val RankBronzeContentDark = Color(0xFF763404)
 
     // 第三方账单品牌标识柔和色
     val ImportMeituanContainer = Color(0xFFFEE895)

@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.designsystem.tokens.CategoryBadgeColors
+import com.omniflow.android.ui.designsystem.tokens.OmniTypographyTokens
 import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
 
 /**
@@ -37,7 +38,7 @@ fun OmniSettingsGroup(
         if (!title.isNullOrBlank()) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall,
+                style = OmniTypographyTokens.settingsGroupTitle,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
             )
@@ -48,7 +49,7 @@ fun OmniSettingsGroup(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             ),
             elevation = CardDefaults.elevatedCardElevation(
-                defaultElevation = 0.5.dp,
+                defaultElevation = 0.dp,
             ),
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -133,7 +134,8 @@ private fun OmniSettingsRowInternal(
         headlineContent = {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
+                style = OmniTypographyTokens.settingsRowTitle,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         },
         supportingContent = if (subtitle != null || content != null) {
@@ -142,7 +144,7 @@ private fun OmniSettingsRowInternal(
                     if (subtitle != null) {
                         Text(
                             text = subtitle,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = OmniTypographyTokens.settingsRowSubtitle,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -160,12 +162,12 @@ private fun OmniSettingsRowInternal(
 }
 
 /**
- * 设置列表项行间细分割线，图标后缩进 56dp。
+ * 设置列表项行间细分割线，图标与间距后对齐文字缩进 72dp。
  */
 @Composable
 fun OmniSettingsDivider(modifier: Modifier = Modifier) {
     HorizontalDivider(
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-        modifier = modifier.padding(start = 56.dp, end = 16.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+        modifier = modifier.padding(start = 72.dp, end = 16.dp),
     )
 }

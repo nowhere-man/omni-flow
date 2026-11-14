@@ -54,4 +54,44 @@ object OmniTypographyTokens {
             fontWeight = FontWeight.Medium,
             fontFeatureSettings = FontFeatureSettingsTnum,
         )
+
+    /** 设置分组标题 (14sp/20sp, Medium) 对齐 Google M3E 设置小节标签 */
+    val settingsGroupTitle: TextStyle
+        @Composable
+        @ReadOnlyComposable
+        get() = MaterialTheme.typography.titleSmall.copy(
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            fontWeight = FontWeight.Medium,
+        )
+
+    /** 设置行标题 (16sp/24sp, Medium) 对齐 Google M3E 设置项标题 */
+    val settingsRowTitle: TextStyle
+        @Composable
+        @ReadOnlyComposable
+        get() = MaterialTheme.typography.titleMedium.copy(
+            fontSize = 16.sp,
+            lineHeight = 24.sp,
+            fontWeight = FontWeight.Medium,
+        )
+
+    /** 设置行副标题 (14sp/20sp, Normal) 对齐 Google M3E 辅助说明文字 */
+    val settingsRowSubtitle: TextStyle
+        @Composable
+        @ReadOnlyComposable
+        get() = MaterialTheme.typography.bodyMedium.copy(
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            fontWeight = FontWeight.Normal,
+        )
+
+    /** 设置行紧凑辅助文字 (12sp/16sp, Normal) */
+    val settingsRowSupporting: TextStyle
+        @Composable
+        @ReadOnlyComposable
+        get() = MaterialTheme.typography.bodySmall.copy(
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            fontWeight = FontWeight.Normal,
+        )
 }
