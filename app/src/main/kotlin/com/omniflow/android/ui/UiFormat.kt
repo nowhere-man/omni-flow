@@ -1,5 +1,6 @@
 package com.omniflow.android.ui
 
+import com.omniflow.android.ui.feature.analytics.AnalyticsRangeMode
 import com.omniflow.core.domain.model.AppTimeZone
 import com.omniflow.core.domain.model.DateRange
 import com.omniflow.core.domain.model.Money
