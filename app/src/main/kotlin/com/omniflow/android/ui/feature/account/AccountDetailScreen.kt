@@ -45,6 +45,7 @@ import com.omniflow.android.ui.TransactionRow
 import com.omniflow.android.ui.asRmb
 import com.omniflow.android.ui.designsystem.components.OmniBadgeIcon
 import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
+import com.omniflow.android.ui.designsystem.tokens.accountTypeBadgeColors
 import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
 import com.omniflow.android.ui.expenseColor
 import com.omniflow.android.ui.incomeColor
@@ -168,7 +169,7 @@ internal fun AccountDetailScreen(
                 val recent = state.transactions.take(15)
                 item {
                     Surface(
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(24.dp),
                         color = surfaceCard(),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
@@ -243,20 +244,14 @@ private fun AccountOverviewCard(
     onEditClick: () -> Unit,
 ) {
     val isLiability = account.balance.minor < 0
-    val badgeType = when (account.type) {
-        AccountType.CASH -> SemanticBadgeType.FINANCIAL
-        AccountType.DEBIT_CARD -> SemanticBadgeType.FINANCIAL
-        AccountType.CREDIT_CARD -> SemanticBadgeType.PLANNING
-        AccountType.E_WALLET -> SemanticBadgeType.DATA_SYNC
-        AccountType.INVESTMENT -> SemanticBadgeType.AI
-    }
+    val badgeColors = accountTypeBadgeColors(account.type)
 
     ElevatedCard(
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.5.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
@@ -271,7 +266,8 @@ private fun AccountOverviewCard(
             ) {
                 OmniBadgeIcon(
                     icon = getCategoryIcon(account.iconKey),
-                    badgeType = badgeType,
+                    containerColor = badgeColors.container,
+                    contentColor = badgeColors.content,
                 )
                 Spacer(Modifier.size(16.dp))
                 Column(Modifier.weight(1f)) {

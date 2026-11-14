@@ -91,7 +91,7 @@ fun DataManagementPage(
                 colors = CardDefaults.elevatedCardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                 ),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.5.dp),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
             ) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -192,7 +192,7 @@ fun DataManagementPage(
                 colors = CardDefaults.elevatedCardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                 ),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.5.dp),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
             ) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -253,7 +253,7 @@ fun DataManagementPage(
                     colors = CardDefaults.elevatedCardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                     ),
-                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.5.dp),
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
                 ) {
                     Text(
                         if (state.syncState.lastBackupAt == null) "配置 WebDAV 后点击「立即备份」创建第一个云端快照" else "未拉取到云端备份，请点击「刷新列表」",
@@ -269,11 +269,11 @@ fun DataManagementPage(
         items(state.backups, key = { "${it.deviceId}-${it.backupId}" }) { backup ->
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.elevatedCardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                 ),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.5.dp),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
             ) {
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),

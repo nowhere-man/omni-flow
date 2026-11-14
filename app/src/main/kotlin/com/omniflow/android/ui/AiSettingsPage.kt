@@ -69,7 +69,7 @@ internal fun AiSettingsPage() {
                 colors = CardDefaults.elevatedCardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                 ),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.5.dp),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
             ) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

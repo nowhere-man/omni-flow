@@ -64,7 +64,7 @@ fun MoreHomeScreen(
             .readableContentWidth()
             .fillMaxHeight()
             .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item { Spacer(Modifier.height(8.dp)) }
 
@@ -77,7 +77,7 @@ fun MoreHomeScreen(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                 ),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.5.dp),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
             ) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(

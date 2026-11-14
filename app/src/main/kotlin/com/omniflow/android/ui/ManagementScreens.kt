@@ -34,7 +34,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
+import com.omniflow.android.ui.designsystem.components.OmniExpressiveSwitch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -679,7 +679,7 @@ private fun ReminderManagement(
                             maxLines = 1,
                         )
                     }
-                    Switch(!reminder.paused, { enabled ->
+                    OmniExpressiveSwitch(!reminder.paused, { enabled ->
                         if (enabled) onRequestNotificationPermission()
                         viewModel.setReminderPaused(reminder, !enabled)
                     })
@@ -777,7 +777,7 @@ private fun ReminderDialog(
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("暂停", modifier = Modifier.weight(1f))
-            Switch(paused, { paused = it })
+            OmniExpressiveSwitch(checked = paused, onCheckedChange = { paused = it })
         }
     }
 }

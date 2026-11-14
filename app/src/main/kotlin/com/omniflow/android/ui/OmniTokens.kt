@@ -41,13 +41,13 @@ internal fun isDarkUi(): Boolean = MaterialTheme.colorScheme.background.luminanc
 @Composable
 internal fun surfaceBase(): Color = MaterialTheme.colorScheme.background
 
-/** 卡片色，比页面底亮一档。 */
+/** 卡片色，比页面底亮一档 (对标 Google M3E surfaceContainerLow)。 */
 @Composable
-internal fun surfaceCard(): Color = MaterialTheme.colorScheme.surface
+internal fun surfaceCard(): Color = MaterialTheme.colorScheme.surfaceContainerLow
 
 /** 卡片内嵌块、chip 轨道，比卡片再亮一档。 */
 @Composable
-internal fun surfaceInset(): Color = MaterialTheme.colorScheme.surfaceVariant
+internal fun surfaceInset(): Color = MaterialTheme.colorScheme.surfaceContainerHigh
 
 /** 次要文字统一走这个，不要再各处手写 alpha。 */
 @Composable

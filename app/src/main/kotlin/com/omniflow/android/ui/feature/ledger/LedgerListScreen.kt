@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.LedgerCoverBox
 import com.omniflow.android.ui.OmniRadius
 import com.omniflow.android.ui.asRmb
+import com.omniflow.android.ui.designsystem.components.OmniSettingsDivider
 import com.omniflow.android.ui.designsystem.components.OmniSettingsGroup
 import com.omniflow.android.ui.expenseColor
 import com.omniflow.android.ui.incomeColor
@@ -196,7 +197,7 @@ internal fun LedgerListScreen(
                         )
 
                         if (index < state.ledgers.lastIndex) {
-                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            OmniSettingsDivider()
                         }
                     }
                 }

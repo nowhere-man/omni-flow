@@ -244,7 +244,7 @@ private fun LedgerOverviewCard(
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.5.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
