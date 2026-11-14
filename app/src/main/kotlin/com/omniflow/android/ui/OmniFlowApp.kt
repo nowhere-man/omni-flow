@@ -304,9 +304,9 @@ fun OmniFlowApp(
         AppLockGate(moreState.preferences.appLockEnabled) {
         BoxWithConstraints {
             val useNavigationRail = maxWidth >= 600.dp
-            // 底部弹层的高度：屏幕高度减一个状态栏。记账页和明细弹层用同一个值，
-            // 免得一个几乎贴顶、一个只占半屏。
+            // 记账弹层高度：屏幕高度减状态栏；首页筛选明细弹层高度：占屏幕高度 2/3，顶部 1/3 遮罩留空
             val sheetHeight = maxHeight - WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+            val detailSheetHeight = maxHeight * 2 / 3
         Scaffold(
             bottomBar = {
                 if (!useNavigationRail) {
@@ -543,7 +543,7 @@ fun OmniFlowApp(
                         state = rangeDetailState.detail,
                         isLoading = rangeDetailState.isLoading,
                         error = rangeDetailState.error,
-                        sheetHeight = sheetHeight,
+                        sheetHeight = detailSheetHeight,
                         onDismiss = {
                             viewModel.dismissDate()
                             navigationState.goBack()
@@ -562,7 +562,7 @@ fun OmniFlowApp(
                         state = rangeDetailState.detail,
                         isLoading = rangeDetailState.isLoading,
                         error = rangeDetailState.error,
-                        sheetHeight = sheetHeight,
+                        sheetHeight = detailSheetHeight,
                         onDismiss = {
                             viewModel.dismissDate()
                             navigationState.goBack()
@@ -1004,7 +1004,6 @@ private fun HomeEmptyState(
         Button(onClick = onAction) { Text(actionLabel) }
     }
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
