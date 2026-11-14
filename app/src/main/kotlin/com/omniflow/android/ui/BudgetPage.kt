@@ -1,6 +1,7 @@
 package com.omniflow.android.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +15,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -28,14 +31,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.omniflow.core.domain.model.AppTimeZone
 import com.omniflow.core.domain.model.BudgetProgress
 import com.omniflow.core.domain.model.Category
 import com.omniflow.core.domain.model.Money
 import com.omniflow.core.domain.model.TransactionType
+import com.omniflow.core.domain.model.calculateDailyAllowance
+import kotlinx.datetime.Clock
+import kotlinx.datetime.toLocalDateTime
 
 /**
  * 月度预算：一条账本总预算 + 每个一级分类各一条。
@@ -117,6 +123,11 @@ internal fun BudgetPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
 
 @Composable
 private fun BudgetHeroCard(progress: BudgetProgress, onClick: () -> Unit) {
+    val today = remember { Clock.System.now().toLocalDateTime(AppTimeZone).date }
+    val dailyAllowance = remember(progress.remaining, today) {
+        calculateDailyAllowance(progress.remaining, today)
+    }
+
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -140,11 +151,29 @@ private fun BudgetHeroCard(progress: BudgetProgress, onClick: () -> Unit) {
                     color = mutedContent(),
                 )
             }
+            Text(
+                if (progress.isOverspent) {
+                    "本月已超支，暂无每日建议额度"
+                } else {
+                    "本月剩余 ${dailyAllowance.remainingDays} 天 · 每日建议可花 ${dailyAllowance.dailyAllowance.asRmb()}"
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (progress.isOverspent) expenseColor() else MaterialTheme.colorScheme.primary,
+            )
             BudgetBar(progress)
             Text(
                 "已用 ${progress.spent.asRmb()} / 预算 ${progress.budget.amount.asRmb()}",
                 style = OmniText.caption,
                 color = mutedContent(),
+            )
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            Text(
+                "口径说明：仅计入当前账本下非转账支出，已自动排除不计入统计的记录",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -160,7 +189,18 @@ private fun BudgetRow(progress: BudgetProgress, onClick: () -> Unit, onDelete: (
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                RoundIcon(progress.iconKey, size = 34)
+                // 分类环形进度微图：外环为圆弧进度，中心嵌分类图标
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.size(40.dp)) {
+                    CircularProgressIndicator(
+                        progress = { progress.ratio.coerceIn(0f, 1f) },
+                        modifier = Modifier.size(40.dp),
+                        strokeWidth = 3.dp,
+                        color = if (progress.isOverspent) expenseColor() else incomeColor(),
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        strokeCap = StrokeCap.Round,
+                    )
+                    RoundIcon(progress.iconKey, size = 26)
+                }
                 Spacer(Modifier.size(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(progress.name, style = OmniText.titleRow, maxLines = 1, overflow = TextOverflow.Ellipsis)

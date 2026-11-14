@@ -126,6 +126,7 @@ data class TransactionEditorUiState(
     val tags: List<Tag> = emptyList(),
     val ledgerId: String? = null,
     val accountId: String? = null,
+    val targetAccountId: String? = null,
     val categoryId: String? = null,
     val selectedTagIds: Set<String> = emptySet(),
     val type: TransactionType = TransactionType.EXPENSE,
@@ -557,11 +558,13 @@ class OmniFlowViewModel(
         val accounts = _transactionUiState.value.accounts
         val selectedLedger = ledgerId ?: defaultLedgerId
         val now = Clock.System.now().toLocalDateTime(AppTimeZone)
+        val defaultAccount = accounts.firstOrNull { it.type == AccountType.CASH }?.id ?: accounts.firstOrNull()?.id
         _transactionUiState.value = TransactionEditorUiState(
             ledgers = _transactionUiState.value.ledgers,
             accounts = accounts,
             ledgerId = selectedLedger,
-            accountId = accounts.firstOrNull { it.type == AccountType.CASH }?.id ?: accounts.firstOrNull()?.id,
+            accountId = defaultAccount,
+            targetAccountId = accounts.firstOrNull { it.id != defaultAccount }?.id,
             occurredAt = LocalDateTime(
                 date ?: now.date,
                 LocalTime(now.hour, now.minute),
@@ -583,6 +586,7 @@ class OmniFlowViewModel(
                     accounts = _transactionUiState.value.accounts,
                     ledgerId = transaction.ledgerId,
                     accountId = transaction.accountId,
+                    targetAccountId = transaction.targetAccountId,
                     categoryId = transaction.categoryId,
                     selectedTagIds = transaction.tagIds,
                     type = transaction.type,
@@ -599,9 +603,16 @@ class OmniFlowViewModel(
     }
     fun setTransactionType(type: TransactionType) {
         val category = _transactionUiState.value.categories.firstOrNull { it.id == _transactionUiState.value.categoryId }
+        val isTransfer = type == TransactionType.TRANSFER
+        val targetAcc = if (isTransfer) {
+            _transactionUiState.value.targetAccountId
+                ?: _transactionUiState.value.accounts.firstOrNull { it.id != _transactionUiState.value.accountId }?.id
+        } else null
         _transactionUiState.value = _transactionUiState.value.copy(
             type = type,
-            categoryId = category?.takeIf { it.type == type }?.id,
+            targetAccountId = targetAcc,
+            isExcluded = if (isTransfer) true else _transactionUiState.value.isExcluded,
+            categoryId = if (isTransfer) null else category?.takeIf { it.type == type }?.id,
         )
     }
     fun setTransactionLedger(ledgerId: String?) {
@@ -609,7 +620,14 @@ class OmniFlowViewModel(
         observeEditorLedger(ledgerId)
     }
     fun setTransactionAccount(accountId: String?) {
-        _transactionUiState.value = _transactionUiState.value.copy(accountId = accountId)
+        val currentTarget = _transactionUiState.value.targetAccountId
+        val newTarget = if (currentTarget == accountId) {
+            _transactionUiState.value.accounts.firstOrNull { it.id != accountId }?.id
+        } else currentTarget
+        _transactionUiState.value = _transactionUiState.value.copy(accountId = accountId, targetAccountId = newTarget)
+    }
+    fun setTransactionTargetAccount(accountId: String?) {
+        _transactionUiState.value = _transactionUiState.value.copy(targetAccountId = accountId)
     }
     fun setTransactionCategory(categoryId: String?) {
         _transactionUiState.value = _transactionUiState.value.copy(categoryId = categoryId)
@@ -650,19 +668,38 @@ class OmniFlowViewModel(
     }
     fun pressAmountKey(key: String) {
         val current = _transactionUiState.value.amountInput
+        if (key == "=") {
+            sharedApp.evaluateAmount.evaluateToInput(current).fold(
+                onSuccess = { evaluated ->
+                    _transactionUiState.value = _transactionUiState.value.copy(amountInput = evaluated, error = null)
+                },
+                onFailure = { err ->
+                    _transactionUiState.value = _transactionUiState.value.copy(error = err.message ?: "算式错误")
+                },
+            )
+            return
+        }
+        if (key == "C") {
+            _transactionUiState.value = _transactionUiState.value.copy(amountInput = "", error = null)
+            return
+        }
         val updated = when (key) {
             "退格" -> current.dropLast(1)
-            "+", "-" -> if (current.isNotEmpty() && current.last() !in "+-") current + key else current
-            "." -> if (current.substringAfterLast('+').substringAfterLast('-').contains('.')) current else current + key
+            "+", "-", "*", "/" -> if (current.isNotEmpty() && current.last() !in "+-*/") current + key else current
+            "." -> {
+                val lastPart = current.split('+', '-', '*', '/').lastOrNull().orEmpty()
+                if (lastPart.contains('.')) current else current + key
+            }
             else -> current + key
         }
         _transactionUiState.value = _transactionUiState.value.copy(amountInput = updated, error = null)
     }
     fun saveTransaction(saveAgain: Boolean) {
         val state = _transactionUiState.value
-        val amount = evaluateAmount(state.amountInput)?.let(::Money)
+        val evalResult = sharedApp.evaluateAmount(state.amountInput)
+        val amount = evalResult.getOrNull()
         if (amount == null) {
-            _transactionUiState.value = state.copy(error = "请输入有效金额")
+            _transactionUiState.value = state.copy(error = evalResult.exceptionOrNull()?.message ?: "请输入有效金额")
             return
         }
         _transactionUiState.value = state.copy(isSaving = true, error = null)
@@ -674,12 +711,13 @@ class OmniFlowViewModel(
                         id = UUID.randomUUID().toString(),
                         ledgerId = state.ledgerId,
                         accountId = state.accountId,
+                        targetAccountId = state.targetAccountId,
                         categoryId = state.categoryId,
                         amount = amount,
                         type = state.type,
                         occurredAt = state.occurredAt,
                         note = state.note,
-                        isExcluded = state.isExcluded,
+                        isExcluded = if (state.type == TransactionType.TRANSFER) true else state.isExcluded,
                         tagIds = state.selectedTagIds,
                     ),
                 )
@@ -688,12 +726,13 @@ class OmniFlowViewModel(
                     existing.copy(
                         ledgerId = state.ledgerId ?: existing.ledgerId,
                         accountId = state.accountId ?: existing.accountId,
+                        targetAccountId = state.targetAccountId ?: existing.targetAccountId,
                         categoryId = state.categoryId ?: existing.categoryId,
                         amount = amount,
                         type = state.type,
                         occurredAt = state.occurredAt,
                         note = state.note,
-                        isExcluded = state.isExcluded,
+                        isExcluded = if (state.type == TransactionType.TRANSFER) true else state.isExcluded,
                         tagIds = state.selectedTagIds,
                     ),
                 )

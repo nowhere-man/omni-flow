@@ -139,9 +139,15 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.omniflow.android.ui.feature.account.AccountDetailScreen
+import com.omniflow.android.ui.feature.account.AccountViewModel
+import com.omniflow.android.ui.feature.account.AccountViewModelFactory
 import com.omniflow.android.ui.feature.analytics.AnalyticsScreen
 import com.omniflow.android.ui.feature.analytics.AnalyticsViewModel
 import com.omniflow.android.ui.feature.analytics.AnalyticsViewModelFactory
+import com.omniflow.android.ui.feature.ledger.LedgerDetailScreen
+import com.omniflow.android.ui.feature.ledger.LedgerViewModel
+import com.omniflow.android.ui.feature.ledger.LedgerViewModelFactory
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.fragment.app.FragmentActivity
@@ -173,6 +179,12 @@ fun OmniFlowApp(
     initialTransactionId: Pair<String, Long>? = null,
     analyticsViewModel: AnalyticsViewModel = viewModel(
         factory = AnalyticsViewModelFactory(viewModel.sharedApp),
+    ),
+    accountViewModel: AccountViewModel = viewModel(
+        factory = AccountViewModelFactory(viewModel.sharedApp),
+    ),
+    ledgerViewModel: LedgerViewModel = viewModel(
+        factory = LedgerViewModelFactory(viewModel.sharedApp),
     ),
 ) {
     val homeState by viewModel.homeUiState.collectAsStateWithLifecycle()
@@ -373,6 +385,7 @@ fun OmniFlowApp(
                         onType = viewModel::setTransactionType,
                         onLedger = viewModel::setTransactionLedger,
                         onAccount = viewModel::setTransactionAccount,
+                        onTargetAccount = viewModel::setTransactionTargetAccount,
                         onCategory = viewModel::setTransactionCategory,
                         onReorderPrimary = viewModel::reorderTransactionPrimaryCategories,
                         onCreateSecondary = viewModel::createTransactionSecondaryCategory,
@@ -439,12 +452,14 @@ fun OmniFlowApp(
                         context.getSharedPreferences("android_ui", 0).edit()
                             .putBoolean("dynamic_color", enabled).apply()
                     },
+                    accountViewModel = accountViewModel,
+                    ledgerViewModel = ledgerViewModel,
                     modifier = Modifier.padding(padding),
                 )
-                is OmniRoute.LedgerDetail -> EntityDetailScreen(
-                    state = entityDetailState,
-                    moreState = moreState,
-                    onLoad = { viewModel.showEntityDetail(EntityDetailKind.LEDGER, key.id) },
+                is OmniRoute.LedgerDetail -> LedgerDetailScreen(
+                    ledgerId = key.id,
+                    viewModel = ledgerViewModel,
+                    onBack = { navigationState.goBack() },
                     onOpenTransaction = { navigationState.navigate(OmniRoute.TransactionDetail(it)) },
                     onSeeAll = {
                         viewModel.openSearchFor(EntityDetailKind.LEDGER, key.id)
@@ -452,10 +467,10 @@ fun OmniFlowApp(
                     },
                     modifier = Modifier.padding(padding),
                 )
-                is OmniRoute.AccountDetail -> EntityDetailScreen(
-                    state = entityDetailState,
-                    moreState = moreState,
-                    onLoad = { viewModel.showEntityDetail(EntityDetailKind.ACCOUNT, key.id) },
+                is OmniRoute.AccountDetail -> AccountDetailScreen(
+                    accountId = key.id,
+                    viewModel = accountViewModel,
+                    onBack = { navigationState.goBack() },
                     onOpenTransaction = { navigationState.navigate(OmniRoute.TransactionDetail(it)) },
                     onSeeAll = {
                         viewModel.openSearchFor(EntityDetailKind.ACCOUNT, key.id)

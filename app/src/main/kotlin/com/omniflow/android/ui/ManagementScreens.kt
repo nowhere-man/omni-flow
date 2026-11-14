@@ -51,6 +51,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.omniflow.android.ui.designsystem.tokens.CategoryIconOption
+import com.omniflow.android.ui.designsystem.tokens.CategoryIconOptions
 import com.omniflow.core.domain.model.Account
 import com.omniflow.core.domain.model.AccountType
 import com.omniflow.core.domain.model.Category
@@ -72,305 +74,16 @@ internal fun ManagementPage(
     viewModel: OmniFlowViewModel,
     onPage: (MorePage) -> Unit,
     onRequestNotificationPermission: () -> Unit,
-    onOpenLedger: (String) -> Unit,
     onOpenAccount: (String) -> Unit,
     onOpenCategory: (String) -> Unit,
 ) {
     when (page) {
-        MorePage.LEDGERS -> LedgerManagement(state, viewModel, onOpenLedger)
-        MorePage.ACCOUNTS -> AccountManagement(state, viewModel, onOpenAccount)
         MorePage.ASSETS -> AssetManagement(state, onOpenAccount)
         MorePage.CATEGORIES -> CategoryManagement(state, viewModel, onOpenCategory)
         MorePage.TAGS -> TagManagement(state, viewModel)
         MorePage.RULES -> RuleManagement(state, viewModel)
         MorePage.REMINDERS -> ReminderManagement(state, viewModel, onRequestNotificationPermission)
         else -> Unit
-    }
-}
-
-@Composable
-private fun LedgerManagement(state: MoreUiState, viewModel: OmniFlowViewModel, onOpen: (String) -> Unit) {
-    var editing by remember { mutableStateOf<com.omniflow.core.domain.model.Ledger?>(null) }
-    var showNew by remember { mutableStateOf(false) }
-    var menuFor by remember { mutableStateOf<String?>(null) }
-    var confirmDelete by remember { mutableStateOf<com.omniflow.core.domain.model.Ledger?>(null) }
-    LazyColumn(
-        Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        item { Button(onClick = { showNew = true }, modifier = Modifier.fillMaxWidth()) { Text("新建账本") } }
-        state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
-        items(state.ledgers, key = { it.id }) { ledger ->
-            Surface(
-                onClick = { onOpen(ledger.id) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(OmniRadius.medium),
-                color = surfaceCard(),
-            ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    LedgerCoverBox(ledger.coverKey, Modifier.size(52.dp), iconSize = 26)
-                    Spacer(Modifier.size(14.dp))
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                ledger.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Medium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            if (state.defaultLedgerId == ledger.id) {
-                                Spacer(Modifier.size(6.dp))
-                                Surface(shape = RoundedCornerShape(OmniRadius.small), color = MaterialTheme.colorScheme.primary) {
-                                    Text(
-                                        "默认",
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onPrimary,
-                                    )
-                                }
-                            }
-                        }
-                        val stat = state.ledgerStats[ledger.id]
-                        Text(
-                            "${(stat?.count ?: 0).grouped()} 条账目",
-                            style = OmniText.caption,
-                            color = mutedContent(),
-                        )
-                        if (stat != null && stat.count > 0) {
-                            Text(
-                                "支出 ${stat.expense.asRmb()} · 收入 ${stat.income.asRmb()}",
-                                style = OmniText.caption,
-                                color = mutedContent(),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            Text(
-                                "结余 ${stat.net.asRmb()}",
-                                style = OmniText.caption,
-                                color = if (stat.net.minor >= 0) incomeColor() else expenseColor(),
-                                maxLines = 1,
-                            )
-                        }
-                    }
-                    Box {
-                        TextButton(onClick = { menuFor = ledger.id }) { Text("⋯") }
-                        DropdownMenu(expanded = menuFor == ledger.id, onDismissRequest = { menuFor = null }) {
-                            DropdownMenuItem(text = { Text("编辑") }, onClick = { menuFor = null; editing = ledger })
-                            if (state.defaultLedgerId != ledger.id) {
-                                DropdownMenuItem(
-                                    text = { Text("设为默认账本") },
-                                    onClick = { menuFor = null; viewModel.setDefaultLedger(ledger.id) },
-                                )
-                            }
-                            DropdownMenuItem(
-                                text = { Text("删除", color = MaterialTheme.colorScheme.error) },
-                                onClick = { menuFor = null; confirmDelete = ledger },
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        item { Spacer(Modifier.height(88.dp)) }
-    }
-    if (showNew || editing != null) {
-        LedgerSheet(editing, onDismiss = { showNew = false; editing = null }) { name, cover ->
-            viewModel.saveLedger(editing?.id, name, cover)
-            showNew = false
-            editing = null
-        }
-    }
-    confirmDelete?.let { ledger ->
-        AlertDialog(
-            onDismissRequest = { confirmDelete = null },
-            title = { Text("删除账本“${ledger.name}”？") },
-            text = { Text("该账本下的交易、分类、标签和规则都会一并删除，且无法撤销。") },
-            confirmButton = {
-                TextButton(onClick = { confirmDelete = null; viewModel.deleteLedger(ledger.id) }) {
-                    Text("删除", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("取消") } },
-        )
-    }
-}
-
-@Composable
-private fun LedgerSheet(
-    ledger: com.omniflow.core.domain.model.Ledger?,
-    onDismiss: () -> Unit,
-    onSave: (String, String?) -> Unit,
-) {
-    var name by remember(ledger) { mutableStateOf(ledger?.name.orEmpty()) }
-    var cover by remember(ledger) { mutableStateOf(ledger?.coverKey ?: LedgerCovers.first().key) }
-    ManagementSheet(
-        title = if (ledger == null) "新建账本" else "编辑账本",
-        onDismiss = onDismiss,
-        onSave = { onSave(name.trim(), cover) },
-        saveEnabled = name.isNotBlank(),
-    ) {
-        OmniTextField(name, { name = it }, label = "账本名称")
-        Text("封面", style = MaterialTheme.typography.labelLarge)
-        LedgerCoverPicker(cover) { cover = it }
-    }
-}
-
-@Composable
-private fun AccountManagement(state: MoreUiState, viewModel: OmniFlowViewModel, onOpen: (String) -> Unit) {
-    var editing by remember { mutableStateOf<Account?>(null) }
-    var showNew by remember { mutableStateOf(false) }
-    val grouped = AccountType.entries.mapNotNull { type ->
-        state.accounts.filter { it.type == type }.takeIf(List<Account>::isNotEmpty)?.let { type to it }
-    }
-    LazyColumn(
-        Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        item { Button(onClick = { showNew = true }, modifier = Modifier.fillMaxWidth()) { Text("新建账户") } }
-        state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
-        grouped.forEach { (type, accounts) ->
-            val subtotal = accounts.fold(Money.Zero) { total, account -> total + account.balance }
-            item(key = "header-${type.name}") {
-                ManagementGroupHeader("${type.label} · ${accounts.size}", subtotal.asRmb())
-            }
-            itemsIndexed(accounts, key = { _, account -> account.id }) { index, account ->
-                AccountRow(
-                    account = account,
-                    shape = groupedOptionShape(index, accounts.size),
-                    onClick = { onOpen(account.id) },
-                    onEdit = { editing = account },
-                )
-            }
-        }
-        item { Spacer(Modifier.height(88.dp)) }
-    }
-    if (showNew || editing != null) {
-        AccountSheet(editing, onDismiss = { showNew = false; editing = null }, onDelete = { id ->
-            viewModel.deleteAccount(id)
-            editing = null
-        }) { name, type, icon, card, note, balance, included ->
-            viewModel.saveAccount(editing?.id, name, type, icon, card, note, balance, included)
-            showNew = false
-            editing = null
-        }
-    }
-}
-
-@Composable
-private fun AccountRow(
-    account: Account,
-    shape: androidx.compose.ui.graphics.Shape,
-    onClick: () -> Unit,
-    onEdit: () -> Unit,
-) {
-    // 信用卡这类负债余额为负，用 error 语义色，和列表、统计口径一致
-    val isLiability = account.balance.minor < 0
-    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = shape, color = surfaceCard()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            RoundIcon(account.iconKey)
-            Spacer(Modifier.size(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(account.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                val details = listOfNotNull(
-                    account.cardNumber?.takeLast(4)?.takeIf(String::isNotBlank)?.let { "尾号 $it" },
-                    if (!account.includeInTotalAssets) "不计入总资产" else null,
-                ).joinToString(" · ")
-                if (details.isNotBlank()) {
-                    Text(details, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                }
-            }
-            Text(
-                account.balance.asRmb(),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = if (isLiability) expenseColor() else MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-            )
-            TextButton(onClick = onEdit) { Text("编辑") }
-        }
-    }
-}
-
-@Composable
-private fun AccountSheet(
-    account: Account?,
-    onDismiss: () -> Unit,
-    onDelete: (String) -> Unit,
-    onSave: (String, AccountType, String, String?, String?, Money, Boolean) -> Unit,
-) {
-    var name by remember(account) { mutableStateOf(account?.name.orEmpty()) }
-    var type by remember(account) { mutableStateOf(account?.type ?: AccountType.CASH) }
-    var icon by remember(account) { mutableStateOf(account?.iconKey ?: "wallet-cards") }
-    var card by remember(account) { mutableStateOf(account?.cardNumber.orEmpty()) }
-    var note by remember(account) { mutableStateOf(account?.note.orEmpty()) }
-    var balance by remember(account) { mutableStateOf(account?.balance?.toDecimal().orEmpty()) }
-    var included by remember(account) { mutableStateOf(account?.includeInTotalAssets ?: true) }
-    var balanceError by remember(account) { mutableStateOf<String?>(null) }
-    var confirmDelete by remember(account) { mutableStateOf(false) }
-    ManagementSheet(
-        title = if (account == null) "新建账户" else "编辑账户",
-        onDismiss = onDismiss,
-        onSave = {
-            val parsed = balance.toMoneyOrNull()
-            if (parsed == null) {
-                balanceError = "请输入有效余额，最多两位小数"
-            } else {
-                balanceError = null
-                onSave(name.trim(), type, icon, card.ifBlank { null }, note.ifBlank { null }, parsed, included)
-            }
-        },
-        saveEnabled = name.isNotBlank(),
-    ) {
-        OmniTextField(name, { name = it }, label = "账户名称")
-        Text("类型", style = MaterialTheme.typography.labelLarge)
-        Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            AccountType.entries.forEach { entry ->
-                FilterChip(selected = type == entry, onClick = { type = entry }, label = { Text(entry.label) })
-            }
-        }
-        Text("图标", style = MaterialTheme.typography.labelLarge)
-        IconPickerGrid(AccountIconOptions, icon) { icon = it }
-        OmniTextField(
-            value = balance,
-            onValueChange = { balance = it; balanceError = null },
-            label = "当前余额",
-            placeholder = "0.00",
-            supportingText = balanceError,
-        )
-        OmniTextField(card, { card = it }, label = "卡号（可选）")
-        OmniTextField(note, { note = it }, label = "备注（可选）")
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("计入总资产")
-                Text("关闭后该账户不参与净资产统计", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Switch(included, { included = it })
-        }
-        if (account != null) {
-            TextButton(onClick = { confirmDelete = true }) {
-                Text("删除账户", color = MaterialTheme.colorScheme.error)
-            }
-        }
-    }
-    if (confirmDelete && account != null) {
-        AlertDialog(
-            onDismissRequest = { confirmDelete = false },
-            title = { Text("删除账户“${account.name}”？") },
-            text = { Text("此操作无法撤销。") },
-            confirmButton = {
-                TextButton(onClick = { confirmDelete = false; onDelete(account.id) }) {
-                    Text("删除", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("取消") } },
-        )
     }
 }
 
@@ -1090,15 +803,6 @@ private fun FormDialog(
     )
 }
 
-private val AccountType.label: String
-    get() = when (this) {
-        AccountType.CASH -> "现金"
-        AccountType.DEBIT_CARD -> "储蓄卡"
-        AccountType.CREDIT_CARD -> "信用卡"
-        AccountType.E_WALLET -> "电子钱包"
-        AccountType.INVESTMENT -> "投资账户"
-    }
-
 private val TransactionType.label: String get() = if (this == TransactionType.EXPENSE) "支出" else "收入"
 private val ReminderType.label: String get() = if (this == ReminderType.REPAYMENT) "还款提醒" else "订阅提醒"
 private val ReminderScheduleKind.label: String
@@ -1125,8 +829,6 @@ private val RuleActionType.label: String
         RuleActionType.EXCLUDE -> "排除不入账"
     }
 
-internal fun Money.toDecimal(): String = java.math.BigDecimal.valueOf(minor, 2).toPlainString()
-
 internal fun String.toMoneyOrNull(): Money? {
     val value = trim().toBigDecimalOrNull() ?: return null
     if (value.scale() > 2) return null
@@ -1139,7 +841,10 @@ private val BundledIconKeys = listOf(
     "shirt", "chart-line", "briefcase-business", "trophy", "gift", "play", "category",
 )
 
-/** 账户图标网格用的选项，key 沿用 [BundledIconKeys]。 */
-internal val AccountIconOptions = BundledIconKeys.map { key ->
-    CategoryIconOption(key, CategoryIconOptions.firstOrNull { it.key == key }?.label ?: key)
+internal fun groupedOptionShape(index: Int, size: Int): androidx.compose.ui.graphics.Shape = when {
+    size == 1 -> RoundedCornerShape(OmniRadius.medium)
+    index == 0 -> RoundedCornerShape(topStart = OmniRadius.medium, topEnd = OmniRadius.medium, bottomStart = 4.dp, bottomEnd = 4.dp)
+    index == size - 1 -> RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = OmniRadius.medium, bottomEnd = OmniRadius.medium)
+    else -> RoundedCornerShape(4.dp)
 }
+

@@ -82,6 +82,17 @@ internal fun DateRange.detailLabel(): String {
     return if (start == end) start.displayName() else "${start.fullDate()} 至 ${end.fullDate()}"
 }
 
+internal fun Money.toDecimal(): String = java.math.BigDecimal.valueOf(minor, 2).toPlainString()
+
+internal val com.omniflow.core.domain.model.AccountType.label: String
+    get() = when (this) {
+        com.omniflow.core.domain.model.AccountType.CASH -> "现金"
+        com.omniflow.core.domain.model.AccountType.DEBIT_CARD -> "储蓄卡"
+        com.omniflow.core.domain.model.AccountType.CREDIT_CARD -> "信用卡"
+        com.omniflow.core.domain.model.AccountType.E_WALLET -> "电子钱包"
+        com.omniflow.core.domain.model.AccountType.INVESTMENT -> "投资账户"
+    }
+
 private fun LocalDate.monthDay(): String = "${monthNumber.twoDigits()}-${dayOfMonth.twoDigits()}"
 
 private fun LocalDate.fullDate(): String = "$year-${monthNumber.twoDigits()}-${dayOfMonth.twoDigits()}"

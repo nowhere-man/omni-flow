@@ -36,8 +36,6 @@ android {
         versionName = appVersionName.get()
     }
 
-    sourceSets["main"].assets.srcDir(rootProject.file("assets"))
-
     if (providers.gradleProperty("androidArm64Only").isPresent) {
         splits {
             abi {

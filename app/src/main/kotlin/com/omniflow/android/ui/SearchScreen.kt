@@ -225,6 +225,7 @@ private fun FilterPanel(
                         null -> "全部"
                         TransactionType.EXPENSE -> "支出"
                         TransactionType.INCOME -> "收入"
+                        TransactionType.TRANSFER -> "转账"
                     }
                 },
                 onSelected = onType,
@@ -480,7 +481,7 @@ private fun SearchHint(message: String) {
     )
 }
 
-private val SearchTypeOptions = listOf(null, TransactionType.EXPENSE, TransactionType.INCOME)
+private val SearchTypeOptions = listOf(null, TransactionType.EXPENSE, TransactionType.INCOME, TransactionType.TRANSFER)
 
 private fun dateRangeOrNull(first: LocalDate?, second: LocalDate?): DateRange? {
     if (first == null || second == null) return null
