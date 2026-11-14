@@ -138,6 +138,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.omniflow.android.ui.feature.analytics.AnalyticsScreen
+import com.omniflow.android.ui.feature.analytics.AnalyticsViewModel
+import com.omniflow.android.ui.feature.analytics.AnalyticsViewModelFactory
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.fragment.app.FragmentActivity
@@ -164,9 +168,15 @@ private fun androidx.navigation3.runtime.NavKey.toMainDestination(): MainDestina
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String, Long>? = null) {
+fun OmniFlowApp(
+    viewModel: OmniFlowViewModel,
+    initialTransactionId: Pair<String, Long>? = null,
+    analyticsViewModel: AnalyticsViewModel = viewModel(
+        factory = AnalyticsViewModelFactory(viewModel.sharedApp),
+    ),
+) {
     val homeState by viewModel.homeUiState.collectAsStateWithLifecycle()
-    val analyticsState by viewModel.analyticsUiState.collectAsStateWithLifecycle()
+    val analyticsState by analyticsViewModel.uiState.collectAsStateWithLifecycle()
     val rangeDetailState by viewModel.rangeDetailUiState.collectAsStateWithLifecycle()
     val searchState by viewModel.searchUiState.collectAsStateWithLifecycle()
     val transactionState by viewModel.transactionUiState.collectAsStateWithLifecycle()
@@ -335,21 +345,21 @@ fun OmniFlowApp(viewModel: OmniFlowViewModel, initialTransactionId: Pair<String,
                 )
                 OmniRoute.Analytics -> AnalyticsScreen(
                     state = analyticsState,
-                    onScope = viewModel::setAnalyticsScope,
-                    onRangeMode = viewModel::setAnalyticsRangeMode,
-                    onShiftRange = viewModel::shiftAnalyticsRange,
-                    onCurrentRange = viewModel::resetAnalyticsRange,
-                    onCustomRange = viewModel::setAnalyticsCustomRange,
-                    onAnalyticsType = viewModel::setAnalyticsType,
-                    onCategorySelected = { navigationState.navigate(OmniRoute.CategoryDetail(it)) },
-                    onTransactionSelected = { id -> navigationState.navigate(OmniRoute.TransactionDetail(id)) },
-                    onMonthSelected = viewModel::selectAnalyticsMonth,
-                    onSummary = { type ->
+                    onScopeChange = analyticsViewModel::setScope,
+                    onRangeModeChange = analyticsViewModel::setRangeMode,
+                    onShiftRange = analyticsViewModel::shiftRange,
+                    onResetRange = analyticsViewModel::resetRange,
+                    onCustomRangeSelected = analyticsViewModel::setCustomRange,
+                    onCategoryShareTypeChange = analyticsViewModel::setCategoryShareType,
+                    onRankingTypeChange = analyticsViewModel::setRankingType,
+                    onCategoryClick = { navigationState.navigate(OmniRoute.CategoryDetail(it)) },
+                    onTransactionClick = { id -> navigationState.navigate(OmniRoute.TransactionDetail(id)) },
+                    onSummaryClick = { type ->
                         viewModel.showHomeSummary(type)
                         navigationState.navigate(OmniRoute.SummaryDetail(type?.name))
                     },
-                    onStatementTable = viewModel::loadStatementTable,
-                    onDismissStatementTable = viewModel::dismissStatementTable,
+                    onViewStatementTable = analyticsViewModel::loadStatementTable,
+                    onDismissStatementTable = analyticsViewModel::dismissStatementTable,
                     modifier = Modifier.padding(padding),
                 )
                 OmniRoute.TransactionEditor -> ModalBottomSheet(

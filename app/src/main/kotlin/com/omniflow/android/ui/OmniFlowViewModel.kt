@@ -92,24 +92,6 @@ data class RangeDetailUiState(
     val error: String? = null,
 )
 
-enum class AnalyticsRangeMode { WEEK, MONTH, YEAR, CUSTOM }
-
-data class AnalyticsUiState(
-    val dashboard: AnalyticsDashboardState? = null,
-    val statementTable: StatementTable? = null,
-    val ledgers: List<Ledger> = emptyList(),
-    val scope: LedgerScope = LedgerScope.All,
-    val rangeMode: AnalyticsRangeMode = AnalyticsRangeMode.MONTH,
-    val range: DateRange = analyticsRange(
-        AnalyticsRangeMode.MONTH,
-        Clock.System.now().toLocalDateTime(AppTimeZone).date,
-    ),
-    // 排行榜/饼图/标签以前各有一个开关，切换收入要点三次；合成页面级一个
-    val analyticsType: TransactionType = TransactionType.EXPENSE,
-    val isLoading: Boolean = true,
-    val error: String? = null,
-)
-
 data class SearchUiState(
     val query: TransactionSearchQuery = TransactionSearchQuery(),
     val result: SearchResult? = null,
@@ -206,12 +188,10 @@ data class MoreUiState(
 )
 
 class OmniFlowViewModel(
-    private val sharedApp: SharedApp,
+    internal val sharedApp: SharedApp,
 ) : ViewModel() {
     private val _homeUiState = MutableStateFlow(HomeUiState())
     val homeUiState: StateFlow<HomeUiState> = _homeUiState.asStateFlow()
-    private val _analyticsUiState = MutableStateFlow(AnalyticsUiState())
-    val analyticsUiState: StateFlow<AnalyticsUiState> = _analyticsUiState.asStateFlow()
     private val _rangeDetailUiState = MutableStateFlow(RangeDetailUiState())
     val rangeDetailUiState: StateFlow<RangeDetailUiState> = _rangeDetailUiState.asStateFlow()
     private val _searchUiState = MutableStateFlow(SearchUiState())
@@ -227,13 +207,11 @@ class OmniFlowViewModel(
     val moreUiState: StateFlow<MoreUiState> = _moreUiState.asStateFlow()
 
     private var homeQuery = HomeQuery(LedgerScope.All, monthRange(Clock.System.now()))
-    private var analyticsAnchor = Clock.System.now().toLocalDateTime(AppTimeZone).date
     private var preferences = AppPreferences()
     private var defaultLedgerId: String? = null
     private var editingTransaction: Transaction? = null
     private var homeJob: Job? = null
     private var detailJob: Job? = null
-    private var analyticsJob: Job? = null
     private var searchJob: Job? = null
     private var editorCategoriesJob: Job? = null
     private var editorTagsJob: Job? = null
@@ -253,7 +231,6 @@ class OmniFlowViewModel(
         collectPreferences()
         collectSync()
         observeHome()
-        observeAnalytics()
     }
 
     private fun collectManagement() {
@@ -261,7 +238,6 @@ class OmniFlowViewModel(
             sharedApp.management.observeLedgers().collect { result ->
                 val ledgers = result.getOrDefault(emptyList())
                 _homeUiState.value = _homeUiState.value.copy(ledgers = ledgers)
-                _analyticsUiState.value = _analyticsUiState.value.copy(ledgers = ledgers)
                 _searchUiState.value = _searchUiState.value.copy(ledgers = ledgers)
                 _transactionUiState.value = _transactionUiState.value.copy(ledgers = ledgers)
                 val previousSelection = _moreUiState.value.selectedLedgerId
@@ -320,17 +296,14 @@ class OmniFlowViewModel(
             sharedApp.preferences.observe().collect { result ->
                 result.onSuccess { saved ->
                     val homeScopeChanged = homeQuery.scope != saved.homeLedgerScope
-                    val analyticsScopeChanged = _analyticsUiState.value.scope != saved.analyticsLedgerScope
                     preferences = saved
                     homeQuery = homeQuery.copy(scope = saved.homeLedgerScope)
                     _homeUiState.value = _homeUiState.value.copy(
                         displayMode = saved.transactionDetailDisplayMode,
                         appearanceMode = saved.appearanceMode,
                     )
-                    _analyticsUiState.value = _analyticsUiState.value.copy(scope = saved.analyticsLedgerScope)
                     _moreUiState.value = _moreUiState.value.copy(preferences = saved)
                     if (homeScopeChanged) observeHome()
-                    if (analyticsScopeChanged) observeAnalytics()
                 }
             }
         }
@@ -405,89 +378,6 @@ class OmniFlowViewModel(
         val month = JavaLocalDate.of(start.year, start.monthNumber, 1).plusMonths(delta)
         homeQuery = homeQuery.copy(month = monthRange(LocalDate(month.year, month.monthValue, 1)))
         observeHome()
-    }
-
-    fun setAnalyticsScope(scope: LedgerScope) {
-        _analyticsUiState.value = _analyticsUiState.value.copy(scope = scope)
-        savePreferences(preferences.copy(analyticsLedgerScope = scope))
-        observeAnalytics()
-    }
-    fun setAnalyticsRangeMode(mode: AnalyticsRangeMode) {
-        _analyticsUiState.value = _analyticsUiState.value.copy(rangeMode = mode, range = analyticsRange(mode, analyticsAnchor))
-        observeAnalytics()
-    }
-    fun shiftAnalyticsRange(delta: Long) {
-        analyticsAnchor = when (_analyticsUiState.value.rangeMode) {
-            AnalyticsRangeMode.WEEK -> analyticsAnchor.minus(-7 * delta.toInt(), DateTimeUnit.DAY)
-            AnalyticsRangeMode.MONTH -> javaDate(analyticsAnchor).plusMonths(delta).toKotlinDate()
-            AnalyticsRangeMode.YEAR -> javaDate(analyticsAnchor).plusYears(delta).toKotlinDate()
-            AnalyticsRangeMode.CUSTOM -> analyticsAnchor
-        }
-        _analyticsUiState.value = _analyticsUiState.value.copy(
-            range = analyticsRange(_analyticsUiState.value.rangeMode, analyticsAnchor),
-        )
-        observeAnalytics()
-    }
-    fun resetAnalyticsRange() {
-        val mode = _analyticsUiState.value.rangeMode
-        if (mode == AnalyticsRangeMode.CUSTOM) return
-        analyticsAnchor = Clock.System.now().toLocalDateTime(AppTimeZone).date
-        _analyticsUiState.value = _analyticsUiState.value.copy(range = analyticsRange(mode, analyticsAnchor))
-        observeAnalytics()
-    }
-    fun setAnalyticsCustomRange(range: DateRange) {
-        _analyticsUiState.value = _analyticsUiState.value.copy(rangeMode = AnalyticsRangeMode.CUSTOM, range = range)
-        observeAnalytics()
-    }
-    fun setAnalyticsType(type: TransactionType) {
-        _analyticsUiState.value = _analyticsUiState.value.copy(analyticsType = type)
-        observeAnalytics()
-    }
-    fun selectAnalyticsMonth(month: Int) {
-        val year = _analyticsUiState.value.dashboard?.yearStatement?.year
-            ?: _analyticsUiState.value.range.startInclusive.toLocalDateTime(AppTimeZone).year
-        analyticsAnchor = LocalDate(year, month, 1)
-        _analyticsUiState.value = _analyticsUiState.value.copy(
-            rangeMode = AnalyticsRangeMode.MONTH,
-            range = monthRange(analyticsAnchor),
-        )
-        observeAnalytics()
-    }
-    fun loadStatementTable(year: Int) {
-        viewModelScope.launch {
-            sharedApp.analytics.statementTable(_analyticsUiState.value.scope, year).onSuccess { table ->
-                _analyticsUiState.value = _analyticsUiState.value.copy(statementTable = table)
-            }.onFailure { error ->
-                _analyticsUiState.value = _analyticsUiState.value.copy(error = error.message)
-            }
-        }
-    }
-    fun dismissStatementTable() {
-        _analyticsUiState.value = _analyticsUiState.value.copy(statementTable = null)
-    }
-
-    private fun observeAnalytics() {
-        analyticsJob?.cancel()
-        val current = _analyticsUiState.value
-        _analyticsUiState.value = current.copy(isLoading = true, error = null)
-        analyticsJob = viewModelScope.launch {
-            sharedApp.analytics.observeDashboard(
-                AnalyticsQuery(
-                    scope = current.scope,
-                    range = current.range,
-                    rankingType = current.analyticsType,
-                    categoryShareType = current.analyticsType,
-                    tagAnalysisType = current.analyticsType,
-                    trendGranularity = analyticsGranularity(current.rangeMode, current.range),
-                ),
-            ).collect { result ->
-                _analyticsUiState.value = _analyticsUiState.value.copy(
-                    dashboard = result.getOrNull(),
-                    isLoading = false,
-                    error = result.exceptionOrNull()?.message,
-                )
-            }
-        }
     }
 
     // 搜索条件只改草稿，不触发查询：边输边搜会在输到一半时不停刷新结果列表，
@@ -1288,22 +1178,6 @@ internal fun monthRange(now: Instant): DateRange = DateRange.ofMonth(now.toLocal
 internal fun monthRange(date: LocalDate): DateRange = DateRange.ofMonth(date, AppTimeZone)
 
 internal fun dateRange(date: LocalDate): DateRange = DateRange.ofDay(date, AppTimeZone)
-
-private fun analyticsRange(mode: AnalyticsRangeMode, anchor: LocalDate): DateRange = when (mode) {
-    AnalyticsRangeMode.WEEK -> DateRange.ofWeek(anchor, AppTimeZone)
-    AnalyticsRangeMode.MONTH -> DateRange.ofMonth(anchor, AppTimeZone)
-    AnalyticsRangeMode.YEAR -> DateRange.ofYear(anchor.year, AppTimeZone)
-    AnalyticsRangeMode.CUSTOM -> DateRange.ofMonth(anchor, AppTimeZone)
-}
-
-private fun analyticsGranularity(mode: AnalyticsRangeMode, range: DateRange): TimeGranularity = when (mode) {
-    AnalyticsRangeMode.WEEK, AnalyticsRangeMode.MONTH -> TimeGranularity.DAY
-    AnalyticsRangeMode.YEAR -> TimeGranularity.MONTH
-    AnalyticsRangeMode.CUSTOM -> {
-        val days = (range.endExclusive.toEpochMilliseconds() - range.startInclusive.toEpochMilliseconds()) / 86_400_000
-        if (days <= 90) TimeGranularity.DAY else TimeGranularity.MONTH
-    }
-}
 
 private fun javaDate(date: LocalDate) = JavaLocalDate.of(date.year, date.monthNumber, date.dayOfMonth)
 private fun JavaLocalDate.toKotlinDate() = LocalDate(year, monthValue, dayOfMonth)
