@@ -5,6 +5,7 @@ import app.cash.sqldelight.coroutines.mapToList
 import com.omniflow.core.db.OmniFlowDatabase
 import com.omniflow.core.db.TransactionRowsInRange
 import com.omniflow.core.domain.facade.HomeFacade
+import com.omniflow.core.domain.model.AppTimeZone
 import com.omniflow.core.domain.model.CalendarDaySummary
 import com.omniflow.core.domain.model.DateRange
 import com.omniflow.core.domain.model.DayTransactionGroup
@@ -82,7 +83,7 @@ class SqlDelightHomeFacade(
     ): List<CalendarDaySummary> = items
         .asSequence()
         .filterNot(TransactionListItem::isExcluded)
-        .groupBy { it.occurredAt.toLocalDateTime(TimeZone.currentSystemDefault()).date }
+        .groupBy { it.occurredAt.toLocalDateTime(AppTimeZone).date }
         .map { (date, entries) ->
             CalendarDaySummary(
                 date = date,
@@ -97,7 +98,7 @@ class SqlDelightHomeFacade(
 
     private fun groups(items: List<TransactionListItem>): List<DayTransactionGroup> = items
         .filterNot(TransactionListItem::isExcluded)
-        .groupBy { it.occurredAt.toLocalDateTime(TimeZone.currentSystemDefault()).date }
+        .groupBy { it.occurredAt.toLocalDateTime(AppTimeZone).date }
         .map { (date, entries) ->
             DayTransactionGroup(
                 date = date,

@@ -1,5 +1,6 @@
 package com.omniflow.core.parser.csv
 
+import com.omniflow.core.domain.model.AppTimeZone
 import com.omniflow.core.domain.model.Money
 import com.omniflow.core.domain.model.TransactionType
 import com.omniflow.core.parser.ImportFormat
@@ -104,7 +105,7 @@ class CsvBillParser {
             hour = time[0],
             minute = time[1],
             second = time.getOrElse(2) { 0 },
-        ).toInstant(TimeZone.of("Asia/Shanghai"))
+        ).toInstant(AppTimeZone)
     }
 
     private fun parseMoney(value: String): Money =

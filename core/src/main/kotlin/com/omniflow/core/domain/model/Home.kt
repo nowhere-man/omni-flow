@@ -5,11 +5,6 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
-data class DateRange(
-    val startInclusive: Instant,
-    val endExclusive: Instant,
-)
-
 data class HomeQuery(
     val scope: LedgerScope,
     val month: DateRange,
@@ -96,12 +91,12 @@ fun Money.calendarAmountText(): String {
 
 fun LocalDate.yearMonthText(): String = "${year.toString().padStart(4, '0')}年${monthNumber.twoDigits()}月"
 
-fun Instant.hourMinuteText(timeZone: TimeZone = TimeZone.currentSystemDefault()): String {
+fun Instant.hourMinuteText(timeZone: TimeZone = AppTimeZone): String {
     val value = toLocalDateTime(timeZone)
     return "${value.hour.twoDigits()}:${value.minute.twoDigits()}"
 }
 
-fun Instant.transactionDateTimeText(timeZone: TimeZone = TimeZone.currentSystemDefault()): String {
+fun Instant.transactionDateTimeText(timeZone: TimeZone = AppTimeZone): String {
     val value = toLocalDateTime(timeZone)
     return "${value.year.toString().padStart(4, '0')}-${value.monthNumber.twoDigits()}-${value.dayOfMonth.twoDigits()} " +
         "${value.hour.twoDigits()}:${value.minute.twoDigits()}"

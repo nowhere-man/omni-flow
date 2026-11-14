@@ -1,6 +1,7 @@
 package com.omniflow.core.data.repository
 
 import com.omniflow.core.db.OmniFlowDatabase
+import com.omniflow.core.domain.model.AppTimeZone
 import com.omniflow.core.domain.model.Transaction
 import com.omniflow.core.domain.model.TransactionId
 import com.omniflow.core.domain.model.TransactionType
@@ -242,8 +243,8 @@ class SqlDelightTransactionRepository(
     }
 
     private fun dayStart(timestamp: Long): Long = Instant.fromEpochMilliseconds(timestamp)
-        .toLocalDateTime(TimeZone.currentSystemDefault())
+        .toLocalDateTime(AppTimeZone)
         .date
-        .atStartOfDayIn(TimeZone.currentSystemDefault())
+        .atStartOfDayIn(AppTimeZone)
         .toEpochMilliseconds()
 }

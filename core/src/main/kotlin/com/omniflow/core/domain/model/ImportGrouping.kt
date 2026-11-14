@@ -62,7 +62,7 @@ fun ImportPreviewState.itemsIn(range: DateRange?): List<ImportPreviewItem> =
 
 /** 明细里最早/最晚交易日（按本地时区的自然日）；没有明细时返回 null。 */
 fun ImportPreviewState.occurredDateBounds(
-    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+    timeZone: TimeZone = AppTimeZone,
 ): Pair<LocalDate, LocalDate>? = items
     .map { it.raw.occurredAt.toLocalDateTime(timeZone).date }
     .takeIf(List<LocalDate>::isNotEmpty)
@@ -79,7 +79,7 @@ val ImportPreviewState.supportsSourceGrouping: Boolean
 fun ImportPreviewState.groups(
     mode: ImportGroupMode,
     buckets: Set<ImportItemBucket>? = null,
-    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+    timeZone: TimeZone = AppTimeZone,
 ): List<ImportItemGroup> {
     val scoped = if (buckets == null) items else items.filter { it.bucket() in buckets }
     return when (mode) {

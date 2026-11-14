@@ -1,5 +1,6 @@
 package com.omniflow.core.parser.pdf
 
+import com.omniflow.core.domain.model.AppTimeZone
 import com.omniflow.core.domain.model.Money
 import com.omniflow.core.domain.model.TransactionType
 import com.omniflow.core.parser.ImportFormat
@@ -144,7 +145,7 @@ object BocPdfBillParser {
             hour = clock.getOrElse(0) { 0 },
             minute = clock.getOrElse(1) { 0 },
             second = clock.getOrElse(2) { 0 },
-        ).toInstant(TimeZone.of("Asia/Shanghai"))
+        ).toInstant(AppTimeZone)
     }
 
     private const val HEADER_DATE = "记账日期"

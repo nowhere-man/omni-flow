@@ -5,6 +5,7 @@ import com.omniflow.core.domain.model.Account
 import com.omniflow.core.domain.model.AccountId
 import com.omniflow.core.domain.model.AccountSummary
 import com.omniflow.core.domain.model.AccountType
+import com.omniflow.core.domain.model.AppTimeZone
 import com.omniflow.core.domain.model.Money
 import com.omniflow.core.domain.repository.AccountRepository
 import com.omniflow.core.domain.util.UuidGenerator
@@ -117,9 +118,9 @@ class SqlDelightAccountRepository(
     }
 
     private fun dayStart(timestamp: Long): Long = Instant.fromEpochMilliseconds(timestamp)
-        .toLocalDateTime(TimeZone.currentSystemDefault())
+        .toLocalDateTime(AppTimeZone)
         .date
-        .atStartOfDayIn(TimeZone.currentSystemDefault())
+        .atStartOfDayIn(AppTimeZone)
         .toEpochMilliseconds()
 
     override suspend fun summary(): AccountSummary {

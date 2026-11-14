@@ -17,6 +17,7 @@ import com.omniflow.core.domain.model.LedgerScope
 import com.omniflow.core.domain.model.Money
 import com.omniflow.core.domain.model.StatementMonth
 import com.omniflow.core.domain.model.StatementTable
+import com.omniflow.core.domain.model.AppTimeZone
 import com.omniflow.core.domain.model.TagAnalysisItem
 import com.omniflow.core.domain.model.TimeGranularity
 import com.omniflow.core.domain.model.TransactionRankingItem
@@ -40,7 +41,7 @@ class SqlDelightAnalyticsFacade(
     private val database: OmniFlowDatabase,
 ) : AnalyticsFacade {
     override fun observeDashboard(query: AnalyticsQuery): Flow<Result<AnalyticsDashboardState>> {
-        val year = query.range.startInclusive.toLocalDateTime(CHINA_TIME_ZONE).year
+        val year = query.range.startInclusive.toLocalDateTime(AppTimeZone).year
         val previousRange = previousRange(query.range)
         return combine(
             observeRows(query.scope, query.range),
@@ -209,21 +210,18 @@ class SqlDelightAnalyticsFacade(
 
     private fun statement(rows: List<TransactionRowsInRange>, year: Int): StatementTable {
         val entries = rows.filterNot { it.is_excluded != 0L }
-        val now = Clock.System.now().toLocalDateTime(CHINA_TIME_ZONE)
+        val now = Clock.System.now().toLocalDateTime(AppTimeZone)
         val lastMonth = if (year == now.year) now.monthNumber else 12
         val months = (1..lastMonth).map { month ->
             val totals = summary(entries.filter {
-                Instant.fromEpochMilliseconds(it.occurred_at).toLocalDateTime(CHINA_TIME_ZONE).monthNumber == month
+                Instant.fromEpochMilliseconds(it.occurred_at).toLocalDateTime(AppTimeZone).monthNumber == month
             })
             StatementMonth(month, totals.expenseTotal, totals.incomeTotal)
         }
         return StatementTable(year, months, summary(entries))
     }
 
-    private fun yearRange(year: Int) = DateRange(
-        LocalDate(year, 1, 1).atStartOfDayIn(CHINA_TIME_ZONE),
-        LocalDate(year + 1, 1, 1).atStartOfDayIn(CHINA_TIME_ZONE),
-    )
+    private fun yearRange(year: Int) = DateRange.ofYear(year, AppTimeZone)
 
     private fun previousRange(range: DateRange): DateRange {
         val duration = (range.endExclusive.toEpochMilliseconds() - range.startInclusive.toEpochMilliseconds()).coerceAtLeast(0)
@@ -241,27 +239,27 @@ class SqlDelightAnalyticsFacade(
     }
 
     private fun nextPoint(start: Instant, granularity: TimeGranularity): Instant {
-        val date = start.toLocalDateTime(CHINA_TIME_ZONE).date
+        val date = start.toLocalDateTime(AppTimeZone).date
         val next = when (granularity) {
             TimeGranularity.DAY -> date.plus(1, DateTimeUnit.DAY)
             TimeGranularity.WEEK -> date.plus(1, DateTimeUnit.WEEK)
             TimeGranularity.MONTH -> date.plus(1, DateTimeUnit.MONTH)
         }
-        return next.atStartOfDayIn(CHINA_TIME_ZONE)
+        return next.atStartOfDayIn(AppTimeZone)
     }
 
     private fun pointStart(instant: Instant, granularity: TimeGranularity): Instant {
-        val dateTime = instant.toLocalDateTime(CHINA_TIME_ZONE)
+        val dateTime = instant.toLocalDateTime(AppTimeZone)
         val date = when (granularity) {
             TimeGranularity.DAY -> dateTime.date
             TimeGranularity.WEEK -> dateTime.date.minus(dateTime.date.dayOfWeek.ordinal, DateTimeUnit.DAY)
             TimeGranularity.MONTH -> LocalDate(dateTime.year, dateTime.monthNumber, 1)
         }
-        return date.atStartOfDayIn(CHINA_TIME_ZONE)
+        return date.atStartOfDayIn(AppTimeZone)
     }
 
     private fun chartLabel(start: Instant, granularity: TimeGranularity): String {
-        val date = start.toLocalDateTime(CHINA_TIME_ZONE).date
+        val date = start.toLocalDateTime(AppTimeZone).date
         return when (granularity) {
             TimeGranularity.DAY -> date.toString()
             TimeGranularity.WEEK -> date.toString()
@@ -280,7 +278,6 @@ class SqlDelightAnalyticsFacade(
     private data class TagAggregate(var amount: Money = Money.Zero, var count: Int = 0)
 
     private companion object {
-        val CHINA_TIME_ZONE: TimeZone = TimeZone.currentSystemDefault()
         const val RANKING_LIMIT = 10
         const val UNTAGGED_ID = "__untagged__"
     }
