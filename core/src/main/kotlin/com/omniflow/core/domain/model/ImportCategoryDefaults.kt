@@ -41,7 +41,7 @@ object ImportCategoryDefaults {
         val rules = when (type) {
             TransactionType.INCOME -> incomeRules
             TransactionType.EXPENSE -> expenseRules
-            null -> return null
+            TransactionType.TRANSFER, null -> return null
         }
         // 京东的「数码电器 生活服务」这类多值分类靠包含匹配兜底，所以先做一轮精确匹配。
         rules.firstOrNull { (_, keywords) -> keywords.any { it.equals(source, ignoreCase = true) } }

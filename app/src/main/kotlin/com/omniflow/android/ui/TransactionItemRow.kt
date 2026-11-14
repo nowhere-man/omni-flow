@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
 import com.omniflow.core.domain.model.Money
 import com.omniflow.core.domain.model.TransactionType
 
@@ -176,7 +178,7 @@ internal fun AmountText(
     val sign = when (type) {
         TransactionType.EXPENSE -> "-"
         TransactionType.INCOME -> "+"
-        null -> ""
+        TransactionType.TRANSFER, null -> ""
     }
     Text(
         "$sign${amount.asPlainAmount()}",
@@ -194,7 +196,7 @@ internal fun AmountText(
 internal fun amountColor(type: TransactionType?): Color = when (type) {
     TransactionType.EXPENSE -> MaterialTheme.colorScheme.onSurface
     TransactionType.INCOME -> incomeColor()
-    null -> MaterialTheme.colorScheme.onSurfaceVariant
+    TransactionType.TRANSFER, null -> MaterialTheme.colorScheme.onSurfaceVariant
 }
 
 // 收支语义色固定，不跟随主题色，也不用 error/tertiary——那两个会随主题色漂移，
@@ -220,6 +222,11 @@ internal fun CategoryIcon(iconKey: String?, dimmed: Boolean = false, size: Int =
         shape = CircleShape,
         color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = if (dimmed) 0.45f else 1f),
     ) {
-        SvgIcon(iconKey ?: "category", Modifier.padding((size * 0.22).toInt().dp))
+        Icon(
+            imageVector = getCategoryIcon(iconKey),
+            contentDescription = null,
+            modifier = Modifier.padding((size * 0.22).toInt().dp),
+            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
     }
 }

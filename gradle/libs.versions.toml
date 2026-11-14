@@ -6,6 +6,7 @@ sqldelight = "2.1.0"
 serialization = "1.8.1"
 poi = "5.3.0"
 agp = "8.9.1"
+paparazzi = "2.0.0-alpha02"
 compose-bom = "2026.06.01"
 activity-compose = "1.10.0"
 lifecycle = "2.8.7"
@@ -48,3 +49,4 @@ android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+paparazzi = { id = "app.cash.paparazzi", version.ref = "paparazzi" }

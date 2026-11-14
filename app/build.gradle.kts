@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.paparazzi)
 }
 
 
@@ -34,8 +35,6 @@ android {
         versionCode = appVersionCode.get()
         versionName = appVersionName.get()
     }
-
-    sourceSets["main"].assets.srcDir(rootProject.file("assets"))
 
     if (providers.gradleProperty("androidArm64Only").isPresent) {
         splits {

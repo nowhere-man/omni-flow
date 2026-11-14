@@ -43,6 +43,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.omniflow.android.ui.designsystem.tokens.CategoryIconOption
+import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -114,10 +116,11 @@ internal fun IconPickerGrid(
                 color = if (selected) MaterialTheme.colorScheme.primaryContainer else surfaceInset(),
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    SvgIcon(
-                        categoryIconKey(option.key),
-                        Modifier.size(26.dp),
-                        tint = MaterialTheme.colorScheme.primary,
+                    Icon(
+                        imageVector = option.icon,
+                        contentDescription = option.label,
+                        modifier = Modifier.size(26.dp),
+                        tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
                     )
                 }
             }
@@ -159,7 +162,7 @@ internal fun LedgerCoverBox(
             .background(Brush.linearGradient(listOf(cover.start, cover.end))),
         contentAlignment = Alignment.Center,
     ) {
-        SvgIcon(categoryIconKey(cover.iconKey), Modifier.size(iconSize.dp), tint = Color.White)
+        Icon(getCategoryIcon(cover.iconKey), contentDescription = null, Modifier.size(iconSize.dp), tint = Color.White)
     }
 }
 
@@ -269,7 +272,12 @@ internal fun RoundIcon(iconKey: String?, modifier: Modifier = Modifier, size: In
         color = MaterialTheme.colorScheme.secondaryContainer,
     ) {
         Box(contentAlignment = Alignment.Center) {
-            SvgIcon(categoryIconKey(iconKey), Modifier.size((size * 0.55).toInt().dp))
+            Icon(
+                imageVector = getCategoryIcon(iconKey),
+                contentDescription = null,
+                modifier = Modifier.size((size * 0.55).toInt().dp),
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
         }
     }
 }

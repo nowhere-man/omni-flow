@@ -25,6 +25,14 @@ data class DateRange(
     fun endLocalDateInclusive(timeZone: TimeZone = AppTimeZone): LocalDate =
         Instant.fromEpochMilliseconds(endExclusive.toEpochMilliseconds() - 1).toLocalDateTime(timeZone).date
 
+    fun daysCount(timeZone: TimeZone = AppTimeZone): Int {
+        val start = startLocalDate(timeZone)
+        val end = endLocalDateInclusive(timeZone)
+        val jStart = java.time.LocalDate.of(start.year, start.monthNumber, start.dayOfMonth)
+        val jEnd = java.time.LocalDate.of(end.year, end.monthNumber, end.dayOfMonth)
+        return (java.time.temporal.ChronoUnit.DAYS.between(jStart, jEnd) + 1).toInt().coerceAtLeast(1)
+    }
+
     companion object {
         fun ofDay(date: LocalDate, timeZone: TimeZone = AppTimeZone): DateRange {
             val start = date.atStartOfDayIn(timeZone)

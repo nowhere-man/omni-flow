@@ -25,6 +25,7 @@ data class CreateTransactionCommand(
     val source: TransactionSource = TransactionSource.MANUAL,
     val externalId: String? = null,
     val tagIds: Set<TagId> = emptySet(),
+    val targetAccountId: AccountId? = null,
 )
 
 class CreateTransactionUseCase(
@@ -33,7 +34,12 @@ class CreateTransactionUseCase(
     suspend operator fun invoke(command: CreateTransactionCommand): Result<Unit> = runCatching {
         require(command.ledgerId != null) { "请选择账本" }
         require(command.accountId != null) { "请选择账户" }
-        require(command.categoryId != null) { "请选择分类" }
+        if (command.type == TransactionType.TRANSFER) {
+            require(command.targetAccountId != null) { "请选择转入账户" }
+            require(command.targetAccountId != command.accountId) { "转出账户与转入账户不能相同" }
+        } else {
+            require(command.categoryId != null) { "请选择分类" }
+        }
         require(command.amount > Money.Zero) { "金额必须大于零" }
 
         transactions.create(
@@ -41,12 +47,13 @@ class CreateTransactionUseCase(
                 id = command.id,
                 ledgerId = command.ledgerId,
                 accountId = command.accountId,
-                categoryId = command.categoryId,
+                targetAccountId = command.targetAccountId,
+                categoryId = command.categoryId.orEmpty(),
                 amount = command.amount,
                 type = command.type,
                 occurredAt = command.occurredAt,
                 note = command.note?.trim()?.takeIf(String::isNotEmpty),
-                isExcluded = command.isExcluded,
+                isExcluded = if (command.type == TransactionType.TRANSFER) true else command.isExcluded,
                 source = command.source,
                 externalId = command.externalId?.trim()?.takeIf(String::isNotEmpty),
                 tagIds = command.tagIds,

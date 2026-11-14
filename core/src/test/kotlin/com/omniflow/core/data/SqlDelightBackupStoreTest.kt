@@ -20,7 +20,7 @@ class SqlDelightBackupStoreTest {
         database.tagQueries.insertTag("tag", "ledger", "工作", 1, 1)
         database.transactionQueries.insertTransaction(
             "transaction", "ledger", "account", "category", 100, "EXPENSE", 1_000,
-            "午餐", 0, null, null, 1, 1,
+            "午餐", 0, null, null, 1, 1, null,
         )
         database.tagQueries.insertTransactionTag("transaction", "tag")
         database.reminderQueries.insertReminder(

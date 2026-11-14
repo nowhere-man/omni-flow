@@ -28,6 +28,7 @@ data class CategorySuggestionRequest(
     fun optionsFor(type: TransactionType): List<CategoryOption> = when (type) {
         TransactionType.EXPENSE -> expenseOptions
         TransactionType.INCOME -> incomeOptions
+        TransactionType.TRANSFER -> emptyList()
     }
 }
 

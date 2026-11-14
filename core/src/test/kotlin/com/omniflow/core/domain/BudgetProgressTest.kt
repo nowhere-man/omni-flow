@@ -6,7 +6,9 @@ import com.omniflow.core.domain.model.Money
 import com.omniflow.core.domain.model.TransactionListItem
 import com.omniflow.core.domain.model.TransactionType
 import com.omniflow.core.domain.model.buildBudgetProgress
+import com.omniflow.core.domain.model.calculateDailyAllowance
 import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -82,6 +84,45 @@ class BudgetProgressTest {
         )
         assertEquals(1, progress.size)
         assertEquals("总预算", progress.single().name)
+    }
+
+    @Test
+    fun calculateDailyAllowanceCalculatesCorrectlyForMidMonth() {
+        // 11 月有 30 天，11 月 14 日还剩 30 - 14 + 1 = 17 天
+        val allowance = calculateDailyAllowance(
+            remaining = Money(170_000), // 1700 元
+            today = LocalDate(2026, 11, 14),
+        )
+        assertEquals(17, allowance.remainingDays)
+        assertEquals(Money(10_000), allowance.dailyAllowance) // 100 元/天
+    }
+
+    @Test
+    fun calculateDailyAllowanceOnLastDayOfMonth() {
+        // 11 月 30 日最后一天，剩余 1 天
+        val allowance = calculateDailyAllowance(
+            remaining = Money(5_000),
+            today = LocalDate(2026, 11, 30),
+        )
+        assertEquals(1, allowance.remainingDays)
+        assertEquals(Money(5_000), allowance.dailyAllowance)
+    }
+
+    @Test
+    fun calculateDailyAllowanceWhenOverspentOrZeroReturnsZero() {
+        val overspent = calculateDailyAllowance(
+            remaining = Money(-20_000),
+            today = LocalDate(2026, 11, 14),
+        )
+        assertEquals(17, overspent.remainingDays)
+        assertEquals(Money.Zero, overspent.dailyAllowance)
+
+        val zero = calculateDailyAllowance(
+            remaining = Money.Zero,
+            today = LocalDate(2026, 11, 14),
+        )
+        assertEquals(17, zero.remainingDays)
+        assertEquals(Money.Zero, zero.dailyAllowance)
     }
 
     private fun budget(id: String, categoryId: String?, minor: Long) =

@@ -32,9 +32,15 @@ data class TransactionListItem(
     val note: String?,
     val isExcluded: Boolean,
     val source: TransactionSource?,
+    val targetAccountId: AccountId? = null,
+    val targetAccountName: String? = null,
 ) {
     val categoryDisplayName: String
-        get() = if (primaryCategoryName == categoryName) categoryName else "$primaryCategoryName - $categoryName"
+        get() = when {
+            type == TransactionType.TRANSFER -> "转账" + (targetAccountName?.let { " → $it" } ?: "")
+            primaryCategoryName == categoryName -> categoryName
+            else -> "$primaryCategoryName - $categoryName"
+        }
 }
 
 data class TransactionRecordDetail(
@@ -45,6 +51,7 @@ data class TransactionRecordDetail(
     val secondaryCategoryName: String?,
     val categoryIconKey: String?,
     val tagNames: List<String>,
+    val targetAccountName: String? = null,
 )
 
 fun Transaction.toRecordDetail(
@@ -61,7 +68,8 @@ fun Transaction.toRecordDetail(
         transaction = this,
         ledgerName = ledgers.firstOrNull { it.id == ledgerId }?.name ?: "未知账本",
         accountName = accounts.firstOrNull { it.id == accountId }?.name ?: "未知账户",
-        primaryCategoryName = primaryCategory?.name ?: "未分类",
+        targetAccountName = targetAccountId?.let { targetId -> accounts.firstOrNull { it.id == targetId }?.name },
+        primaryCategoryName = if (type == TransactionType.TRANSFER) "内部转账" else (primaryCategory?.name ?: "未分类"),
         secondaryCategoryName = selectedCategory?.takeIf { it.parentId != null }?.name,
         categoryIconKey = primaryCategory?.iconKey ?: selectedCategory?.iconKey,
         tagNames = tags.filter { it.id in tagIds }.map { it.name },

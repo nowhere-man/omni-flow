@@ -1,8 +1,42 @@
 package com.omniflow.core.domain.model
 
 import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
 
 typealias BudgetId = String
+
+/**
+ * 每日预算建议额度。
+ * [remainingDays] 当月包含今日在内的剩余天数（最少为 1）。
+ * [dailyAllowance] 每日平均建议可花金额；当已超支或无结余时为零。
+ */
+data class DailyBudgetAllowance(
+    val remainingDays: Int,
+    val dailyAllowance: Money,
+)
+
+/**
+ * 根据当月剩余预算与指定日期计算每日建议可花额度。
+ */
+fun calculateDailyAllowance(
+    remaining: Money,
+    today: LocalDate,
+    timeZone: TimeZone = AppTimeZone,
+): DailyBudgetAllowance {
+    val jDate = java.time.LocalDate.of(today.year, today.monthNumber, today.dayOfMonth)
+    val totalDaysInMonth = jDate.lengthOfMonth()
+    val remainingDays = (totalDaysInMonth - today.dayOfMonth + 1).coerceAtLeast(1)
+    val allowance = if (remaining.minor <= 0L) {
+        Money.Zero
+    } else {
+        Money(remaining.minor / remainingDays)
+    }
+    return DailyBudgetAllowance(
+        remainingDays = remainingDays,
+        dailyAllowance = allowance,
+    )
+}
 
 /**
  * 月度预算。[categoryId] 为 null 表示整个账本的总预算，否则是某个一级分类的预算。

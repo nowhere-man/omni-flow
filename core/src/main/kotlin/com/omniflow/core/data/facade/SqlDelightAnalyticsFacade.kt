@@ -9,10 +9,12 @@ import com.omniflow.core.domain.facade.AnalyticsFacade
 import com.omniflow.core.domain.model.AnalyticsDashboardState
 import com.omniflow.core.domain.model.AnalyticsQuery
 import com.omniflow.core.domain.model.CategoryBreakdownItem
+import com.omniflow.core.domain.model.CategoryDiffItem
 import com.omniflow.core.domain.model.CategoryShareItem
 import com.omniflow.core.domain.model.ChartData
 import com.omniflow.core.domain.model.ChartPoint
 import com.omniflow.core.domain.model.DateRange
+import com.omniflow.core.domain.model.FinancialHealthSummary
 import com.omniflow.core.domain.model.LedgerScope
 import com.omniflow.core.domain.model.Money
 import com.omniflow.core.domain.model.StatementMonth
@@ -23,6 +25,7 @@ import com.omniflow.core.domain.model.TimeGranularity
 import com.omniflow.core.domain.model.TransactionRankingItem
 import com.omniflow.core.domain.model.TransactionSummary
 import com.omniflow.core.domain.model.TransactionType
+import com.omniflow.core.domain.rule.FinancialInsightEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -50,15 +53,36 @@ class SqlDelightAnalyticsFacade(
             observeTags(query.scope, query.range),
         ) { currentRows, previousRows, yearRows, tagRows ->
             runCatching {
+                val currentSummary = summary(currentRows)
+                val previousSummary = summary(previousRows)
+                val healthSummary = FinancialHealthSummary(
+                    income = currentSummary.incomeTotal,
+                    expense = currentSummary.expenseTotal,
+                    daysCount = query.range.daysCount(AppTimeZone),
+                )
+                val diffs = categoryDiffs(currentRows, previousRows, TransactionType.EXPENSE)
+                val rankings = ranking(currentRows, query.rankingType)
+                val breakdowns = categoryBreakdowns(currentRows, query.categoryShareType)
+                val insight = FinancialInsightEngine.evaluate(
+                    currentSummary = currentSummary,
+                    previousSummary = previousSummary,
+                    healthSummary = healthSummary,
+                    categoryDiffs = diffs,
+                    ranking = rankings,
+                    categoryBreakdowns = breakdowns,
+                )
                 AnalyticsDashboardState(
                     query = query,
-                    summary = summary(currentRows),
-                    previousSummary = summary(previousRows),
+                    summary = currentSummary,
+                    previousSummary = previousSummary,
                     trend = chartData(currentRows, query.range, query.trendGranularity),
-                    ranking = ranking(currentRows, query.rankingType),
-                    categoryBreakdowns = categoryBreakdowns(currentRows, query.categoryShareType),
+                    ranking = rankings,
+                    categoryBreakdowns = breakdowns,
                     tagAnalysis = tagAnalysis(currentRows, tagRows, query.tagAnalysisType),
                     yearStatement = statement(yearRows, year),
+                    healthSummary = healthSummary,
+                    categoryDiffs = diffs,
+                    insight = insight,
                 )
             }
         }
@@ -119,6 +143,7 @@ class SqlDelightAnalyticsFacade(
             when (TransactionType.valueOf(row.type)) {
                 TransactionType.EXPENSE -> total.copy(expenseTotal = total.expenseTotal + Money(row.amount_minor))
                 TransactionType.INCOME -> total.copy(incomeTotal = total.incomeTotal + Money(row.amount_minor))
+                TransactionType.TRANSFER -> total
             }
         }
 
@@ -176,37 +201,96 @@ class SqlDelightAnalyticsFacade(
         }.sortedByDescending(TagAnalysisItem::amount)
     }
 
-    private fun categoryBreakdowns(
+    internal fun categoryBreakdowns(
         rows: List<TransactionRowsInRange>,
         type: TransactionType,
-    ): List<CategoryBreakdownItem> = rows.asSequence()
-        .filterNot { it.is_excluded != 0L }
-        .filter { TransactionType.valueOf(it.type) == type }
-        .groupBy { PrimaryCategory(it.primary_category_name) }
-        .map { (primary, entries) ->
-            val secondaries = entries.asSequence()
-                .filter { it.category_id != it.primary_category_id }
-                .groupBy { CategoryKey(it.category_name) }
-                .map { (category, categoryRows) ->
-                    CategoryShareItem(
-                        categoryId = categoryRows.first().category_id,
-                        categoryName = category.name,
-                        iconKey = categoryRows.firstNotNullOfOrNull { it.category_icon_key },
-                        amount = categoryRows.fold(Money.Zero) { total, row -> total + Money(row.amount_minor) },
-                    )
-                }
-                .sortedByDescending(CategoryShareItem::amount)
-                .toList()
-            CategoryBreakdownItem(
-                primaryCategoryId = entries.first().primary_category_id,
-                primaryCategoryName = primary.name,
-                iconKey = entries.firstNotNullOfOrNull { it.primary_category_icon_key },
-                amount = entries.fold(Money.Zero) { total, row -> total + Money(row.amount_minor) },
-                secondaryCategories = secondaries,
+    ): List<CategoryBreakdownItem> {
+        val filtered = rows.filterNot { it.is_excluded != 0L }
+            .filter { TransactionType.valueOf(it.type) == type }
+        val totalMinor = filtered.sumOf { it.amount_minor }
+        val totalDouble = totalMinor.toDouble()
+
+        return filtered.groupBy { PrimaryCategory(it.primary_category_name) }
+            .map { (primary, entries) ->
+                val primaryAmount = entries.fold(Money.Zero) { total, row -> total + Money(row.amount_minor) }
+                val primaryRatio = if (totalMinor > 0L) primaryAmount.minor.toDouble() / totalDouble else 0.0
+
+                val secondaries = entries.asSequence()
+                    .filter { it.category_id != it.primary_category_id }
+                    .groupBy { CategoryKey(it.category_name) }
+                    .map { (category, categoryRows) ->
+                        val secAmount = categoryRows.fold(Money.Zero) { total, row -> total + Money(row.amount_minor) }
+                        val secRatio = if (totalMinor > 0L) secAmount.minor.toDouble() / totalDouble else 0.0
+                        CategoryShareItem(
+                            categoryId = categoryRows.first().category_id,
+                            categoryName = category.name,
+                            iconKey = categoryRows.firstNotNullOfOrNull { it.category_icon_key },
+                            amount = secAmount,
+                            shareRatio = secRatio,
+                        )
+                    }
+                    .sortedByDescending(CategoryShareItem::amount)
+                    .toList()
+                CategoryBreakdownItem(
+                    primaryCategoryId = entries.first().primary_category_id,
+                    primaryCategoryName = primary.name,
+                    iconKey = entries.firstNotNullOfOrNull { it.primary_category_icon_key },
+                    amount = primaryAmount,
+                    secondaryCategories = secondaries,
+                    shareRatio = primaryRatio,
+                )
+            }
+            .sortedByDescending(CategoryBreakdownItem::amount)
+    }
+
+    private fun categoryDiffs(
+        currentRows: List<TransactionRowsInRange>,
+        previousRows: List<TransactionRowsInRange>,
+        type: TransactionType = TransactionType.EXPENSE,
+    ): List<CategoryDiffItem> {
+        val currentByPrimary = currentRows.asSequence()
+            .filterNot { it.is_excluded != 0L }
+            .filter { TransactionType.valueOf(it.type) == type }
+            .groupBy { it.primary_category_name }
+            .mapValues { (_, entries) ->
+                CategoryDiffSource(
+                    id = entries.first().primary_category_id,
+                    iconKey = entries.firstNotNullOfOrNull { it.primary_category_icon_key },
+                    amount = entries.fold(Money.Zero) { total, row -> total + Money(row.amount_minor) },
+                )
+            }
+
+        val previousByPrimary = previousRows.asSequence()
+            .filterNot { it.is_excluded != 0L }
+            .filter { TransactionType.valueOf(it.type) == type }
+            .groupBy { it.primary_category_name }
+            .mapValues { (_, entries) ->
+                CategoryDiffSource(
+                    id = entries.first().primary_category_id,
+                    iconKey = entries.firstNotNullOfOrNull { it.primary_category_icon_key },
+                    amount = entries.fold(Money.Zero) { total, row -> total + Money(row.amount_minor) },
+                )
+            }
+
+        val allNames = (currentByPrimary.keys + previousByPrimary.keys)
+        return allNames.map { name ->
+            val current = currentByPrimary[name]
+            val previous = previousByPrimary[name]
+            val id = current?.id ?: previous?.id.orEmpty()
+            val icon = current?.iconKey ?: previous?.iconKey
+            val currAmt = current?.amount ?: Money.Zero
+            val prevAmt = previous?.amount ?: Money.Zero
+            CategoryDiffItem(
+                categoryId = id,
+                categoryName = name,
+                iconKey = icon,
+                currentAmount = currAmt,
+                previousAmount = prevAmt,
             )
         }
-        .sortedByDescending(CategoryBreakdownItem::amount)
-        .toList()
+        .filter { it.currentAmount > Money.Zero || it.previousAmount > Money.Zero }
+        .sortedByDescending { it.absoluteDiffAmount }
+    }
 
     private fun statement(rows: List<TransactionRowsInRange>, year: Int): StatementTable {
         val entries = rows.filterNot { it.is_excluded != 0L }
@@ -274,6 +358,7 @@ class SqlDelightAnalyticsFacade(
 
     private data class PrimaryCategory(val name: String)
     private data class CategoryKey(val name: String)
+    private data class CategoryDiffSource(val id: String, val iconKey: String?, val amount: Money)
     private data class TagKey(val id: String, val name: String)
     private data class TagAggregate(var amount: Money = Money.Zero, var count: Int = 0)
 

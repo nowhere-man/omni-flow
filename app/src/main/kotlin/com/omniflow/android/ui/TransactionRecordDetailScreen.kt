@@ -50,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
 import com.omniflow.core.domain.model.TransactionSource
 import com.omniflow.core.domain.model.TransactionType
 import com.omniflow.core.domain.model.transactionDateTimeText
@@ -108,9 +109,10 @@ internal fun TransactionRecordDetailSheet(
                                     color = MaterialTheme.colorScheme.surface,
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
-                                        SvgIcon(
-                                            categoryIconKey(state.categoryIconKey),
-                                            Modifier.size(34.dp),
+                                        Icon(
+                                            imageVector = getCategoryIcon(state.categoryIconKey),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(34.dp),
                                             tint = MaterialTheme.colorScheme.primary,
                                         )
                                     }

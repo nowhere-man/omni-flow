@@ -92,24 +92,6 @@ data class RangeDetailUiState(
     val error: String? = null,
 )
 
-enum class AnalyticsRangeMode { WEEK, MONTH, YEAR, CUSTOM }
-
-data class AnalyticsUiState(
-    val dashboard: AnalyticsDashboardState? = null,
-    val statementTable: StatementTable? = null,
-    val ledgers: List<Ledger> = emptyList(),
-    val scope: LedgerScope = LedgerScope.All,
-    val rangeMode: AnalyticsRangeMode = AnalyticsRangeMode.MONTH,
-    val range: DateRange = analyticsRange(
-        AnalyticsRangeMode.MONTH,
-        Clock.System.now().toLocalDateTime(AppTimeZone).date,
-    ),
-    // 排行榜/饼图/标签以前各有一个开关，切换收入要点三次；合成页面级一个
-    val analyticsType: TransactionType = TransactionType.EXPENSE,
-    val isLoading: Boolean = true,
-    val error: String? = null,
-)
-
 data class SearchUiState(
     val query: TransactionSearchQuery = TransactionSearchQuery(),
     val result: SearchResult? = null,
@@ -144,6 +126,7 @@ data class TransactionEditorUiState(
     val tags: List<Tag> = emptyList(),
     val ledgerId: String? = null,
     val accountId: String? = null,
+    val targetAccountId: String? = null,
     val categoryId: String? = null,
     val selectedTagIds: Set<String> = emptySet(),
     val type: TransactionType = TransactionType.EXPENSE,
@@ -206,12 +189,10 @@ data class MoreUiState(
 )
 
 class OmniFlowViewModel(
-    private val sharedApp: SharedApp,
+    internal val sharedApp: SharedApp,
 ) : ViewModel() {
     private val _homeUiState = MutableStateFlow(HomeUiState())
     val homeUiState: StateFlow<HomeUiState> = _homeUiState.asStateFlow()
-    private val _analyticsUiState = MutableStateFlow(AnalyticsUiState())
-    val analyticsUiState: StateFlow<AnalyticsUiState> = _analyticsUiState.asStateFlow()
     private val _rangeDetailUiState = MutableStateFlow(RangeDetailUiState())
     val rangeDetailUiState: StateFlow<RangeDetailUiState> = _rangeDetailUiState.asStateFlow()
     private val _searchUiState = MutableStateFlow(SearchUiState())
@@ -227,13 +208,11 @@ class OmniFlowViewModel(
     val moreUiState: StateFlow<MoreUiState> = _moreUiState.asStateFlow()
 
     private var homeQuery = HomeQuery(LedgerScope.All, monthRange(Clock.System.now()))
-    private var analyticsAnchor = Clock.System.now().toLocalDateTime(AppTimeZone).date
     private var preferences = AppPreferences()
     private var defaultLedgerId: String? = null
     private var editingTransaction: Transaction? = null
     private var homeJob: Job? = null
     private var detailJob: Job? = null
-    private var analyticsJob: Job? = null
     private var searchJob: Job? = null
     private var editorCategoriesJob: Job? = null
     private var editorTagsJob: Job? = null
@@ -253,7 +232,6 @@ class OmniFlowViewModel(
         collectPreferences()
         collectSync()
         observeHome()
-        observeAnalytics()
     }
 
     private fun collectManagement() {
@@ -261,7 +239,6 @@ class OmniFlowViewModel(
             sharedApp.management.observeLedgers().collect { result ->
                 val ledgers = result.getOrDefault(emptyList())
                 _homeUiState.value = _homeUiState.value.copy(ledgers = ledgers)
-                _analyticsUiState.value = _analyticsUiState.value.copy(ledgers = ledgers)
                 _searchUiState.value = _searchUiState.value.copy(ledgers = ledgers)
                 _transactionUiState.value = _transactionUiState.value.copy(ledgers = ledgers)
                 val previousSelection = _moreUiState.value.selectedLedgerId
@@ -320,17 +297,14 @@ class OmniFlowViewModel(
             sharedApp.preferences.observe().collect { result ->
                 result.onSuccess { saved ->
                     val homeScopeChanged = homeQuery.scope != saved.homeLedgerScope
-                    val analyticsScopeChanged = _analyticsUiState.value.scope != saved.analyticsLedgerScope
                     preferences = saved
                     homeQuery = homeQuery.copy(scope = saved.homeLedgerScope)
                     _homeUiState.value = _homeUiState.value.copy(
                         displayMode = saved.transactionDetailDisplayMode,
                         appearanceMode = saved.appearanceMode,
                     )
-                    _analyticsUiState.value = _analyticsUiState.value.copy(scope = saved.analyticsLedgerScope)
                     _moreUiState.value = _moreUiState.value.copy(preferences = saved)
                     if (homeScopeChanged) observeHome()
-                    if (analyticsScopeChanged) observeAnalytics()
                 }
             }
         }
@@ -405,89 +379,6 @@ class OmniFlowViewModel(
         val month = JavaLocalDate.of(start.year, start.monthNumber, 1).plusMonths(delta)
         homeQuery = homeQuery.copy(month = monthRange(LocalDate(month.year, month.monthValue, 1)))
         observeHome()
-    }
-
-    fun setAnalyticsScope(scope: LedgerScope) {
-        _analyticsUiState.value = _analyticsUiState.value.copy(scope = scope)
-        savePreferences(preferences.copy(analyticsLedgerScope = scope))
-        observeAnalytics()
-    }
-    fun setAnalyticsRangeMode(mode: AnalyticsRangeMode) {
-        _analyticsUiState.value = _analyticsUiState.value.copy(rangeMode = mode, range = analyticsRange(mode, analyticsAnchor))
-        observeAnalytics()
-    }
-    fun shiftAnalyticsRange(delta: Long) {
-        analyticsAnchor = when (_analyticsUiState.value.rangeMode) {
-            AnalyticsRangeMode.WEEK -> analyticsAnchor.minus(-7 * delta.toInt(), DateTimeUnit.DAY)
-            AnalyticsRangeMode.MONTH -> javaDate(analyticsAnchor).plusMonths(delta).toKotlinDate()
-            AnalyticsRangeMode.YEAR -> javaDate(analyticsAnchor).plusYears(delta).toKotlinDate()
-            AnalyticsRangeMode.CUSTOM -> analyticsAnchor
-        }
-        _analyticsUiState.value = _analyticsUiState.value.copy(
-            range = analyticsRange(_analyticsUiState.value.rangeMode, analyticsAnchor),
-        )
-        observeAnalytics()
-    }
-    fun resetAnalyticsRange() {
-        val mode = _analyticsUiState.value.rangeMode
-        if (mode == AnalyticsRangeMode.CUSTOM) return
-        analyticsAnchor = Clock.System.now().toLocalDateTime(AppTimeZone).date
-        _analyticsUiState.value = _analyticsUiState.value.copy(range = analyticsRange(mode, analyticsAnchor))
-        observeAnalytics()
-    }
-    fun setAnalyticsCustomRange(range: DateRange) {
-        _analyticsUiState.value = _analyticsUiState.value.copy(rangeMode = AnalyticsRangeMode.CUSTOM, range = range)
-        observeAnalytics()
-    }
-    fun setAnalyticsType(type: TransactionType) {
-        _analyticsUiState.value = _analyticsUiState.value.copy(analyticsType = type)
-        observeAnalytics()
-    }
-    fun selectAnalyticsMonth(month: Int) {
-        val year = _analyticsUiState.value.dashboard?.yearStatement?.year
-            ?: _analyticsUiState.value.range.startInclusive.toLocalDateTime(AppTimeZone).year
-        analyticsAnchor = LocalDate(year, month, 1)
-        _analyticsUiState.value = _analyticsUiState.value.copy(
-            rangeMode = AnalyticsRangeMode.MONTH,
-            range = monthRange(analyticsAnchor),
-        )
-        observeAnalytics()
-    }
-    fun loadStatementTable(year: Int) {
-        viewModelScope.launch {
-            sharedApp.analytics.statementTable(_analyticsUiState.value.scope, year).onSuccess { table ->
-                _analyticsUiState.value = _analyticsUiState.value.copy(statementTable = table)
-            }.onFailure { error ->
-                _analyticsUiState.value = _analyticsUiState.value.copy(error = error.message)
-            }
-        }
-    }
-    fun dismissStatementTable() {
-        _analyticsUiState.value = _analyticsUiState.value.copy(statementTable = null)
-    }
-
-    private fun observeAnalytics() {
-        analyticsJob?.cancel()
-        val current = _analyticsUiState.value
-        _analyticsUiState.value = current.copy(isLoading = true, error = null)
-        analyticsJob = viewModelScope.launch {
-            sharedApp.analytics.observeDashboard(
-                AnalyticsQuery(
-                    scope = current.scope,
-                    range = current.range,
-                    rankingType = current.analyticsType,
-                    categoryShareType = current.analyticsType,
-                    tagAnalysisType = current.analyticsType,
-                    trendGranularity = analyticsGranularity(current.rangeMode, current.range),
-                ),
-            ).collect { result ->
-                _analyticsUiState.value = _analyticsUiState.value.copy(
-                    dashboard = result.getOrNull(),
-                    isLoading = false,
-                    error = result.exceptionOrNull()?.message,
-                )
-            }
-        }
     }
 
     // 搜索条件只改草稿，不触发查询：边输边搜会在输到一半时不停刷新结果列表，
@@ -667,11 +558,13 @@ class OmniFlowViewModel(
         val accounts = _transactionUiState.value.accounts
         val selectedLedger = ledgerId ?: defaultLedgerId
         val now = Clock.System.now().toLocalDateTime(AppTimeZone)
+        val defaultAccount = accounts.firstOrNull { it.type == AccountType.CASH }?.id ?: accounts.firstOrNull()?.id
         _transactionUiState.value = TransactionEditorUiState(
             ledgers = _transactionUiState.value.ledgers,
             accounts = accounts,
             ledgerId = selectedLedger,
-            accountId = accounts.firstOrNull { it.type == AccountType.CASH }?.id ?: accounts.firstOrNull()?.id,
+            accountId = defaultAccount,
+            targetAccountId = accounts.firstOrNull { it.id != defaultAccount }?.id,
             occurredAt = LocalDateTime(
                 date ?: now.date,
                 LocalTime(now.hour, now.minute),
@@ -693,6 +586,7 @@ class OmniFlowViewModel(
                     accounts = _transactionUiState.value.accounts,
                     ledgerId = transaction.ledgerId,
                     accountId = transaction.accountId,
+                    targetAccountId = transaction.targetAccountId,
                     categoryId = transaction.categoryId,
                     selectedTagIds = transaction.tagIds,
                     type = transaction.type,
@@ -709,9 +603,16 @@ class OmniFlowViewModel(
     }
     fun setTransactionType(type: TransactionType) {
         val category = _transactionUiState.value.categories.firstOrNull { it.id == _transactionUiState.value.categoryId }
+        val isTransfer = type == TransactionType.TRANSFER
+        val targetAcc = if (isTransfer) {
+            _transactionUiState.value.targetAccountId
+                ?: _transactionUiState.value.accounts.firstOrNull { it.id != _transactionUiState.value.accountId }?.id
+        } else null
         _transactionUiState.value = _transactionUiState.value.copy(
             type = type,
-            categoryId = category?.takeIf { it.type == type }?.id,
+            targetAccountId = targetAcc,
+            isExcluded = if (isTransfer) true else _transactionUiState.value.isExcluded,
+            categoryId = if (isTransfer) null else category?.takeIf { it.type == type }?.id,
         )
     }
     fun setTransactionLedger(ledgerId: String?) {
@@ -719,7 +620,14 @@ class OmniFlowViewModel(
         observeEditorLedger(ledgerId)
     }
     fun setTransactionAccount(accountId: String?) {
-        _transactionUiState.value = _transactionUiState.value.copy(accountId = accountId)
+        val currentTarget = _transactionUiState.value.targetAccountId
+        val newTarget = if (currentTarget == accountId) {
+            _transactionUiState.value.accounts.firstOrNull { it.id != accountId }?.id
+        } else currentTarget
+        _transactionUiState.value = _transactionUiState.value.copy(accountId = accountId, targetAccountId = newTarget)
+    }
+    fun setTransactionTargetAccount(accountId: String?) {
+        _transactionUiState.value = _transactionUiState.value.copy(targetAccountId = accountId)
     }
     fun setTransactionCategory(categoryId: String?) {
         _transactionUiState.value = _transactionUiState.value.copy(categoryId = categoryId)
@@ -760,19 +668,38 @@ class OmniFlowViewModel(
     }
     fun pressAmountKey(key: String) {
         val current = _transactionUiState.value.amountInput
+        if (key == "=") {
+            sharedApp.evaluateAmount.evaluateToInput(current).fold(
+                onSuccess = { evaluated ->
+                    _transactionUiState.value = _transactionUiState.value.copy(amountInput = evaluated, error = null)
+                },
+                onFailure = { err ->
+                    _transactionUiState.value = _transactionUiState.value.copy(error = err.message ?: "算式错误")
+                },
+            )
+            return
+        }
+        if (key == "C") {
+            _transactionUiState.value = _transactionUiState.value.copy(amountInput = "", error = null)
+            return
+        }
         val updated = when (key) {
             "退格" -> current.dropLast(1)
-            "+", "-" -> if (current.isNotEmpty() && current.last() !in "+-") current + key else current
-            "." -> if (current.substringAfterLast('+').substringAfterLast('-').contains('.')) current else current + key
+            "+", "-", "*", "/" -> if (current.isNotEmpty() && current.last() !in "+-*/") current + key else current
+            "." -> {
+                val lastPart = current.split('+', '-', '*', '/').lastOrNull().orEmpty()
+                if (lastPart.contains('.')) current else current + key
+            }
             else -> current + key
         }
         _transactionUiState.value = _transactionUiState.value.copy(amountInput = updated, error = null)
     }
     fun saveTransaction(saveAgain: Boolean) {
         val state = _transactionUiState.value
-        val amount = evaluateAmount(state.amountInput)?.let(::Money)
+        val evalResult = sharedApp.evaluateAmount(state.amountInput)
+        val amount = evalResult.getOrNull()
         if (amount == null) {
-            _transactionUiState.value = state.copy(error = "请输入有效金额")
+            _transactionUiState.value = state.copy(error = evalResult.exceptionOrNull()?.message ?: "请输入有效金额")
             return
         }
         _transactionUiState.value = state.copy(isSaving = true, error = null)
@@ -784,12 +711,13 @@ class OmniFlowViewModel(
                         id = UUID.randomUUID().toString(),
                         ledgerId = state.ledgerId,
                         accountId = state.accountId,
+                        targetAccountId = state.targetAccountId,
                         categoryId = state.categoryId,
                         amount = amount,
                         type = state.type,
                         occurredAt = state.occurredAt,
                         note = state.note,
-                        isExcluded = state.isExcluded,
+                        isExcluded = if (state.type == TransactionType.TRANSFER) true else state.isExcluded,
                         tagIds = state.selectedTagIds,
                     ),
                 )
@@ -798,12 +726,13 @@ class OmniFlowViewModel(
                     existing.copy(
                         ledgerId = state.ledgerId ?: existing.ledgerId,
                         accountId = state.accountId ?: existing.accountId,
+                        targetAccountId = state.targetAccountId ?: existing.targetAccountId,
                         categoryId = state.categoryId ?: existing.categoryId,
                         amount = amount,
                         type = state.type,
                         occurredAt = state.occurredAt,
                         note = state.note,
-                        isExcluded = state.isExcluded,
+                        isExcluded = if (state.type == TransactionType.TRANSFER) true else state.isExcluded,
                         tagIds = state.selectedTagIds,
                     ),
                 )
@@ -1288,22 +1217,6 @@ internal fun monthRange(now: Instant): DateRange = DateRange.ofMonth(now.toLocal
 internal fun monthRange(date: LocalDate): DateRange = DateRange.ofMonth(date, AppTimeZone)
 
 internal fun dateRange(date: LocalDate): DateRange = DateRange.ofDay(date, AppTimeZone)
-
-private fun analyticsRange(mode: AnalyticsRangeMode, anchor: LocalDate): DateRange = when (mode) {
-    AnalyticsRangeMode.WEEK -> DateRange.ofWeek(anchor, AppTimeZone)
-    AnalyticsRangeMode.MONTH -> DateRange.ofMonth(anchor, AppTimeZone)
-    AnalyticsRangeMode.YEAR -> DateRange.ofYear(anchor.year, AppTimeZone)
-    AnalyticsRangeMode.CUSTOM -> DateRange.ofMonth(anchor, AppTimeZone)
-}
-
-private fun analyticsGranularity(mode: AnalyticsRangeMode, range: DateRange): TimeGranularity = when (mode) {
-    AnalyticsRangeMode.WEEK, AnalyticsRangeMode.MONTH -> TimeGranularity.DAY
-    AnalyticsRangeMode.YEAR -> TimeGranularity.MONTH
-    AnalyticsRangeMode.CUSTOM -> {
-        val days = (range.endExclusive.toEpochMilliseconds() - range.startInclusive.toEpochMilliseconds()) / 86_400_000
-        if (days <= 90) TimeGranularity.DAY else TimeGranularity.MONTH
-    }
-}
 
 private fun javaDate(date: LocalDate) = JavaLocalDate.of(date.year, date.monthNumber, date.dayOfMonth)
 private fun JavaLocalDate.toKotlinDate() = LocalDate(year, monthValue, dayOfMonth)

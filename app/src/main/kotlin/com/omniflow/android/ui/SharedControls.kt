@@ -23,6 +23,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -318,3 +319,29 @@ internal fun OmniTextField(
         modifier = modifier.fillMaxWidth(),
     )
 }
+
+@Composable
+internal fun ExportDateButton(
+    label: String,
+    date: kotlinx.datetime.LocalDate,
+    modifier: Modifier = Modifier,
+    onDate: (kotlinx.datetime.LocalDate) -> Unit,
+) {
+    var showDialog by remember { mutableStateOf(false) }
+    OutlinedButton(
+        onClick = { showDialog = true },
+        modifier = modifier,
+    ) { Text("$label ${date.monthNumber}/${date.dayOfMonth}") }
+
+    if (showDialog) {
+        com.omniflow.android.ui.designsystem.components.OmniDatePickerDialog(
+            initialDate = date,
+            onDateSelected = onDate,
+            onDismissRequest = { showDialog = false },
+        )
+    }
+}
+
+internal fun exportRange(first: kotlinx.datetime.LocalDate, second: kotlinx.datetime.LocalDate): com.omniflow.core.domain.model.DateRange =
+    com.omniflow.core.domain.model.DateRange.ofClosedDates(first, second, com.omniflow.core.domain.model.AppTimeZone)
+

@@ -89,7 +89,7 @@ class SqlDelightHomeFacadeTest {
         seed(database)
         database.transactionQueries.insertTransaction(
             "excluded", "ledger", "account", "expense", 300, "EXPENSE", 1_600,
-            "不计入统计", 1, null, null, 1, 1,
+            "不计入统计", 1, null, null, 1, 1, null,
         )
 
         val state = SqlDelightHomeFacade(database).observeHome(
@@ -133,6 +133,7 @@ class SqlDelightHomeFacadeTest {
             external_id = null,
             created_at = 1,
             updated_at = 1,
+            target_account_id = null,
         )
         database.transactionQueries.insertTransaction(
             id = "income-transaction",
@@ -148,6 +149,7 @@ class SqlDelightHomeFacadeTest {
             external_id = null,
             created_at = 1,
             updated_at = 1,
+            target_account_id = null,
         )
     }
 }

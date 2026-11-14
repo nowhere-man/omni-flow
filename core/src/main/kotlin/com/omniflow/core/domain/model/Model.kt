@@ -8,7 +8,7 @@ typealias CategoryId = String
 typealias TagId = String
 typealias TransactionId = String
 
-enum class TransactionType { EXPENSE, INCOME }
+enum class TransactionType { EXPENSE, INCOME, TRANSFER }
 
 enum class AccountType { CASH, DEBIT_CARD, CREDIT_CARD, E_WALLET, INVESTMENT }
 
@@ -69,6 +69,7 @@ data class Transaction(
     val externalId: String?,
     val tagIds: Set<TagId> = emptySet(),
     val deletedAt: Instant? = null,
+    val targetAccountId: AccountId? = null,
 )
 
 data class AccountSummary(

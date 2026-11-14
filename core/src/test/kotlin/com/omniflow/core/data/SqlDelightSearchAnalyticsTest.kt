@@ -20,6 +20,8 @@ import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toLocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlin.math.abs
 
 class SqlDelightSearchAnalyticsTest {
     @Test
@@ -191,6 +193,145 @@ class SqlDelightSearchAnalyticsTest {
         assertEquals(listOf(Money.Zero, Money.Zero, Money(500)), dashboard.trend.points.map { it.income })
     }
 
+    @Test
+    fun dashboardPopulatesHealthSummaryCategoryDiffsAndInsight() = runBlocking {
+        val database = createJvmDatabase()
+        database.ledgerQueries.insertLedger("ledger", "日常", null, 1, 1)
+        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 1, 1, 1)
+        database.categoryQueries.insertCategory("food", "ledger", null, "餐饮", "utensils", "EXPENSE", 1, 1)
+        database.categoryQueries.insertCategory("tech", "ledger", null, "数码", "laptop", "EXPENSE", 2, 1)
+
+        val range = DateRange.ofClosedDates(
+            start = kotlinx.datetime.LocalDate(2026, 10, 1),
+            endInclusive = kotlinx.datetime.LocalDate(2026, 10, 10),
+        )
+        val prevRange = DateRange.ofClosedDates(
+            start = kotlinx.datetime.LocalDate(2026, 9, 21),
+            endInclusive = kotlinx.datetime.LocalDate(2026, 9, 30),
+        )
+        // Previous period
+        insert(database, "prev-food", "food", 2_000, "EXPENSE", prevRange.startInclusive.toEpochMilliseconds() + 1000, "", excluded = false)
+        // Current period: food=3000, tech=5000, income=12000
+        insert(database, "curr-food", "food", 3_000, "EXPENSE", range.startInclusive.toEpochMilliseconds() + 1000, "", excluded = false)
+        insert(database, "curr-tech", "tech", 5_000, "EXPENSE", range.startInclusive.toEpochMilliseconds() + 2000, "", excluded = false)
+        insert(database, "curr-income", "food", 12_000, "INCOME", range.startInclusive.toEpochMilliseconds() + 3000, "", excluded = false)
+
+        val dashboard = SqlDelightAnalyticsFacade(database).observeDashboard(
+            AnalyticsQuery(
+                scope = LedgerScope.All,
+                range = range,
+            ),
+        ).first().getOrThrow()
+
+        // Health Summary checks
+        assertEquals(Money(12_000), dashboard.healthSummary.income)
+        assertEquals(Money(8_000), dashboard.healthSummary.expense)
+        assertEquals(Money(4_000), dashboard.healthSummary.netSavings)
+        assertEquals(10, dashboard.healthSummary.daysCount)
+        assertEquals(33.33, kotlin.math.round(dashboard.healthSummary.savingsRatePercentage!! * 100) / 100)
+        assertEquals(Money(800), dashboard.healthSummary.dailyAverageExpense)
+
+        // Category Diffs checks
+        // tech: current=5000, prev=0 -> diff=+5000
+        // food: current=3000, prev=2000 -> diff=+1000
+        assertEquals(2, dashboard.categoryDiffs.size)
+        assertEquals("数码", dashboard.categoryDiffs[0].categoryName)
+        assertEquals(Money(5_000), dashboard.categoryDiffs[0].diffAmount)
+        assertEquals(true, dashboard.categoryDiffs[0].isIncrease)
+        assertEquals("餐饮", dashboard.categoryDiffs[1].categoryName)
+        assertEquals(Money(1_000), dashboard.categoryDiffs[1].diffAmount)
+
+        // Insight check
+        // Total expense jumped from 2000 to 8000 (+6000 >= 15%), tech contributed 5000 (83% of increase >= 40%) -> ANOMALY_INCREASE
+        assertEquals(com.omniflow.core.domain.model.InsightType.ANOMALY_INCREASE, dashboard.insight.type)
+        assertEquals("超支异动预警", dashboard.insight.title)
+    }
+
+    @Test
+    fun analyticsCategoryBreakdownsCalculatesShareRatioAndSumEqualsOne() = runBlocking {
+        val database = createJvmDatabase()
+        database.ledgerQueries.insertLedger("ledger", "日常", null, 1, 1)
+        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 1, 1, 1)
+        database.categoryQueries.insertCategory("food", "ledger", null, "餐饮", "utensils", "EXPENSE", 1, 1)
+        database.categoryQueries.insertCategory("lunch", "ledger", "food", "午餐", null, "EXPENSE", 1, 1)
+        database.categoryQueries.insertCategory("tech", "ledger", null, "数码", "laptop", "EXPENSE", 2, 1)
+        database.categoryQueries.insertCategory("daily", "ledger", null, "日用", "cart", "EXPENSE", 3, 1)
+        database.categoryQueries.insertCategory("salary", "ledger", null, "工资", "banknote", "INCOME", 4, 1)
+
+        // Expense: lunch 5000 + food 3000 = 8000 (40%), tech 8000 (40%), daily 4000 (20%) -> Total 20000
+        insert(database, "t1", "lunch", 5_000, "EXPENSE", 1_000, "午餐", excluded = false)
+        insert(database, "t2", "food", 3_000, "EXPENSE", 2_000, "食材", excluded = false)
+        insert(database, "t3", "tech", 8_000, "EXPENSE", 3_000, "键盘", excluded = false)
+        insert(database, "t4", "daily", 4_000, "EXPENSE", 4_000, "纸巾", excluded = false)
+        // Excluded transaction should not count towards breakdown or total
+        insert(database, "t5", "daily", 2_000, "EXPENSE", 5_000, "公司报销", excluded = true)
+        // Income transaction should not count towards EXPENSE breakdown
+        insert(database, "t6", "salary", 50_000, "INCOME", 6_000, "工资", excluded = false)
+
+        val dashboard = SqlDelightAnalyticsFacade(database).observeDashboard(
+            AnalyticsQuery(
+                scope = LedgerScope.All,
+                range = DateRange(Instant.fromEpochMilliseconds(0), Instant.fromEpochMilliseconds(10_000)),
+            ),
+        ).first().getOrThrow()
+
+        val breakdowns = dashboard.categoryBreakdowns
+        assertEquals(3, breakdowns.size)
+
+        // Sum of primary shareRatio must be approximately 1.0
+        val sumRatio = breakdowns.sumOf { it.shareRatio }
+        assertTrue(abs(sumRatio - 1.0) < 0.0001, "Expected sum of shareRatio to be ~1.0, was $sumRatio")
+
+        val food = breakdowns.first { it.primaryCategoryId == "food" }
+        assertEquals(Money(8_000), food.amount)
+        assertTrue(abs(food.shareRatio - 0.40) < 0.0001)
+
+        // Secondary category ratio must be relative to the same total (5000 / 20000 = 0.25)
+        assertEquals(1, food.secondaryCategories.size)
+        val lunch = food.secondaryCategories.single()
+        assertEquals(Money(5_000), lunch.amount)
+        assertTrue(abs(lunch.shareRatio - 0.25) < 0.0001)
+
+        val tech = breakdowns.first { it.primaryCategoryId == "tech" }
+        assertEquals(Money(8_000), tech.amount)
+        assertTrue(abs(tech.shareRatio - 0.40) < 0.0001)
+
+        val daily = breakdowns.first { it.primaryCategoryId == "daily" }
+        assertEquals(Money(4_000), daily.amount)
+        assertTrue(abs(daily.shareRatio - 0.20) < 0.0001)
+    }
+
+    @Test
+    fun analyticsCategoryBreakdownsHandlesZeroTotalWithoutCrash() = runBlocking {
+        val database = createJvmDatabase()
+        database.ledgerQueries.insertLedger("ledger", "日常", null, 1, 1)
+        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 1, 1, 1)
+        database.categoryQueries.insertCategory("food", "ledger", null, "餐饮", "utensils", "EXPENSE", 1, 1)
+
+        // Case 1: No expense transactions at all
+        val dashboardEmpty = SqlDelightAnalyticsFacade(database).observeDashboard(
+            AnalyticsQuery(
+                scope = LedgerScope.All,
+                range = DateRange(Instant.fromEpochMilliseconds(0), Instant.fromEpochMilliseconds(10_000)),
+            ),
+        ).first().getOrThrow()
+        assertTrue(dashboardEmpty.categoryBreakdowns.isEmpty())
+
+        // Case 2: Zero-amount expense transaction
+        insert(database, "t-zero", "food", 0, "EXPENSE", 1_000, "零元交易", excluded = false)
+        val dashboardZero = SqlDelightAnalyticsFacade(database).observeDashboard(
+            AnalyticsQuery(
+                scope = LedgerScope.All,
+                range = DateRange(Instant.fromEpochMilliseconds(0), Instant.fromEpochMilliseconds(10_000)),
+            ),
+        ).first().getOrThrow()
+
+        assertEquals(1, dashboardZero.categoryBreakdowns.size)
+        val item = dashboardZero.categoryBreakdowns.single()
+        assertEquals(Money.Zero, item.amount)
+        assertEquals(0.0, item.shareRatio)
+    }
+
     private fun insert(
         database: com.omniflow.core.db.OmniFlowDatabase,
         id: String,
@@ -205,7 +346,7 @@ class SqlDelightSearchAnalyticsTest {
     ) {
         database.transactionQueries.insertTransaction(
             id, ledgerId, accountId, categoryId, amount, type, occurredAt, note,
-            if (excluded) 1 else 0, null, null, occurredAt, occurredAt,
+            if (excluded) 1 else 0, null, null, occurredAt, occurredAt, null,
         )
     }
 }

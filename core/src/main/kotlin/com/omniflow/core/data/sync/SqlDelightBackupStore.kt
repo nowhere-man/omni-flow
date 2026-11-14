@@ -46,7 +46,7 @@ class SqlDelightBackupStore(
                 "transactions" to JsonArray(queries.allTransactionsForBackup().executeAsList().map { row(
                     it.id, it.ledger_id, it.account_id, it.category_id, it.amount_minor, it.type,
                     it.occurred_at, it.note, it.is_excluded, it.external_source, it.external_id,
-                    it.created_at, it.updated_at, it.deleted_at,
+                    it.created_at, it.updated_at, it.deleted_at, it.target_account_id,
                 ) }),
                 "rules" to JsonArray(queries.allRulesForBackup().executeAsList().map { row(
                     it.id, it.ledger_id, it.name, it.condition_type, it.condition_value, it.action_type,
@@ -130,7 +130,7 @@ class SqlDelightBackupStore(
                 queries.restoreTransaction(
                     values.text(0), values.text(1), values.text(2), values.text(3), values.long(4), values.text(5),
                     values.long(6), values.nullableText(7), values.long(8), values.nullableText(9), values.nullableText(10),
-                    values.long(11), values.long(12), values.nullableLong(13),
+                    values.long(11), values.long(12), values.nullableLong(13), values.nullableText(14),
                 )
             } }
             root.rows("transactionTags").forEach { element -> element.jsonArray.let { values ->
@@ -170,7 +170,7 @@ private fun row(vararg values: Any?): JsonArray = JsonArray(values.map { value -
 private fun JsonObject.rows(name: String): JsonArray = this[name]?.jsonArray ?: JsonArray(emptyList())
 private fun JsonArray.text(index: Int): String = get(index).jsonPrimitive.content
 private fun JsonArray.long(index: Int): Long = text(index).toLong()
-private fun JsonArray.nullableText(index: Int): String? = get(index).takeUnless { it is JsonNull }?.jsonPrimitive?.content
+private fun JsonArray.nullableText(index: Int): String? = getOrNull(index)?.takeUnless { it is JsonNull }?.jsonPrimitive?.content
 private fun JsonArray.nullableLong(index: Int): Long? = nullableText(index)?.toLong()
 
 private val REQUIRED_SECTIONS = listOf(
