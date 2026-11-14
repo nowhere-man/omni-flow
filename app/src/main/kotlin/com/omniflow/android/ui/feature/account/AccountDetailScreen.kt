@@ -1,5 +1,7 @@
 package com.omniflow.android.ui.feature.account
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -45,6 +48,7 @@ import com.omniflow.android.ui.TransactionRow
 import com.omniflow.android.ui.asRmb
 import com.omniflow.android.ui.designsystem.components.OmniBadgeIcon
 import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
+import com.omniflow.android.ui.designsystem.tokens.accountCardGradient
 import com.omniflow.android.ui.designsystem.tokens.accountTypeBadgeColors
 import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
 import com.omniflow.android.ui.expenseColor
@@ -234,19 +238,22 @@ private fun AccountOverviewCard(
 ) {
     val isLiability = account.balance.minor < 0
     val badgeColors = accountTypeBadgeColors(account.type)
+    val cardGradient = accountCardGradient(account.type)
 
-    ElevatedCard(
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
-        modifier = Modifier.fillMaxWidth(),
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(cardGradient)
+            .border(
+                1.dp,
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                RoundedCornerShape(24.dp),
+            )
+            .padding(20.dp),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Row(

@@ -39,6 +39,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.omniflow.android.ui.feature.account.AccountListScreen
 import com.omniflow.android.ui.feature.account.AccountViewModel
 import com.omniflow.android.ui.feature.account.AccountViewModelFactory
+import com.omniflow.android.ui.feature.asset.AssetScreen
+import com.omniflow.android.ui.feature.category.CategoryScreen
 import com.omniflow.android.ui.feature.ledger.LedgerListScreen
 import com.omniflow.android.ui.feature.ledger.LedgerViewModel
 import com.omniflow.android.ui.feature.ledger.LedgerViewModelFactory
@@ -48,6 +50,8 @@ import com.omniflow.android.ui.feature.more.ExportPage
 import com.omniflow.android.ui.feature.more.ImportPage
 import com.omniflow.android.ui.feature.more.MoreHomeScreen
 import com.omniflow.android.ui.feature.more.SettingsPage
+import com.omniflow.android.ui.feature.reminder.ReminderScreen
+import com.omniflow.android.ui.feature.tag.TagScreen
 
 enum class MorePage(val label: String, val icon: ImageVector) {
     HOME("更多", Icons.Default.Settings),
@@ -83,7 +87,18 @@ internal fun MoreScreen(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxSize()) {
-        if (page != MorePage.HOME && page != MorePage.ABOUT && page != MorePage.LEDGERS) {
+        val hasOwnScaffold = page in setOf(
+            MorePage.HOME,
+            MorePage.ABOUT,
+            MorePage.LEDGERS,
+            MorePage.ACCOUNTS,
+            MorePage.ASSETS,
+            MorePage.CATEGORIES,
+            MorePage.TAGS,
+            MorePage.BUDGETS,
+            MorePage.REMINDERS,
+        )
+        if (!hasOwnScaffold) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = mutedContent())
@@ -104,16 +119,21 @@ internal fun MoreScreen(
             )
             MorePage.DATA -> DataManagementPage(state, viewModel)
             MorePage.AI -> AiSettingsPage()
-            MorePage.BUDGETS -> BudgetPage(state, viewModel)
+            MorePage.BUDGETS -> BudgetPage(state, viewModel, onBack = onBack)
             MorePage.IMPORT -> ImportPage(state, viewModel)
             MorePage.EXPORT -> ExportPage(state, viewModel)
             MorePage.LEDGERS -> LedgerListScreen(ledgerViewModel, onOpenLedger = onOpenLedger, onBack = onBack)
-            MorePage.ACCOUNTS -> AccountListScreen(accountViewModel, onOpenAccount = onOpenAccount)
-            MorePage.RULES,
-            MorePage.REMINDERS,
-            MorePage.ASSETS,
-            MorePage.CATEGORIES,
-            MorePage.TAGS -> ManagementPage(
+            MorePage.ACCOUNTS -> AccountListScreen(accountViewModel, onOpenAccount = onOpenAccount, onBack = onBack)
+            MorePage.ASSETS -> AssetScreen(state, onBack = onBack, onPage = onPage)
+            MorePage.CATEGORIES -> CategoryScreen(state, viewModel, onBack = onBack, onOpenCategory = onOpenCategory)
+            MorePage.TAGS -> TagScreen(state, viewModel, onBack = onBack)
+            MorePage.REMINDERS -> ReminderScreen(
+                state = state,
+                viewModel = viewModel,
+                onRequestNotificationPermission = onRequestNotificationPermission,
+                onBack = onBack,
+            )
+            MorePage.RULES -> ManagementPage(
                 page,
                 state,
                 viewModel,
