@@ -47,7 +47,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.omniflow.android.ui.designsystem.components.OmniDatePickerDialog
 import com.omniflow.core.domain.model.Account
+import com.omniflow.core.domain.model.AppTimeZone
 import com.omniflow.core.domain.model.DateRange
 import com.omniflow.core.domain.model.Ledger
 import com.omniflow.core.domain.model.LedgerScope
@@ -390,30 +392,47 @@ private fun KeywordField(value: String, onValue: (String) -> Unit, onSearch: () 
 
 @Composable
 private fun DateFilterRow(range: DateRange?, onRange: (DateRange?) -> Unit) {
-    val context = LocalContext.current
-    val initialStart = range?.startInclusive?.toLocalDateTime(ChinaTimeZone)?.date
-    val initialEnd = range?.endExclusive?.let { Instant.fromEpochMilliseconds(it.toEpochMilliseconds() - 1) }
-        ?.toLocalDateTime(ChinaTimeZone)?.date
+    val initialStart = range?.startLocalDate(AppTimeZone)
+    val initialEnd = range?.endLocalDateInclusive(AppTimeZone)
     var start by remember(range) { mutableStateOf(initialStart) }
     var end by remember(range) { mutableStateOf(initialEnd) }
+    var pickingStart by remember { mutableStateOf(false) }
+    var pickingEnd by remember { mutableStateOf(false) }
+
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         DateFilterButton(start?.toString() ?: "开始日期", Modifier.weight(1f)) {
-            showSearchDatePicker(context, start ?: Clock.System.now().toLocalDateTime(ChinaTimeZone).date) { selected ->
-                start = selected
-                onRange(dateRangeOrNull(start, end))
-            }
+            pickingStart = true
         }
         DateFilterButton(end?.toString() ?: "结束日期", Modifier.weight(1f)) {
-            showSearchDatePicker(context, end ?: start ?: Clock.System.now().toLocalDateTime(ChinaTimeZone).date) { selected ->
-                end = selected
-                onRange(dateRangeOrNull(start, end))
-            }
+            pickingEnd = true
         }
         if (range != null || start != null || end != null) {
             TextButton(onClick = { start = null; end = null; onRange(null) }) {
                 Text("清除", style = OmniText.caption)
             }
         }
+    }
+
+    if (pickingStart) {
+        OmniDatePickerDialog(
+            initialDate = start ?: Clock.System.now().toLocalDateTime(AppTimeZone).date,
+            onDateSelected = { selected ->
+                start = selected
+                onRange(dateRangeOrNull(start, end))
+            },
+            onDismissRequest = { pickingStart = false },
+        )
+    }
+
+    if (pickingEnd) {
+        OmniDatePickerDialog(
+            initialDate = end ?: start ?: Clock.System.now().toLocalDateTime(AppTimeZone).date,
+            onDateSelected = { selected ->
+                end = selected
+                onRange(dateRangeOrNull(start, end))
+            },
+            onDismissRequest = { pickingEnd = false },
+        )
     }
 }
 
@@ -463,23 +482,7 @@ private fun SearchHint(message: String) {
 
 private val SearchTypeOptions = listOf(null, TransactionType.EXPENSE, TransactionType.INCOME)
 
-private fun showSearchDatePicker(context: android.content.Context, date: LocalDate, onDate: (LocalDate) -> Unit) {
-    android.app.DatePickerDialog(
-        context,
-        { _, year, month, day -> onDate(LocalDate(year, month + 1, day)) },
-        date.year,
-        date.monthNumber - 1,
-        date.dayOfMonth,
-    ).show()
-}
-
 private fun dateRangeOrNull(first: LocalDate?, second: LocalDate?): DateRange? {
     if (first == null || second == null) return null
-    val start = minOf(first, second)
-    val end = maxOf(first, second)
-    val next = java.time.LocalDate.of(end.year, end.monthNumber, end.dayOfMonth).plusDays(1)
-    return DateRange(
-        start.atStartOfDayIn(ChinaTimeZone),
-        LocalDate(next.year, next.monthValue, next.dayOfMonth).atStartOfDayIn(ChinaTimeZone),
-    )
+    return DateRange.ofClosedDates(first, second, AppTimeZone)
 }

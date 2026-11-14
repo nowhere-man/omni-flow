@@ -12,6 +12,7 @@ import com.omniflow.core.domain.model.AnalyticsQuery
 import com.omniflow.core.domain.model.AppPreferences
 import com.omniflow.core.domain.model.AppearanceMode
 import com.omniflow.core.domain.model.BudgetProgress
+import com.omniflow.core.domain.model.AppTimeZone
 import com.omniflow.core.domain.model.buildBudgetProgress
 import com.omniflow.core.domain.model.Category
 import com.omniflow.core.domain.model.DateRange
@@ -101,7 +102,7 @@ data class AnalyticsUiState(
     val rangeMode: AnalyticsRangeMode = AnalyticsRangeMode.MONTH,
     val range: DateRange = analyticsRange(
         AnalyticsRangeMode.MONTH,
-        Clock.System.now().toLocalDateTime(ChinaTimeZone).date,
+        Clock.System.now().toLocalDateTime(AppTimeZone).date,
     ),
     // 排行榜/饼图/标签以前各有一个开关，切换收入要点三次；合成页面级一个
     val analyticsType: TransactionType = TransactionType.EXPENSE,
@@ -226,7 +227,7 @@ class OmniFlowViewModel(
     val moreUiState: StateFlow<MoreUiState> = _moreUiState.asStateFlow()
 
     private var homeQuery = HomeQuery(LedgerScope.All, monthRange(Clock.System.now()))
-    private var analyticsAnchor = Clock.System.now().toLocalDateTime(ChinaTimeZone).date
+    private var analyticsAnchor = Clock.System.now().toLocalDateTime(AppTimeZone).date
     private var preferences = AppPreferences()
     private var defaultLedgerId: String? = null
     private var editingTransaction: Transaction? = null
@@ -400,7 +401,7 @@ class OmniFlowViewModel(
     }
 
     private fun updateHomeMonth(delta: Long) {
-        val start = homeQuery.month.startInclusive.toLocalDateTime(ChinaTimeZone).date
+        val start = homeQuery.month.startInclusive.toLocalDateTime(AppTimeZone).date
         val month = JavaLocalDate.of(start.year, start.monthNumber, 1).plusMonths(delta)
         homeQuery = homeQuery.copy(month = monthRange(LocalDate(month.year, month.monthValue, 1)))
         observeHome()
@@ -430,7 +431,7 @@ class OmniFlowViewModel(
     fun resetAnalyticsRange() {
         val mode = _analyticsUiState.value.rangeMode
         if (mode == AnalyticsRangeMode.CUSTOM) return
-        analyticsAnchor = Clock.System.now().toLocalDateTime(ChinaTimeZone).date
+        analyticsAnchor = Clock.System.now().toLocalDateTime(AppTimeZone).date
         _analyticsUiState.value = _analyticsUiState.value.copy(range = analyticsRange(mode, analyticsAnchor))
         observeAnalytics()
     }
@@ -444,7 +445,7 @@ class OmniFlowViewModel(
     }
     fun selectAnalyticsMonth(month: Int) {
         val year = _analyticsUiState.value.dashboard?.yearStatement?.year
-            ?: _analyticsUiState.value.range.startInclusive.toLocalDateTime(ChinaTimeZone).year
+            ?: _analyticsUiState.value.range.startInclusive.toLocalDateTime(AppTimeZone).year
         analyticsAnchor = LocalDate(year, month, 1)
         _analyticsUiState.value = _analyticsUiState.value.copy(
             rangeMode = AnalyticsRangeMode.MONTH,
@@ -665,7 +666,7 @@ class OmniFlowViewModel(
         editingTransaction = null
         val accounts = _transactionUiState.value.accounts
         val selectedLedger = ledgerId ?: defaultLedgerId
-        val now = Clock.System.now().toLocalDateTime(ChinaTimeZone)
+        val now = Clock.System.now().toLocalDateTime(AppTimeZone)
         _transactionUiState.value = TransactionEditorUiState(
             ledgers = _transactionUiState.value.ledgers,
             accounts = accounts,
@@ -674,7 +675,7 @@ class OmniFlowViewModel(
             occurredAt = LocalDateTime(
                 date ?: now.date,
                 LocalTime(now.hour, now.minute),
-            ).toInstant(ChinaTimeZone),
+            ).toInstant(AppTimeZone),
         )
         observeEditorLedger(selectedLedger)
     }
@@ -1282,34 +1283,17 @@ class OmniFlowViewModelFactory(
     override fun <T : ViewModel> create(modelClass: Class<T>): T = OmniFlowViewModel(sharedApp) as T
 }
 
-internal val ChinaTimeZone = TimeZone.currentSystemDefault()
+internal fun monthRange(now: Instant): DateRange = DateRange.ofMonth(now.toLocalDateTime(AppTimeZone).date, AppTimeZone)
 
-internal fun monthRange(now: Instant): DateRange = monthRange(now.toLocalDateTime(ChinaTimeZone).date)
+internal fun monthRange(date: LocalDate): DateRange = DateRange.ofMonth(date, AppTimeZone)
 
-internal fun monthRange(date: LocalDate): DateRange {
-    val next = javaDate(LocalDate(date.year, date.monthNumber, 1)).plusMonths(1)
-    return DateRange(
-        LocalDate(date.year, date.monthNumber, 1).atStartOfDayIn(ChinaTimeZone),
-        next.toKotlinDate().atStartOfDayIn(ChinaTimeZone),
-    )
-}
-
-internal fun dateRange(date: LocalDate): DateRange {
-    val next = javaDate(date).plusDays(1).toKotlinDate()
-    return DateRange(date.atStartOfDayIn(ChinaTimeZone), next.atStartOfDayIn(ChinaTimeZone))
-}
+internal fun dateRange(date: LocalDate): DateRange = DateRange.ofDay(date, AppTimeZone)
 
 private fun analyticsRange(mode: AnalyticsRangeMode, anchor: LocalDate): DateRange = when (mode) {
-    AnalyticsRangeMode.WEEK -> {
-        val start = javaDate(anchor).minusDays((javaDate(anchor).dayOfWeek.value - 1).toLong()).toKotlinDate()
-        DateRange(start.atStartOfDayIn(ChinaTimeZone), javaDate(start).plusDays(7).toKotlinDate().atStartOfDayIn(ChinaTimeZone))
-    }
-    AnalyticsRangeMode.MONTH -> monthRange(anchor)
-    AnalyticsRangeMode.YEAR -> DateRange(
-        LocalDate(anchor.year, 1, 1).atStartOfDayIn(ChinaTimeZone),
-        LocalDate(anchor.year + 1, 1, 1).atStartOfDayIn(ChinaTimeZone),
-    )
-    AnalyticsRangeMode.CUSTOM -> monthRange(anchor)
+    AnalyticsRangeMode.WEEK -> DateRange.ofWeek(anchor, AppTimeZone)
+    AnalyticsRangeMode.MONTH -> DateRange.ofMonth(anchor, AppTimeZone)
+    AnalyticsRangeMode.YEAR -> DateRange.ofYear(anchor.year, AppTimeZone)
+    AnalyticsRangeMode.CUSTOM -> DateRange.ofMonth(anchor, AppTimeZone)
 }
 
 private fun analyticsGranularity(mode: AnalyticsRangeMode, range: DateRange): TimeGranularity = when (mode) {

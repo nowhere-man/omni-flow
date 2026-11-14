@@ -1,7 +1,8 @@
 package com.omniflow.android.ui
 
 import android.content.Context
-import android.app.DatePickerDialog
+import com.omniflow.android.ui.designsystem.components.OmniDatePickerDialog
+import com.omniflow.core.domain.model.AppTimeZone
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -875,7 +876,7 @@ private fun ExportPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
     val context = LocalContext.current
     var payload by remember { mutableStateOf<String?>(null) }
     var formatChoice by remember { mutableStateOf(ExportFormatChoice.CSV) }
-    val today = remember { Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date }
+    val today = remember { Clock.System.now().toLocalDateTime(AppTimeZone).date }
     var ledgerScope by remember { mutableStateOf<LedgerScope>(LedgerScope.All) }
     var incremental by remember { mutableStateOf(false) }
     var startDate by remember { mutableStateOf(today) }
@@ -1039,31 +1040,23 @@ private fun ExportPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
 
 @Composable
 internal fun ExportDateButton(label: String, date: LocalDate, modifier: Modifier, onDate: (LocalDate) -> Unit) {
-    val context = LocalContext.current
+    var showDialog by remember { mutableStateOf(false) }
     OutlinedButton(
-        onClick = {
-            DatePickerDialog(
-                context,
-                { _, year, month, day -> onDate(LocalDate(year, month + 1, day)) },
-                date.year,
-                date.monthNumber - 1,
-                date.dayOfMonth,
-            ).show()
-        },
+        onClick = { showDialog = true },
         modifier = modifier,
     ) { Text("$label ${date.monthNumber}/${date.dayOfMonth}") }
+
+    if (showDialog) {
+        OmniDatePickerDialog(
+            initialDate = date,
+            onDateSelected = onDate,
+            onDismissRequest = { showDialog = false },
+        )
+    }
 }
 
-internal fun exportRange(first: LocalDate, second: LocalDate): DateRange {
-    val start = minOf(first, second)
-    val end = maxOf(first, second)
-    val exclusive = java.time.LocalDate.of(end.year, end.monthNumber, end.dayOfMonth).plusDays(1)
-    val zone = TimeZone.currentSystemDefault()
-    return DateRange(
-        start.atStartOfDayIn(zone),
-        LocalDate(exclusive.year, exclusive.monthValue, exclusive.dayOfMonth).atStartOfDayIn(zone),
-    )
-}
+internal fun exportRange(first: LocalDate, second: LocalDate): DateRange =
+    DateRange.ofClosedDates(first, second, AppTimeZone)
 
 internal fun exportJsonToCsv(payload: String): String {
     val root = JSONObject(payload)

@@ -1,6 +1,7 @@
 package com.omniflow.android.ui
 
-import android.app.DatePickerDialog
+import com.omniflow.android.ui.designsystem.components.OmniDatePickerDialog
+import com.omniflow.core.domain.model.AppTimeZone
 import android.app.TimePickerDialog
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntOffsetAsState
@@ -239,7 +240,7 @@ private fun EditorAttributeRow(
     onExcluded: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
-    val dateTime = state.occurredAt.toLocalDateTime(ChinaTimeZone)
+    val dateTime = state.occurredAt.toLocalDateTime(AppTimeZone)
     val selectedAccount = state.accounts.firstOrNull { it.id == state.accountId }
     var accountExpanded by remember { mutableStateOf(false) }
     var tagExpanded by remember { mutableStateOf(false) }
@@ -302,7 +303,7 @@ private fun EditorAttributeRow(
                         TimePickerDialog(
                             context,
                             { _, hour, minute ->
-                                onDate(LocalDateTime(dateTime.date, LocalTime(hour, minute)).toInstant(ChinaTimeZone))
+                                onDate(LocalDateTime(dateTime.date, LocalTime(hour, minute)).toInstant(AppTimeZone))
                             },
                             dateTime.hour,
                             dateTime.minute,
@@ -573,7 +574,7 @@ private fun TransactionEntryPanel(
     onNoteFocusChanged: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
-    val dateTime = state.occurredAt.toLocalDateTime(ChinaTimeZone)
+    val dateTime = state.occurredAt.toLocalDateTime(AppTimeZone)
     val amountColor = amountColor(state.type)
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -667,18 +668,9 @@ private fun TransactionEntryPanel(
                     }
                 }
                 Spacer(Modifier.width(6.dp))
+                var showDatePicker by remember { mutableStateOf(false) }
                 Surface(
-                    onClick = {
-                        DatePickerDialog(
-                            context,
-                            { _, year, month, day ->
-                                onDate(LocalDateTime(LocalDate(year, month + 1, day), dateTime.time).toInstant(ChinaTimeZone))
-                            },
-                            dateTime.year,
-                            dateTime.monthNumber - 1,
-                            dateTime.dayOfMonth,
-                        ).show()
-                    },
+                    onClick = { showDatePicker = true },
                     modifier = Modifier.height(34.dp),
                     color = surfaceInset(),
                     shape = MaterialTheme.shapes.small,
@@ -696,6 +688,15 @@ private fun TransactionEntryPanel(
                             maxLines = 1,
                         )
                     }
+                }
+                if (showDatePicker) {
+                    OmniDatePickerDialog(
+                        initialDate = dateTime.date,
+                        onDateSelected = { selectedDate ->
+                            onDate(LocalDateTime(selectedDate, dateTime.time).toInstant(AppTimeZone))
+                        },
+                        onDismissRequest = { showDatePicker = false },
+                    )
                 }
             }
         }

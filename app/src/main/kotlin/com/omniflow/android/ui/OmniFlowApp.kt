@@ -109,6 +109,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
+import com.omniflow.core.domain.model.AppTimeZone
 import com.omniflow.core.domain.model.CalendarDaySummary
 import com.omniflow.core.domain.model.AppearanceMode
 import com.omniflow.core.domain.model.calendarAmountText
@@ -869,10 +870,10 @@ private fun HomeScreen(
                 item { LedgerScopePill(home.scope, state.ledgers, onLedgerSelected) }
                 item {
                     RangeStepper(
-                        label = home.month.startInclusive.toLocalDateTime(ChinaTimeZone).date.yearMonthText(),
+                        label = home.month.startInclusive.toLocalDateTime(AppTimeZone).date.yearMonthText(),
                         onPrevious = onPreviousMonth,
                         onNext = onNextMonth,
-                        onLabel = { onMonthSelected(Clock.System.now().toLocalDateTime(ChinaTimeZone).date) },
+                        onLabel = { onMonthSelected(Clock.System.now().toLocalDateTime(AppTimeZone).date) },
                     )
                 }
                 item {
@@ -887,7 +888,7 @@ private fun HomeScreen(
                 item {
                     Surface(shape = RoundedCornerShape(OmniRadius.medium), color = surfaceCard()) {
                         CalendarMonth(
-                            month = home.month.startInclusive.toLocalDateTime(ChinaTimeZone).date,
+                            month = home.month.startInclusive.toLocalDateTime(AppTimeZone).date,
                             summaries = home.calendar,
                             onDateSelected = onDateSelected,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
@@ -979,7 +980,7 @@ private fun CalendarMonth(
     modifier: Modifier = Modifier,
 ) {
     val totals = remember(summaries) { summaries.associateBy(CalendarDaySummary::date) }
-    val today = remember { Clock.System.now().toLocalDateTime(ChinaTimeZone).date }
+    val today = remember { Clock.System.now().toLocalDateTime(AppTimeZone).date }
     val first = JavaLocalDate.of(month.year, month.monthNumber, 1)
     val leading = first.dayOfWeek.value % 7
     val cells = List(leading) { null } + (1..first.lengthOfMonth()).map { day ->
