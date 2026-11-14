@@ -51,7 +51,6 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material3.Card
 import androidx.compose.material3.Button
@@ -288,10 +287,11 @@ fun OmniFlowApp(
             darkTheme,
         ),
         shapes = Shapes(
-            small = RoundedCornerShape(8.dp),
-            medium = RoundedCornerShape(12.dp),
-            large = RoundedCornerShape(16.dp),
-            extraLarge = RoundedCornerShape(28.dp),
+            extraSmall = com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens.extraSmall,
+            small = com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens.small,
+            medium = com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens.mediumSmall,
+            large = com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens.large,
+            extraLarge = com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens.extraLarge,
         ),
     ) {
         SideEffect {

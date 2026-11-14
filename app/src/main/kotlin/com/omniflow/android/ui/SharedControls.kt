@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import com.omniflow.android.ui.designsystem.tokens.OmniColorTokens
+import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -310,7 +311,7 @@ internal fun OmniTextField(
         },
         visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else VisualTransformation.None,
         singleLine = singleLine,
-        shape = RoundedCornerShape(OmniRadius.medium),
+        shape = OmniShapeTokens.textField,
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f),
@@ -332,6 +333,7 @@ internal fun ExportDateButton(
     OutlinedButton(
         onClick = { showDialog = true },
         modifier = modifier,
+        shape = OmniShapeTokens.outlinedButton,
     ) { Text("$label ${date.monthNumber}/${date.dayOfMonth}") }
 
     if (showDialog) {

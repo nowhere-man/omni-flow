@@ -21,6 +21,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.designsystem.tokens.CategoryBadgeColors
+import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
+import com.omniflow.android.ui.designsystem.tokens.OmniSpacingTokens
 import com.omniflow.android.ui.designsystem.tokens.OmniTypographyTokens
 import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
 
@@ -34,7 +36,7 @@ fun OmniSettingsGroup(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     ElevatedCard(
-        shape = RoundedCornerShape(24.dp),
+        shape = OmniShapeTokens.card,
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
@@ -43,7 +45,10 @@ fun OmniSettingsGroup(
         ),
         modifier = modifier.fillMaxWidth(),
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(OmniSpacingTokens.intraGroupSpacing),
+        ) {
             content()
         }
     }
@@ -157,6 +162,9 @@ private fun OmniSettingsRowInternal(
 fun OmniSettingsDivider(modifier: Modifier = Modifier) {
     HorizontalDivider(
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-        modifier = modifier.padding(start = 72.dp, end = 16.dp),
+        modifier = modifier.padding(
+            start = OmniSpacingTokens.dividerIndentStart,
+            end = OmniSpacingTokens.dividerIndentEnd,
+        ),
     )
 }

@@ -18,11 +18,11 @@ import com.omniflow.android.ui.designsystem.tokens.chartColors
  * 「表面明度 + 字号字重」，颜色只留给真正有语义的地方。
  */
 
-/** 圆角只留三档，避免出现 4/6/8/12/18/20/24 混用。 */
+/** 圆角阶梯 (对齐 M3 Expressive 标准阶梯 8/16/24dp 与 OmniShapeTokens) */
 object OmniRadius {
-    val small = 10.dp
+    val small = 8.dp
     val medium = 16.dp
-    val large = 22.dp
+    val large = 24.dp
 }
 
 object OmniSpace {
