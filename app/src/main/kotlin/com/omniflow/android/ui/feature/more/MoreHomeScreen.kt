@@ -119,7 +119,7 @@ fun MoreHomeScreen(
 
         // 分组 1：数据与备份
         item {
-            OmniSettingsGroup(title = "数据与备份") {
+            OmniSettingsGroup {
                 MoreOptionItem(
                     page = MorePage.DATA,
                     badgeType = SemanticBadgeType.DATA_SYNC,
@@ -152,7 +152,7 @@ fun MoreHomeScreen(
 
         // 分组 2：账本与资产
         item {
-            OmniSettingsGroup(title = "账本与资产") {
+            OmniSettingsGroup {
                 MoreOptionItem(
                     page = MorePage.LEDGERS,
                     badgeType = SemanticBadgeType.FINANCIAL,
@@ -192,7 +192,7 @@ fun MoreHomeScreen(
 
         // 分组 3：规划与规则
         item {
-            OmniSettingsGroup(title = "规划与规则") {
+            OmniSettingsGroup {
                 MoreOptionItem(
                     page = MorePage.BUDGETS,
                     badgeType = SemanticBadgeType.PLANNING,
@@ -218,7 +218,7 @@ fun MoreHomeScreen(
 
         // 分组 4：系统设置
         item {
-            OmniSettingsGroup(title = "系统设置") {
+            OmniSettingsGroup {
                 MoreOptionItem(
                     page = MorePage.SETTINGS,
                     badgeType = SemanticBadgeType.SYSTEM,

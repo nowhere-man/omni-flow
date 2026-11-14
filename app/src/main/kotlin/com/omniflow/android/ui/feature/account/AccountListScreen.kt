@@ -218,10 +218,7 @@ private fun AccountGroupCard(
     hideAmount: Boolean,
     onOpenAccount: (AccountId) -> Unit,
 ) {
-    val subtotalText = if (hideAmount) "••••••" else group.subtotal.asRmb()
-    val groupTitle = "${group.type.label} · ${group.accounts.size} (小计 $subtotalText)"
-
-    OmniSettingsGroup(title = groupTitle) {
+    OmniSettingsGroup {
         group.accounts.forEachIndexed { index, account ->
             val isLiability = account.balance.minor < 0
             val details = listOfNotNull(

@@ -100,7 +100,7 @@ internal fun LedgerListScreen(
             }
         } else {
             item {
-                OmniSettingsGroup(title = "全部账本 · ${state.ledgers.size}") {
+                OmniSettingsGroup {
                     state.ledgers.forEachIndexed { index, ledger ->
                         val stat = state.ledgerStats[ledger.id]
                         val isDefault = state.defaultLedgerId == ledger.id
@@ -135,14 +135,9 @@ internal fun LedgerListScreen(
                                     }
                                 }
                             },
-                            supportingContent = {
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text(
-                                        text = "${stat?.transactionCount ?: 0} 笔账目",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = mutedContent(),
-                                    )
-                                    if (stat != null && stat.transactionCount > 0) {
+                            supportingContent = if (stat != null && stat.transactionCount > 0) {
+                                {
+                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                         Text(
                                             text = "支出 ${stat.totalExpense.asRmb()} · 收入 ${stat.totalIncome.asRmb()}",
                                             style = MaterialTheme.typography.bodySmall,
@@ -158,7 +153,7 @@ internal fun LedgerListScreen(
                                         )
                                     }
                                 }
-                            },
+                            } else null,
                             trailingContent = {
                                 Box {
                                     TextButton(onClick = { menuFor = ledger.id }) {

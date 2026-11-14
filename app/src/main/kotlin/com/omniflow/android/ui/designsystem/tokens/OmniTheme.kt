@@ -1,11 +1,7 @@
 package com.omniflow.android.ui.designsystem.tokens
 
-import android.content.Context
-import android.os.Build
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 import com.omniflow.core.domain.model.ThemeColor
@@ -49,12 +45,7 @@ fun themeTertiaryColor(themeColor: ThemeColor, darkTheme: Boolean): Color = when
 fun omniColorScheme(
     themeColor: ThemeColor,
     darkTheme: Boolean,
-    dynamicColorEnabled: Boolean,
-    context: Context,
 ): ColorScheme {
-    if (dynamicColorEnabled && Build.VERSION.SDK_INT >= 31) {
-        return if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-    }
     val primary = themePrimaryColor(themeColor, darkTheme)
     val primaryContainer = themePrimaryContainerColor(themeColor, darkTheme)
     val secondary = themeSecondaryColor(themeColor, darkTheme)

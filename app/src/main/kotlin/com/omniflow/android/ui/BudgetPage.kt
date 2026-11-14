@@ -80,7 +80,7 @@ internal fun BudgetPage(state: MoreUiState, viewModel: OmniFlowViewModel) {
                 }
             }
             if (perCategory.isNotEmpty()) {
-                item { ManagementGroupHeader("分类预算", "${perCategory.size} 项") }
+                item { ManagementGroupHeader("分类预算") }
             }
             items(perCategory, key = { it.budget.id }) { progress ->
                 BudgetRow(

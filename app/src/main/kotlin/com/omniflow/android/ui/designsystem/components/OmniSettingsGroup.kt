@@ -26,36 +26,25 @@ import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
 
 /**
  * Material 3 Expressive 分组大圆角卡片容器。
- * 对应 Gmail 新版设置页模板：小节标题 + 24dp 大圆角 ElevatedCard (surfaceContainerLow)。
+ * 对应 Gmail 新版设置页模板：24dp 大圆角 ElevatedCard (surfaceContainerLow)。
  */
 @Composable
 fun OmniSettingsGroup(
-    title: String? = null,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        if (!title.isNullOrBlank()) {
-            Text(
-                text = title,
-                style = OmniTypographyTokens.settingsGroupTitle,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
-            )
-        }
-        ElevatedCard(
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            ),
-            elevation = CardDefaults.elevatedCardElevation(
-                defaultElevation = 0.dp,
-            ),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                content()
-            }
+    ElevatedCard(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+        elevation = CardDefaults.elevatedCardElevation(
+            defaultElevation = 0.dp,
+        ),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            content()
         }
     }
 }

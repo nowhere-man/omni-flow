@@ -18,7 +18,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
@@ -59,8 +58,6 @@ import com.omniflow.core.domain.model.ThemeColor
 fun SettingsPage(
     state: MoreUiState,
     viewModel: OmniFlowViewModel,
-    dynamicColorEnabled: Boolean,
-    onDynamicColorChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -74,7 +71,7 @@ fun SettingsPage(
     ) {
         // 卡片 1：隐私与安全
         item {
-            OmniSettingsGroup(title = "隐私与安全") {
+            OmniSettingsGroup {
                 OmniSettingsRow(
                     title = "应用锁",
                     icon = Icons.Default.Lock,
@@ -92,7 +89,7 @@ fun SettingsPage(
 
         // 卡片 2：外观与个性化
         item {
-            OmniSettingsGroup(title = "外观与个性化") {
+            OmniSettingsGroup {
                 OmniSettingsRow(
                     title = "界面外观",
                     icon = Icons.Default.DarkMode,
@@ -175,25 +172,12 @@ fun SettingsPage(
                         }
                     },
                 )
-                OmniSettingsDivider()
-                OmniSettingsRow(
-                    title = "动态取色",
-                    icon = Icons.Default.ColorLens,
-                    badgeType = SemanticBadgeType.SYSTEM,
-                    subtitle = "使用 Android 系统壁纸生成 Material 3 配色（Android 12+）",
-                    trailing = {
-                        OmniExpressiveSwitch(
-                            checked = dynamicColorEnabled,
-                            onCheckedChange = onDynamicColorChanged,
-                        )
-                    },
-                )
             }
         }
 
         // 卡片 3：系统维护
         item {
-            OmniSettingsGroup(title = "系统维护") {
+            OmniSettingsGroup {
                 OmniSettingsRow(
                     title = "清理临时缓存",
                     icon = Icons.Default.Storage,

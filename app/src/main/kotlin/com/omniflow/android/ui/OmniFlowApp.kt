@@ -230,9 +230,6 @@ fun OmniFlowApp(
         android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
     }
     val view = LocalView.current
-    val dynamicColorEnabled = remember {
-        mutableStateOf(context.getSharedPreferences("android_ui", 0).getBoolean("dynamic_color", false))
-    }
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     LaunchedEffect(moreState.reminders) {
         ReminderScheduler(context).sync(moreState.reminders)
@@ -289,8 +286,6 @@ fun OmniFlowApp(
         colorScheme = omniColorScheme(
             moreState.preferences.themeColor,
             darkTheme,
-            dynamicColorEnabled.value,
-            context,
         ),
         shapes = Shapes(
             small = RoundedCornerShape(8.dp),
@@ -487,12 +482,6 @@ fun OmniFlowApp(
                     onOpenLedger = { navigationState.navigate(OmniRoute.LedgerDetail(it)) },
                     onOpenAccount = { navigationState.navigate(OmniRoute.AccountDetail(it)) },
                     onOpenCategory = { navigationState.navigate(OmniRoute.CategoryDetail(it)) },
-                    dynamicColorEnabled = dynamicColorEnabled.value,
-                    onDynamicColorChanged = { enabled ->
-                        dynamicColorEnabled.value = enabled
-                        context.getSharedPreferences("android_ui", 0).edit()
-                            .putBoolean("dynamic_color", enabled).apply()
-                    },
                     accountViewModel = accountViewModel,
                     ledgerViewModel = ledgerViewModel,
                     modifier = Modifier.padding(padding),

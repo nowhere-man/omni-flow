@@ -143,7 +143,7 @@ private fun AssetManagement(state: MoreUiState, onOpenAccount: (String) -> Unit)
             }
         }
         if (excluded.isNotEmpty()) {
-            item { ManagementGroupHeader("不计入总资产", "${excluded.size} 个") }
+            item { ManagementGroupHeader("不计入总资产") }
             itemsIndexed(excluded, key = { _, account -> "excluded-${account.id}" }) { index, account ->
                 AssetRow(account, 0f, groupedOptionShape(index, excluded.size)) { onOpenAccount(account.id) }
             }
@@ -299,11 +299,13 @@ private fun CategoryCardRow(
                 Spacer(Modifier.size(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(primary.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(
-                        if (children.isEmpty()) "暂无二级分类" else "${children.size} 个二级分类",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    if (children.isEmpty()) {
+                        Text(
+                            "暂无二级分类",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
                 TextButton(onClick = onEdit) { Text("编辑") }
                 TextButton(onClick = onToggle) { Text(if (expanded) "收起" else "展开") }
