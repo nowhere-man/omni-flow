@@ -39,7 +39,6 @@ import com.omniflow.android.ui.MoreUiState
 import com.omniflow.android.ui.OmniRadius
 import com.omniflow.android.ui.OmniText
 import com.omniflow.android.ui.asRmb
-import com.omniflow.android.ui.designsystem.components.OmniSettingsDivider
 import com.omniflow.android.ui.designsystem.components.OmniSettingsGroup
 import com.omniflow.android.ui.designsystem.components.OmniSettingsRow
 import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
@@ -126,7 +125,6 @@ fun MoreHomeScreen(
                     state = state,
                     onClick = { onPage(MorePage.SETTINGS) },
                 )
-                OmniSettingsDivider()
                 MoreOptionItem(
                     page = MorePage.DATA,
                     badgeType = SemanticBadgeType.SYSTEM,
@@ -145,14 +143,12 @@ fun MoreHomeScreen(
                     state = state,
                     onClick = { onPage(MorePage.LEDGERS) },
                 )
-                OmniSettingsDivider()
                 MoreOptionItem(
                     page = MorePage.ACCOUNTS,
                     badgeType = SemanticBadgeType.FINANCIAL,
                     state = state,
                     onClick = { onPage(MorePage.ACCOUNTS) },
                 )
-                OmniSettingsDivider()
                 MoreOptionItem(
                     page = MorePage.ASSETS,
                     badgeType = SemanticBadgeType.FINANCIAL,
@@ -171,21 +167,18 @@ fun MoreHomeScreen(
                     state = state,
                     onClick = { onPage(MorePage.IMPORT) },
                 )
-                OmniSettingsDivider()
                 MoreOptionItem(
                     page = MorePage.AI,
                     badgeType = SemanticBadgeType.DATA_SYNC,
                     state = state,
                     onClick = { onPage(MorePage.AI) },
                 )
-                OmniSettingsDivider()
                 MoreOptionItem(
                     page = MorePage.RULES,
                     badgeType = SemanticBadgeType.DATA_SYNC,
                     state = state,
                     onClick = { onPage(MorePage.RULES) },
                 )
-                OmniSettingsDivider()
                 MoreOptionItem(
                     page = MorePage.EXPORT,
                     badgeType = SemanticBadgeType.DATA_SYNC,
@@ -204,7 +197,6 @@ fun MoreHomeScreen(
                     state = state,
                     onClick = { onPage(MorePage.CATEGORIES) },
                 )
-                OmniSettingsDivider()
                 MoreOptionItem(
                     page = MorePage.TAGS,
                     badgeType = SemanticBadgeType.CATEGORY,
@@ -223,7 +215,6 @@ fun MoreHomeScreen(
                     state = state,
                     onClick = { onPage(MorePage.REMINDERS) },
                 )
-                OmniSettingsDivider()
                 MoreOptionItem(
                     page = MorePage.BUDGETS,
                     badgeType = SemanticBadgeType.PLANNING,

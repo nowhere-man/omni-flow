@@ -22,7 +22,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -38,6 +37,8 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import com.omniflow.android.ui.designsystem.components.OmniExpressiveSwitch
+import com.omniflow.android.ui.designsystem.components.OmniSettingsGroup
+import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -130,25 +131,29 @@ private fun AssetManagement(state: MoreUiState, onOpenAccount: (String) -> Unit)
         }
         if (assets.isNotEmpty()) {
             item { ManagementGroupHeader("资产构成", assetTotal.asRmb()) }
-            itemsIndexed(assets, key = { _, account -> "asset-${account.id}" }) { index, account ->
-                AssetRow(
-                    account = account,
-                    share = if (assetTotal.minor > 0) account.balance.minor.toFloat() / assetTotal.minor else 0f,
-                    shape = groupedOptionShape(index, assets.size),
-                    onClick = { onOpenAccount(account.id) },
-                )
+            item {
+                OmniSettingsGroup {
+                    assets.forEach { account ->
+                        val share = if (assetTotal.minor > 0) account.balance.minor.toFloat() / assetTotal.minor else 0f
+                        AssetRow(account, share) { onOpenAccount(account.id) }
+                    }
+                }
             }
         }
         if (liabilities.isNotEmpty()) {
             item { ManagementGroupHeader("负债", state.accountSummary.liabilities.asRmb()) }
-            itemsIndexed(liabilities, key = { _, account -> "liability-${account.id}" }) { index, account ->
-                AssetRow(account, 0f, groupedOptionShape(index, liabilities.size)) { onOpenAccount(account.id) }
+            item {
+                OmniSettingsGroup {
+                    liabilities.forEach { account -> AssetRow(account, 0f) { onOpenAccount(account.id) } }
+                }
             }
         }
         if (excluded.isNotEmpty()) {
             item { ManagementGroupHeader("不计入总资产") }
-            itemsIndexed(excluded, key = { _, account -> "excluded-${account.id}" }) { index, account ->
-                AssetRow(account, 0f, groupedOptionShape(index, excluded.size)) { onOpenAccount(account.id) }
+            item {
+                OmniSettingsGroup {
+                    excluded.forEach { account -> AssetRow(account, 0f) { onOpenAccount(account.id) } }
+                }
             }
         }
         if (state.accounts.isEmpty()) {
@@ -164,10 +169,9 @@ private fun AssetManagement(state: MoreUiState, onOpenAccount: (String) -> Unit)
 private fun AssetRow(
     account: Account,
     share: Float,
-    shape: androidx.compose.ui.graphics.Shape,
     onClick: () -> Unit,
 ) {
-    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = shape, color = surfaceCard()) {
+    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = OmniShapeTokens.card, color = surfaceCard()) {
         Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RoundIcon(account.iconKey, size = 34)
@@ -419,21 +423,27 @@ private fun TagManagement(state: MoreUiState, viewModel: OmniFlowViewModel) {
                     )
                 }
             }
-            itemsIndexed(state.tags, key = { _, tag -> tag.id }) { index, tag ->
-                Surface(
-                    onClick = { editing = tag },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = groupedOptionShape(index, state.tags.size),
-                    color = surfaceInset(),
-                ) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text("#", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.size(10.dp))
-                        Text(tag.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("编辑", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            if (state.tags.isNotEmpty()) {
+                item {
+                    OmniSettingsGroup {
+                        state.tags.forEach { tag ->
+                            Surface(
+                                onClick = { editing = tag },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = OmniShapeTokens.card,
+                                color = surfaceCard(),
+                            ) {
+                                Row(
+                                    Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text("#", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                                    Spacer(Modifier.size(10.dp))
+                                    Text(tag.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text("编辑", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -658,32 +668,31 @@ private fun ReminderManagement(
                 )
             }
         }
-        itemsIndexed(state.reminders, key = { _, reminder -> reminder.id }) { index, reminder ->
-            Surface(
-                onClick = { editing = reminder },
-                modifier = Modifier.fillMaxWidth(),
-                shape = groupedOptionShape(index, state.reminders.size),
-                color = surfaceInset(),
-            ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(reminder.name, style = OmniText.titleRow, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(
-                            "${reminder.type.label} · ${reminder.schedule.kind.label}",
-                            style = OmniText.caption,
-                            color = mutedContent(),
-                            maxLines = 1,
-                        )
-                    }
-                    OmniExpressiveSwitch(!reminder.paused, { enabled ->
-                        if (enabled) onRequestNotificationPermission()
-                        viewModel.setReminderPaused(reminder, !enabled)
-                    })
-                    TextButton(onClick = { confirmDelete = reminder }) {
-                        Text("删除", color = MaterialTheme.colorScheme.error)
+        if (state.reminders.isNotEmpty()) {
+            item {
+                OmniSettingsGroup {
+                    state.reminders.forEach { reminder ->
+                        Surface(
+                            onClick = { editing = reminder },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = OmniShapeTokens.card,
+                            color = surfaceCard(),
+                        ) {
+                            Row(
+                                Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(reminder.name, style = OmniText.titleRow, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text("${reminder.type.label} · ${reminder.schedule.kind.label}", style = OmniText.caption, color = mutedContent(), maxLines = 1)
+                                }
+                                OmniExpressiveSwitch(!reminder.paused, { enabled ->
+                                    if (enabled) onRequestNotificationPermission()
+                                    viewModel.setReminderPaused(reminder, !enabled)
+                                })
+                                TextButton(onClick = { confirmDelete = reminder }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+                            }
+                        }
                     }
                 }
             }
@@ -804,29 +813,26 @@ private fun FormDialog(
 
 private val TransactionType.label: String get() = if (this == TransactionType.EXPENSE) "支出" else "收入"
 private val ReminderType.label: String get() = if (this == ReminderType.REPAYMENT) "还款提醒" else "订阅提醒"
-private val ReminderScheduleKind.label: String
-    get() = when (this) {
-        ReminderScheduleKind.FIXED_REPAYMENT_DAY -> "固定还款日"
-        ReminderScheduleKind.DAYS_AFTER_STATEMENT -> "账单日后 N 天"
-        ReminderScheduleKind.DAILY -> "每天"
-        ReminderScheduleKind.WEEKLY -> "每周"
-        ReminderScheduleKind.MONTHLY -> "每月"
-        ReminderScheduleKind.YEARLY -> "每年"
-    }
+private val ReminderScheduleKind.label: String get() = when (this) {
+    ReminderScheduleKind.FIXED_REPAYMENT_DAY -> "固定还款日"
+    ReminderScheduleKind.DAYS_AFTER_STATEMENT -> "账单日后 N 天"
+    ReminderScheduleKind.DAILY -> "每天"
+    ReminderScheduleKind.WEEKLY -> "每周"
+    ReminderScheduleKind.MONTHLY -> "每月"
+    ReminderScheduleKind.YEARLY -> "每年"
+}
 
-private val RuleConditionType.label: String
-    get() = when (this) {
-        RuleConditionType.NOTE_CONTAINS -> "备注包含"
-        RuleConditionType.TRANSACTION_TYPE -> "收支类型"
-        RuleConditionType.TRANSACTION_SOURCE -> "来源平台"
-    }
+private val RuleConditionType.label: String get() = when (this) {
+    RuleConditionType.NOTE_CONTAINS -> "备注包含"
+    RuleConditionType.TRANSACTION_TYPE -> "收支类型"
+    RuleConditionType.TRANSACTION_SOURCE -> "来源平台"
+}
 
-private val RuleActionType.label: String
-    get() = when (this) {
-        RuleActionType.SET_CATEGORY -> "设置分类"
-        RuleActionType.SET_EXCLUDED -> "设为不计入收支"
-        RuleActionType.EXCLUDE -> "排除不入账"
-    }
+private val RuleActionType.label: String get() = when (this) {
+    RuleActionType.SET_CATEGORY -> "设置分类"
+    RuleActionType.SET_EXCLUDED -> "设为不计入收支"
+    RuleActionType.EXCLUDE -> "排除不入账"
+}
 
 internal fun String.toMoneyOrNull(): Money? {
     val value = trim().toBigDecimalOrNull() ?: return null
@@ -834,16 +840,4 @@ internal fun String.toMoneyOrNull(): Money? {
     return runCatching { Money(value.movePointRight(2).longValueExact()) }.getOrNull()
 }
 
-private val BundledIconKeys = listOf(
-    "banknote", "wallet-cards", "wallet", "landmark", "shopping-bag", "utensils",
-    "bus", "wrench", "film", "heart-pulse", "plane", "car", "house", "smartphone",
-    "shirt", "chart-line", "briefcase-business", "trophy", "gift", "play", "category",
-)
-
-internal fun groupedOptionShape(index: Int, size: Int): androidx.compose.ui.graphics.Shape = when {
-    size == 1 -> RoundedCornerShape(OmniRadius.medium)
-    index == 0 -> RoundedCornerShape(topStart = OmniRadius.medium, topEnd = OmniRadius.medium, bottomStart = 4.dp, bottomEnd = 4.dp)
-    index == size - 1 -> RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = OmniRadius.medium, bottomEnd = OmniRadius.medium)
-    else -> RoundedCornerShape(4.dp)
-}
 

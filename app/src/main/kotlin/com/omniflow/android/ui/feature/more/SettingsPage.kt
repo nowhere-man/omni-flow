@@ -42,7 +42,6 @@ import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.MoreUiState
 import com.omniflow.android.ui.OmniFlowViewModel
 import com.omniflow.android.ui.designsystem.components.OmniExpressiveSwitch
-import com.omniflow.android.ui.designsystem.components.OmniSettingsDivider
 import com.omniflow.android.ui.designsystem.components.OmniSettingsGroup
 import com.omniflow.android.ui.designsystem.components.OmniSettingsRow
 import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
@@ -124,7 +123,6 @@ fun SettingsPage(
                         }
                     },
                 )
-                OmniSettingsDivider()
                 OmniSettingsRow(
                     title = "主题色",
                     icon = Icons.Default.Palette,

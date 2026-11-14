@@ -37,11 +37,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.ui.graphics.Color
 import com.omniflow.android.ui.LedgerCoverBox
 import com.omniflow.android.ui.OmniRadius
 import com.omniflow.android.ui.asRmb
-import com.omniflow.android.ui.designsystem.components.OmniSettingsDivider
 import com.omniflow.android.ui.designsystem.components.OmniSettingsGroup
+import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
+import com.omniflow.android.ui.designsystem.tokens.OmniSpacingTokens
 import com.omniflow.android.ui.expenseColor
 import com.omniflow.android.ui.incomeColor
 import com.omniflow.android.ui.mutedContent
@@ -101,98 +107,108 @@ internal fun LedgerListScreen(
         } else {
             item {
                 OmniSettingsGroup {
-                    state.ledgers.forEachIndexed { index, ledger ->
+                    state.ledgers.forEach { ledger ->
                         val stat = state.ledgerStats[ledger.id]
                         val isDefault = state.defaultLedgerId == ledger.id
 
-                        ListItem(
-                            modifier = Modifier.clickable { onOpenLedger(ledger.id) },
-                            leadingContent = {
-                                LedgerCoverBox(ledger.coverKey, Modifier.size(48.dp), iconSize = 24)
-                            },
-                            headlineContent = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = ledger.name,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Medium,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                    if (isDefault) {
-                                        Spacer(Modifier.size(8.dp))
-                                        Surface(
-                                            shape = RoundedCornerShape(OmniRadius.small),
-                                            color = MaterialTheme.colorScheme.primary,
-                                        ) {
-                                            Text(
-                                                text = "默认",
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onPrimary,
-                                            )
-                                        }
-                                    }
-                                }
-                            },
-                            supportingContent = if (stat != null && stat.transactionCount > 0) {
-                                {
-                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        ElevatedCard(
+                            shape = OmniShapeTokens.card,
+                            colors = CardDefaults.elevatedCardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                            ),
+                            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            ListItem(
+                                modifier = Modifier
+                                    .clickable { onOpenLedger(ledger.id) }
+                                    .defaultMinSize(minHeight = OmniSpacingTokens.settingsRowMinHeight),
+                                colors = ListItemDefaults.colors(
+                                    containerColor = Color.Transparent,
+                                ),
+                                leadingContent = {
+                                    LedgerCoverBox(ledger.coverKey, Modifier.size(48.dp), iconSize = 24)
+                                },
+                                headlineContent = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(
-                                            text = "支出 ${stat.totalExpense.asRmb()} · 收入 ${stat.totalIncome.asRmb()}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = mutedContent(),
+                                            text = ledger.name,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Medium,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
                                         )
-                                        Text(
-                                            text = "结余 ${stat.netBalance.asRmb()}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            fontWeight = FontWeight.Medium,
-                                            color = if (stat.netBalance.minor >= 0) incomeColor() else expenseColor(),
-                                        )
+                                        if (isDefault) {
+                                            Spacer(Modifier.size(8.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(OmniRadius.small),
+                                                color = MaterialTheme.colorScheme.primary,
+                                            ) {
+                                                Text(
+                                                    text = "默认",
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onPrimary,
+                                                )
+                                            }
+                                        }
                                     }
-                                }
-                            } else null,
-                            trailingContent = {
-                                Box {
-                                    TextButton(onClick = { menuFor = ledger.id }) {
-                                        Text("⋯", style = MaterialTheme.typography.titleMedium)
+                                },
+                                supportingContent = if (stat != null && stat.transactionCount > 0) {
+                                    {
+                                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                            Text(
+                                                text = "支出 ${stat.totalExpense.asRmb()} · 收入 ${stat.totalIncome.asRmb()}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = mutedContent(),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                            Text(
+                                                text = "结余 ${stat.netBalance.asRmb()}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = FontWeight.Medium,
+                                                color = if (stat.netBalance.minor >= 0) incomeColor() else expenseColor(),
+                                            )
+                                        }
                                     }
-                                    DropdownMenu(
-                                        expanded = menuFor == ledger.id,
-                                        onDismissRequest = { menuFor = null },
-                                    ) {
-                                        DropdownMenuItem(
-                                            text = { Text("编辑") },
-                                            onClick = {
-                                                menuFor = null
-                                                editingLedger = ledger
-                                            },
-                                        )
-                                        if (!isDefault) {
+                                } else null,
+                                trailingContent = {
+                                    Box {
+                                        TextButton(onClick = { menuFor = ledger.id }) {
+                                            Text("⋯", style = MaterialTheme.typography.titleMedium)
+                                        }
+                                        DropdownMenu(
+                                            expanded = menuFor == ledger.id,
+                                            onDismissRequest = { menuFor = null },
+                                        ) {
                                             DropdownMenuItem(
-                                                text = { Text("设为默认账本") },
+                                                text = { Text("编辑") },
                                                 onClick = {
                                                     menuFor = null
-                                                    viewModel.setDefaultLedger(ledger.id)
+                                                    editingLedger = ledger
+                                                },
+                                            )
+                                            if (!isDefault) {
+                                                DropdownMenuItem(
+                                                    text = { Text("设为默认账本") },
+                                                    onClick = {
+                                                        menuFor = null
+                                                        viewModel.setDefaultLedger(ledger.id)
+                                                    },
+                                                )
+                                            }
+                                            DropdownMenuItem(
+                                                text = { Text("删除", color = MaterialTheme.colorScheme.error) },
+                                                onClick = {
+                                                    menuFor = null
+                                                    deletingLedger = ledger
                                                 },
                                             )
                                         }
-                                        DropdownMenuItem(
-                                            text = { Text("删除", color = MaterialTheme.colorScheme.error) },
-                                            onClick = {
-                                                menuFor = null
-                                                deletingLedger = ledger
-                                            },
-                                        )
                                     }
-                                }
-                            },
-                        )
-
-                        if (index < state.ledgers.lastIndex) {
-                            OmniSettingsDivider()
+                                },
+                            )
                         }
                     }
                 }

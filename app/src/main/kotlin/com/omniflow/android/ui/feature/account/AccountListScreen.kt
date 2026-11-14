@@ -36,7 +36,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.asRmb
-import com.omniflow.android.ui.designsystem.components.OmniSettingsDivider
 import com.omniflow.android.ui.designsystem.components.OmniSettingsGroup
 import com.omniflow.android.ui.designsystem.components.OmniSettingsRow
 import com.omniflow.android.ui.designsystem.tokens.CategoryIconOptions
@@ -219,7 +218,7 @@ private fun AccountGroupCard(
     onOpenAccount: (AccountId) -> Unit,
 ) {
     OmniSettingsGroup {
-        group.accounts.forEachIndexed { index, account ->
+        group.accounts.forEach { account ->
             val isLiability = account.balance.minor < 0
             val details = listOfNotNull(
                 account.cardNumber?.takeLast(4)?.takeIf(String::isNotBlank)?.let { "尾号 $it" },
@@ -242,10 +241,6 @@ private fun AccountGroupCard(
                     )
                 },
             )
-
-            if (index < group.accounts.lastIndex) {
-                OmniSettingsDivider()
-            }
         }
     }
 }
