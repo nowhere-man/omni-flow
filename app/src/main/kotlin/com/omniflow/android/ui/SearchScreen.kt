@@ -23,45 +23,32 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.omniflow.android.ui.designsystem.components.OmniDatePickerDialog
-import com.omniflow.core.domain.model.Account
-import com.omniflow.core.domain.model.AppTimeZone
+import com.omniflow.android.ui.feature.search.SearchFilterPanel
+import com.omniflow.android.ui.feature.search.SearchUiState
+import com.omniflow.core.domain.model.Category
 import com.omniflow.core.domain.model.DateRange
-import com.omniflow.core.domain.model.Ledger
 import com.omniflow.core.domain.model.LedgerScope
-import com.omniflow.core.domain.model.hourMinuteText
+import com.omniflow.core.domain.model.Money
 import com.omniflow.core.domain.model.TransactionType
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
-import kotlinx.datetime.LocalDate
-import kotlinx.datetime.atStartOfDayIn
-import kotlinx.datetime.toLocalDateTime
+import com.omniflow.core.domain.model.hourMinuteText
 
-/** 所有筛选控件统一的高度，和分段控件、账本药丸对齐。 */
 private val FieldHeight = 44.dp
 
 @Composable
@@ -70,9 +57,8 @@ internal fun SearchScreen(
     onKeyword: (String) -> Unit,
     onScope: (LedgerScope) -> Unit,
     onType: (TransactionType?) -> Unit,
-    onPrimaryCategoryText: (String) -> Unit,
-    onSecondaryCategoryText: (String) -> Unit,
-    onTagText: (String) -> Unit,
+    onCategorySelected: (Category?, Category?) -> Unit,
+    onTagToggle: (String) -> Unit,
     onNoteText: (String) -> Unit,
     onAccount: (String?) -> Unit,
     onAmount: (String, String) -> Unit,
@@ -87,6 +73,7 @@ internal fun SearchScreen(
     val hasInput = state.query.hasFilters ||
         state.minimumAmountText.isNotBlank() ||
         state.maximumAmountText.isNotBlank()
+
     Column(modifier.readableContentWidth().fillMaxHeight()) {
         Column(
             Modifier.padding(horizontal = 16.dp),
@@ -114,13 +101,12 @@ internal fun SearchScreen(
                 )
             }
             if (filtersExpanded) {
-                FilterPanel(
+                SearchFilterPanel(
                     state = state,
                     onScope = onScope,
                     onType = onType,
-                    onPrimaryCategoryText = onPrimaryCategoryText,
-                    onSecondaryCategoryText = onSecondaryCategoryText,
-                    onTagText = onTagText,
+                    onCategorySelected = onCategorySelected,
+                    onTagToggle = onTagToggle,
                     onNoteText = onNoteText,
                     onAccount = onAccount,
                     onAmount = onAmount,
@@ -198,163 +184,6 @@ internal fun SearchScreen(
 }
 
 @Composable
-private fun FilterPanel(
-    state: SearchUiState,
-    onScope: (LedgerScope) -> Unit,
-    onType: (TransactionType?) -> Unit,
-    onPrimaryCategoryText: (String) -> Unit,
-    onSecondaryCategoryText: (String) -> Unit,
-    onTagText: (String) -> Unit,
-    onNoteText: (String) -> Unit,
-    onAccount: (String?) -> Unit,
-    onAmount: (String, String) -> Unit,
-    onDateRange: (DateRange?) -> Unit,
-) {
-    Surface(
-        Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(OmniRadius.medium),
-        color = surfaceCard(),
-    ) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            // 和统计页的周/月/年/范围同一个控件，不再自己写一套三段按钮
-            OmniSegmented(
-                options = SearchTypeOptions,
-                selected = state.query.type,
-                label = {
-                    when (it) {
-                        null -> "全部"
-                        TransactionType.EXPENSE -> "支出"
-                        TransactionType.INCOME -> "收入"
-                        TransactionType.TRANSFER -> "转账"
-                    }
-                },
-                onSelected = onType,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterMenu(
-                    label = when (val scope = state.query.scope) {
-                        LedgerScope.All -> "所有账本"
-                        is LedgerScope.Single -> state.ledgers.firstOrNull { it.id == scope.ledgerId }?.name ?: "账本"
-                    },
-                    allLabel = "所有账本",
-                    values = state.ledgers,
-                    valueLabel = Ledger::name,
-                    onAll = { onScope(LedgerScope.All) },
-                    onSelected = { onScope(LedgerScope.Single(it.id)) },
-                    modifier = Modifier.weight(1f),
-                )
-                FilterMenu(
-                    label = state.accounts.firstOrNull { it.id == state.query.accountId }?.name ?: "所有账户",
-                    allLabel = "所有账户",
-                    values = state.accounts,
-                    valueLabel = Account::name,
-                    onAll = { onAccount(null) },
-                    onSelected = { onAccount(it.id) },
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterField("一级分类", state.query.primaryCategoryText, onPrimaryCategoryText, Modifier.weight(1f))
-                FilterField("二级分类", state.query.secondaryCategoryText, onSecondaryCategoryText, Modifier.weight(1f))
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterField("标签", state.query.tagText, onTagText, Modifier.weight(1f))
-                FilterField("备注", state.query.noteText, onNoteText, Modifier.weight(1f))
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterField(
-                    "最低金额",
-                    state.minimumAmountText,
-                    { onAmount(it, state.maximumAmountText) },
-                    Modifier.weight(1f),
-                    KeyboardType.Decimal,
-                )
-                FilterField(
-                    "最高金额",
-                    state.maximumAmountText,
-                    { onAmount(state.minimumAmountText, it) },
-                    Modifier.weight(1f),
-                    KeyboardType.Decimal,
-                )
-            }
-            DateFilterRow(state.query.dateRange, onDateRange)
-        }
-    }
-}
-
-/** 所有文字筛选框长一个样：44dp 高、小圆角、内嵌底色，不带 Material 的浮动标签。 */
-@Composable
-private fun FilterField(
-    label: String,
-    value: String,
-    onValue: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    keyboardType: KeyboardType = KeyboardType.Text,
-) {
-    Surface(
-        modifier = modifier.height(FieldHeight),
-        shape = RoundedCornerShape(OmniRadius.small),
-        color = surfaceInset(),
-    ) {
-        Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f)) {
-                if (value.isEmpty()) {
-                    Text(label, style = OmniText.bodyRow, color = mutedContent(), maxLines = 1)
-                }
-                BasicTextField(
-                    value = value,
-                    onValueChange = onValue,
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    textStyle = OmniText.bodyRow.copy(color = MaterialTheme.colorScheme.onSurface),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                    keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun <T> FilterMenu(
-    label: String,
-    allLabel: String,
-    values: List<T>,
-    valueLabel: (T) -> String,
-    onAll: () -> Unit,
-    onSelected: (T) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Box(modifier) {
-        Surface(
-            onClick = { expanded = true },
-            modifier = Modifier.fillMaxWidth().height(FieldHeight),
-            shape = RoundedCornerShape(OmniRadius.small),
-            color = surfaceInset(),
-        ) {
-            Row(Modifier.padding(start = 12.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    label,
-                    modifier = Modifier.weight(1f),
-                    style = OmniText.bodyRow,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Icon(Icons.Default.ExpandMore, null, Modifier.size(18.dp), tint = mutedContent())
-            }
-        }
-        DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(text = { Text(allLabel) }, onClick = { expanded = false; onAll() })
-            values.forEach { value ->
-                DropdownMenuItem(text = { Text(valueLabel(value)) }, onClick = { expanded = false; onSelected(value) })
-            }
-        }
-    }
-}
-
-@Composable
 private fun KeywordField(value: String, onValue: (String) -> Unit, onSearch: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth().height(48.dp),
@@ -392,67 +221,7 @@ private fun KeywordField(value: String, onValue: (String) -> Unit, onSearch: () 
 }
 
 @Composable
-private fun DateFilterRow(range: DateRange?, onRange: (DateRange?) -> Unit) {
-    val initialStart = range?.startLocalDate(AppTimeZone)
-    val initialEnd = range?.endLocalDateInclusive(AppTimeZone)
-    var start by remember(range) { mutableStateOf(initialStart) }
-    var end by remember(range) { mutableStateOf(initialEnd) }
-    var pickingStart by remember { mutableStateOf(false) }
-    var pickingEnd by remember { mutableStateOf(false) }
-
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        DateFilterButton(start?.toString() ?: "开始日期", Modifier.weight(1f)) {
-            pickingStart = true
-        }
-        DateFilterButton(end?.toString() ?: "结束日期", Modifier.weight(1f)) {
-            pickingEnd = true
-        }
-        if (range != null || start != null || end != null) {
-            TextButton(onClick = { start = null; end = null; onRange(null) }) {
-                Text("清除", style = OmniText.caption)
-            }
-        }
-    }
-
-    if (pickingStart) {
-        OmniDatePickerDialog(
-            initialDate = start ?: Clock.System.now().toLocalDateTime(AppTimeZone).date,
-            onDateSelected = { selected ->
-                start = selected
-                onRange(dateRangeOrNull(start, end))
-            },
-            onDismissRequest = { pickingStart = false },
-        )
-    }
-
-    if (pickingEnd) {
-        OmniDatePickerDialog(
-            initialDate = end ?: start ?: Clock.System.now().toLocalDateTime(AppTimeZone).date,
-            onDateSelected = { selected ->
-                end = selected
-                onRange(dateRangeOrNull(start, end))
-            },
-            onDismissRequest = { pickingEnd = false },
-        )
-    }
-}
-
-@Composable
-private fun DateFilterButton(label: String, modifier: Modifier, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier.height(FieldHeight),
-        shape = RoundedCornerShape(OmniRadius.small),
-        color = surfaceInset(),
-    ) {
-        Box(Modifier.padding(horizontal = 12.dp), contentAlignment = Alignment.CenterStart) {
-            Text(label, style = OmniText.bodyRow, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-    }
-}
-
-@Composable
-private fun SearchSummary(count: Int, income: com.omniflow.core.domain.model.Money, expense: com.omniflow.core.domain.model.Money) {
+private fun SearchSummary(count: Int, income: Money, expense: Money) {
     Surface(
         Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(OmniRadius.medium),
@@ -479,11 +248,4 @@ private fun SearchHint(message: String) {
         color = mutedContent(),
         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
     )
-}
-
-private val SearchTypeOptions = listOf(null, TransactionType.EXPENSE, TransactionType.INCOME, TransactionType.TRANSFER)
-
-private fun dateRangeOrNull(first: LocalDate?, second: LocalDate?): DateRange? {
-    if (first == null || second == null) return null
-    return DateRange.ofClosedDates(first, second, AppTimeZone)
 }

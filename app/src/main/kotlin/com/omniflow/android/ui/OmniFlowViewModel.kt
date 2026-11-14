@@ -3,6 +3,8 @@ package com.omniflow.android.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.omniflow.android.ui.feature.search.SearchController
+import com.omniflow.android.ui.feature.search.SearchUiState
 import com.omniflow.core.SharedApp
 import com.omniflow.core.domain.model.Account
 import com.omniflow.core.domain.model.AccountSummary
@@ -88,17 +90,6 @@ data class HomeUiState(
 
 data class RangeDetailUiState(
     val detail: TransactionDetailState? = null,
-    val isLoading: Boolean = false,
-    val error: String? = null,
-)
-
-data class SearchUiState(
-    val query: TransactionSearchQuery = TransactionSearchQuery(),
-    val result: SearchResult? = null,
-    val ledgers: List<Ledger> = emptyList(),
-    val accounts: List<Account> = emptyList(),
-    val minimumAmountText: String = "",
-    val maximumAmountText: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,
 )
@@ -195,8 +186,8 @@ class OmniFlowViewModel(
     val homeUiState: StateFlow<HomeUiState> = _homeUiState.asStateFlow()
     private val _rangeDetailUiState = MutableStateFlow(RangeDetailUiState())
     val rangeDetailUiState: StateFlow<RangeDetailUiState> = _rangeDetailUiState.asStateFlow()
-    private val _searchUiState = MutableStateFlow(SearchUiState())
-    val searchUiState: StateFlow<SearchUiState> = _searchUiState.asStateFlow()
+    private val searchController = SearchController(viewModelScope, sharedApp)
+    val searchUiState: StateFlow<SearchUiState> = searchController.searchUiState
     private val _transactionRecordDetailUiState = MutableStateFlow(TransactionRecordDetailUiState())
     val transactionRecordDetailUiState: StateFlow<TransactionRecordDetailUiState> =
         _transactionRecordDetailUiState.asStateFlow()
@@ -213,7 +204,6 @@ class OmniFlowViewModel(
     private var editingTransaction: Transaction? = null
     private var homeJob: Job? = null
     private var detailJob: Job? = null
-    private var searchJob: Job? = null
     private var editorCategoriesJob: Job? = null
     private var editorTagsJob: Job? = null
     private var moreCategoriesJob: Job? = null
@@ -239,7 +229,7 @@ class OmniFlowViewModel(
             sharedApp.management.observeLedgers().collect { result ->
                 val ledgers = result.getOrDefault(emptyList())
                 _homeUiState.value = _homeUiState.value.copy(ledgers = ledgers)
-                _searchUiState.value = _searchUiState.value.copy(ledgers = ledgers)
+                searchController.onLedgersUpdated(ledgers)
                 _transactionUiState.value = _transactionUiState.value.copy(ledgers = ledgers)
                 val previousSelection = _moreUiState.value.selectedLedgerId
                 val selected = previousSelection?.takeIf { id -> ledgers.any { it.id == id } }
@@ -258,7 +248,7 @@ class OmniFlowViewModel(
         viewModelScope.launch {
             sharedApp.management.observeAccounts().collect { result ->
                 val accounts = result.getOrDefault(emptyList())
-                _searchUiState.value = _searchUiState.value.copy(accounts = accounts)
+                searchController.onAccountsUpdated(accounts)
                 _transactionUiState.value = _transactionUiState.value.copy(accounts = accounts)
                 _moreUiState.value = _moreUiState.value.copy(accounts = accounts)
             }
@@ -381,94 +371,21 @@ class OmniFlowViewModel(
         observeHome()
     }
 
-    // 搜索条件只改草稿，不触发查询：边输边搜会在输到一半时不停刷新结果列表，
-    // 也让「同时看几个条件的组合」变得没法操作。真正的查询交给 runSearch()。
-    fun setSearchKeyword(keyword: String) = updateDraft(_searchUiState.value.query.copy(keyword = keyword))
-    fun setSearchScope(scope: LedgerScope) = updateDraft(
-        _searchUiState.value.query.copy(
-            scope = scope,
-            primaryCategoryId = null,
-            secondaryCategoryId = null,
-            tagId = null,
-        ),
-    )
-    fun setSearchType(type: TransactionType?) = updateDraft(_searchUiState.value.query.copy(type = type))
-    fun setSearchPrimaryCategoryText(value: String) = updateDraft(
-        _searchUiState.value.query.copy(primaryCategoryText = value),
-    )
-    fun setSearchSecondaryCategoryText(value: String) = updateDraft(
-        _searchUiState.value.query.copy(secondaryCategoryText = value),
-    )
-    fun setSearchTagText(value: String) = updateDraft(_searchUiState.value.query.copy(tagText = value))
-    fun setSearchNoteText(value: String) = updateDraft(_searchUiState.value.query.copy(noteText = value))
-    fun setSearchAmount(minimumText: String, maximumText: String) {
-        _searchUiState.value = _searchUiState.value.copy(
-            minimumAmountText = minimumText,
-            maximumAmountText = maximumText,
-            error = null,
-        )
-        updateDraft(
-            _searchUiState.value.query.copy(
-                amount = com.omniflow.core.domain.model.AmountFilter(
-                    minimum = minimumText.toSearchMoneyOrNull(),
-                    maximum = maximumText.toSearchMoneyOrNull(),
-                ),
-            ),
-        )
-    }
-    fun setSearchDateRange(range: DateRange?) = updateDraft(_searchUiState.value.query.copy(dateRange = range))
-    fun setSearchAccount(accountId: String?) = updateDraft(_searchUiState.value.query.copy(accountId = accountId))
-    fun clearSearch() {
-        searchJob?.cancel()
-        _searchUiState.value = _searchUiState.value.copy(
-            query = TransactionSearchQuery(),
-            result = null,
-            minimumAmountText = "",
-            maximumAmountText = "",
-            isLoading = false,
-            error = null,
-        )
-    }
-
-    /** 点「搜索」才真正查库；金额格式也在这时候校验，边输边报错太吵。 */
-    fun runSearch() {
-        val state = _searchUiState.value
-        val minimumInvalid = state.minimumAmountText.isNotBlank() && state.minimumAmountText.toSearchMoneyOrNull() == null
-        val maximumInvalid = state.maximumAmountText.isNotBlank() && state.maximumAmountText.toSearchMoneyOrNull() == null
-        val minimum = state.query.amount.minimum
-        val maximum = state.query.amount.maximum
-        val reversed = minimum != null && maximum != null && minimum > maximum
-        if (minimumInvalid || maximumInvalid || reversed) {
-            searchJob?.cancel()
-            _searchUiState.value = state.copy(
-                result = null,
-                isLoading = false,
-                error = if (reversed) "最低金额不能大于最高金额" else "金额格式有误，最多输入两位小数",
-            )
-            return
-        }
-        runQuery(state.query)
-    }
-
-    private fun updateDraft(query: TransactionSearchQuery) {
-        _searchUiState.value = _searchUiState.value.copy(query = query)
-    }
-
-    private fun runQuery(query: TransactionSearchQuery) {
-        searchJob?.cancel()
-        if (!query.hasFilters) {
-            _searchUiState.value = _searchUiState.value.copy(result = null, isLoading = false, error = null)
-            return
-        }
-        searchJob = viewModelScope.launch {
-            _searchUiState.value = _searchUiState.value.copy(isLoading = true, error = null)
-            sharedApp.search(query).onSuccess { result ->
-                _searchUiState.value = _searchUiState.value.copy(result = result, isLoading = false)
-            }.onFailure { error ->
-                _searchUiState.value = _searchUiState.value.copy(isLoading = false, error = error.message)
-            }
-        }
-    }
+    // 搜索条件只改草稿，不触发查询：真正的查询交给 runSearch()。
+    fun setSearchKeyword(keyword: String) = searchController.setSearchKeyword(keyword)
+    fun setSearchScope(scope: LedgerScope) = searchController.setSearchScope(scope)
+    fun setSearchType(type: TransactionType?) = searchController.setSearchType(type)
+    fun setSearchCategory(primary: Category?, secondary: Category?) = searchController.setSearchCategory(primary, secondary)
+    fun toggleSearchTag(tagName: String) = searchController.toggleSearchTag(tagName)
+    fun setSearchPrimaryCategoryText(value: String) = searchController.setSearchPrimaryCategoryText(value)
+    fun setSearchSecondaryCategoryText(value: String) = searchController.setSearchSecondaryCategoryText(value)
+    fun setSearchTagText(value: String) = searchController.setSearchTagText(value)
+    fun setSearchNoteText(value: String) = searchController.setSearchNoteText(value)
+    fun setSearchAmount(minimumText: String, maximumText: String) = searchController.setSearchAmount(minimumText, maximumText)
+    fun setSearchDateRange(range: DateRange?) = searchController.setSearchDateRange(range)
+    fun setSearchAccount(accountId: String?) = searchController.setSearchAccount(accountId)
+    fun clearSearch() = searchController.clearSearch()
+    fun runSearch() = searchController.runSearch()
 
     /**
      * 账本 / 账户 / 分类详情。全部走已有的 search 用例，core 不需要新增查询能力。
@@ -502,12 +419,7 @@ class OmniFlowViewModel(
             EntityDetailKind.ACCOUNT -> TransactionSearchQuery(accountId = id)
             EntityDetailKind.CATEGORY -> TransactionSearchQuery(primaryCategoryId = id)
         }
-        _searchUiState.value = _searchUiState.value.copy(
-            query = query,
-            minimumAmountText = "",
-            maximumAmountText = "",
-        )
-        runQuery(query)
+        searchController.openSearchFor(query)
     }
 
     fun showTransactionRecordDetail(transactionId: String) {
