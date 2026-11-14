@@ -1,5 +1,6 @@
 package com.omniflow.core.parser.pdf
 
+import com.omniflow.core.domain.model.AppTimeZone
 import com.omniflow.core.domain.model.Money
 import com.omniflow.core.domain.model.TransactionType
 import com.omniflow.core.parser.ImportFormat
@@ -137,7 +138,7 @@ object CmbPdfBillParser {
             hour = 0,
             minute = 0,
             second = 0,
-        ).toInstant(TimeZone.of("Asia/Shanghai"))
+        ).toInstant(AppTimeZone)
     }
 
     private fun isFooter(run: PdfTextRun): Boolean {

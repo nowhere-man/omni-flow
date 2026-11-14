@@ -4,6 +4,7 @@ import com.omniflow.core.data.facade.SqlDelightAnalyticsFacade
 import com.omniflow.core.data.local.createJvmDatabase
 import com.omniflow.core.data.usecase.SqlDelightSearchTransactionsUseCase
 import com.omniflow.core.domain.model.AnalyticsQuery
+import com.omniflow.core.domain.model.AppTimeZone
 import com.omniflow.core.domain.model.DateRange
 import com.omniflow.core.domain.model.LedgerScope
 import com.omniflow.core.domain.model.Money
@@ -143,7 +144,7 @@ class SqlDelightSearchAnalyticsTest {
         database.ledgerQueries.insertLedger("ledger", "日常", null, 1, 1)
         database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 1, 1, 1)
         database.categoryQueries.insertCategory("food", "ledger", null, "餐饮", "utensils", "EXPENSE", 1, 1)
-        val zone = TimeZone.currentSystemDefault()
+        val zone = AppTimeZone
         val now = Clock.System.now().toLocalDateTime(zone)
         val januaryStart = LocalDate(now.year, 1, 1).atStartOfDayIn(zone)
         val februaryStart = LocalDate(now.year, 2, 1).atStartOfDayIn(zone)
@@ -166,7 +167,7 @@ class SqlDelightSearchAnalyticsTest {
         database.ledgerQueries.insertLedger("ledger", "日常", null, 1, 1)
         database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 1, 1, 1)
         database.categoryQueries.insertCategory("food", "ledger", null, "餐饮", "utensils", "EXPENSE", 1, 1)
-        val zone = TimeZone.currentSystemDefault()
+        val zone = AppTimeZone
         val start = LocalDate(2025, 1, 1).atStartOfDayIn(zone)
         val secondDay = LocalDate(2025, 1, 2).atStartOfDayIn(zone)
         val thirdDay = LocalDate(2025, 1, 3).atStartOfDayIn(zone)

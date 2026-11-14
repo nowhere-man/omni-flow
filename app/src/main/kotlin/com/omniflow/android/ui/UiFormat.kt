@@ -1,5 +1,6 @@
 package com.omniflow.android.ui
 
+import com.omniflow.core.domain.model.AppTimeZone
 import com.omniflow.core.domain.model.DateRange
 import com.omniflow.core.domain.model.Money
 import java.time.LocalDate as JavaLocalDate
@@ -54,19 +55,18 @@ internal fun LocalDate.displayName(): String {
     return "${monthNumber}月${dayOfMonth}日 ${day.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.CHINA)}"
 }
 
-internal fun Instant.displayTime(): String = toLocalDateTime(ChinaTimeZone).time.toString().take(5)
+internal fun Instant.displayTime(): String = toLocalDateTime(AppTimeZone).time.toString().take(5)
 
 /** 备份列表用的本地时间，精确到秒。 */
 internal fun Instant.backupTimeText(): String {
-    val local = toLocalDateTime(ChinaTimeZone)
+    val local = toLocalDateTime(AppTimeZone)
     return "${local.year}-${local.monthNumber.twoDigits()}-${local.dayOfMonth.twoDigits()} " +
         "${local.hour.twoDigits()}:${local.minute.twoDigits()}:${local.second.twoDigits()}"
 }
 
 internal fun DateRange.displayLabel(mode: AnalyticsRangeMode): String {
-    val start = startInclusive.toLocalDateTime(ChinaTimeZone).date
-    val end = Instant.fromEpochMilliseconds(endExclusive.toEpochMilliseconds() - 1)
-        .toLocalDateTime(ChinaTimeZone).date
+    val start = startLocalDate(AppTimeZone)
+    val end = endLocalDateInclusive(AppTimeZone)
     return when (mode) {
         AnalyticsRangeMode.WEEK -> "${start.monthDay()} 至 ${end.monthDay()}"
         AnalyticsRangeMode.MONTH -> "${start.year}-${start.monthNumber.twoDigits()}"
@@ -76,9 +76,8 @@ internal fun DateRange.displayLabel(mode: AnalyticsRangeMode): String {
 }
 
 internal fun DateRange.detailLabel(): String {
-    val start = startInclusive.toLocalDateTime(ChinaTimeZone).date
-    val end = Instant.fromEpochMilliseconds(endExclusive.toEpochMilliseconds() - 1)
-        .toLocalDateTime(ChinaTimeZone).date
+    val start = startLocalDate(AppTimeZone)
+    val end = endLocalDateInclusive(AppTimeZone)
     return if (start == end) start.displayName() else "${start.fullDate()} 至 ${end.fullDate()}"
 }
 

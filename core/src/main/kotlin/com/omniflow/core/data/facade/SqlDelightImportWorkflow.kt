@@ -9,6 +9,7 @@ import com.omniflow.core.domain.model.Account
 import com.omniflow.core.domain.model.AccountType
 import com.omniflow.core.domain.model.DateRange
 import com.omniflow.core.domain.model.ImportCategoryBatchEdit
+import com.omniflow.core.domain.model.AppTimeZone
 import com.omniflow.core.domain.model.ImportCategoryDefaults
 import com.omniflow.core.domain.model.ImportCategoryOrigin
 import com.omniflow.core.domain.model.ImportCommitResult
@@ -321,8 +322,8 @@ class SqlDelightImportWorkflow(
         }
         val instant = raw.occurredAt.toEpochMilliseconds()
         val (start, end) = if (raw.format == ImportFormat.CCB) {
-            val startOfDay = raw.occurredAt.toLocalDateTime(CHINA_TIME_ZONE).date
-                .atStartOfDayIn(CHINA_TIME_ZONE)
+            val startOfDay = raw.occurredAt.toLocalDateTime(AppTimeZone).date
+                .atStartOfDayIn(AppTimeZone)
                 .toEpochMilliseconds()
             startOfDay to startOfDay + DAY_MILLISECONDS
         } else {
@@ -413,6 +414,5 @@ class SqlDelightImportWorkflow(
         val REMEMBERED_ORIGINS = setOf(ImportCategoryOrigin.USER, ImportCategoryOrigin.AI)
         const val TWO_HOURS_MILLISECONDS = 2 * 60 * 60 * 1000L
         const val DAY_MILLISECONDS = 24 * 60 * 60 * 1000L
-        val CHINA_TIME_ZONE: TimeZone = TimeZone.of("Asia/Shanghai")
     }
 }

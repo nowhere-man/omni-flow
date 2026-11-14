@@ -2,6 +2,7 @@ package com.omniflow.core.data.repository
 
 import com.omniflow.core.db.OmniFlowDatabase
 import com.omniflow.core.domain.model.AppPreferenceKey
+import com.omniflow.core.domain.model.AppTimeZone
 import com.omniflow.core.domain.model.Ledger
 import com.omniflow.core.domain.model.LedgerId
 import com.omniflow.core.domain.model.SystemDefaults
@@ -114,8 +115,8 @@ class SqlDelightLedgerRepository(
     }
 
     private fun dayStart(timestamp: Long): Long = Instant.fromEpochMilliseconds(timestamp)
-        .toLocalDateTime(TimeZone.currentSystemDefault())
+        .toLocalDateTime(AppTimeZone)
         .date
-        .atStartOfDayIn(TimeZone.currentSystemDefault())
+        .atStartOfDayIn(AppTimeZone)
         .toEpochMilliseconds()
 }

@@ -1,6 +1,7 @@
 package com.omniflow.android.ui
 
-import android.app.DatePickerDialog
+import com.omniflow.android.ui.designsystem.components.OmniDatePickerDialog
+import com.omniflow.core.domain.model.AppTimeZone
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -265,7 +266,7 @@ private fun YearBars(
                     maximum = maximum,
                     layout = layout,
                     selected = state.rangeMode == AnalyticsRangeMode.MONTH &&
-                        state.range.startInclusive.toLocalDateTime(ChinaTimeZone).monthNumber == month.month,
+                        state.range.startLocalDate(AppTimeZone).monthNumber == month.month,
                     onClick = { onMonthSelected(month.month) },
                     modifier = Modifier.weight(1f),
                 )
@@ -403,7 +404,7 @@ private fun RankingCard(
                         Text(
                             listOfNotNull(
                                 item.note?.takeIf(String::isNotBlank),
-                                item.occurredAt.toLocalDateTime(ChinaTimeZone).let { "${it.monthNumber}月${it.dayOfMonth}日" },
+                                item.occurredAt.toLocalDateTime(AppTimeZone).let { "${it.monthNumber}月${it.dayOfMonth}日" },
                             ).joinToString(" · "),
                             style = OmniText.caption,
                             color = mutedContent(),
@@ -549,27 +550,41 @@ private fun AnalyticsCard(content: @Composable () -> Unit) {
 
 @Composable
 private fun CustomRangeControls(range: DateRange, onRange: (DateRange) -> Unit) {
-    val context = LocalContext.current
-    var start by remember(range) { mutableStateOf(range.startInclusive.toLocalDateTime(ChinaTimeZone).date) }
-    var end by remember(range) { mutableStateOf(Instant.fromEpochMilliseconds(range.endExclusive.toEpochMilliseconds() - 1).toLocalDateTime(ChinaTimeZone).date) }
+    var start by remember(range) { mutableStateOf(range.startLocalDate(AppTimeZone)) }
+    var end by remember(range) { mutableStateOf(range.endLocalDateInclusive(AppTimeZone)) }
+    var pickingStart by remember { mutableStateOf(false) }
+    var pickingEnd by remember { mutableStateOf(false) }
+
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilledTonalButton({ showDatePicker(context, start) { start = it; onRange(customRange(start, end)) } }, Modifier.weight(1f)) {
+        FilledTonalButton({ pickingStart = true }, Modifier.weight(1f)) {
             Text("开始 ${start.monthNumber}月${start.dayOfMonth}日", maxLines = 1)
         }
-        FilledTonalButton({ showDatePicker(context, end) { end = it; onRange(customRange(start, end)) } }, Modifier.weight(1f)) {
+        FilledTonalButton({ pickingEnd = true }, Modifier.weight(1f)) {
             Text("结束 ${end.monthNumber}月${end.dayOfMonth}日", maxLines = 1)
         }
     }
-}
 
-private fun showDatePicker(context: android.content.Context, date: LocalDate, onDate: (LocalDate) -> Unit) {
-    DatePickerDialog(context, { _, year, month, day -> onDate(LocalDate(year, month + 1, day)) }, date.year, date.monthNumber - 1, date.dayOfMonth).show()
-}
+    if (pickingStart) {
+        OmniDatePickerDialog(
+            initialDate = start,
+            onDateSelected = {
+                start = it
+                onRange(DateRange.ofClosedDates(start, end, AppTimeZone))
+            },
+            onDismissRequest = { pickingStart = false },
+        )
+    }
 
-private fun customRange(first: LocalDate, second: LocalDate): DateRange {
-    val start = minOf(first, second)
-    val end = maxOf(first, second)
-    return DateRange(start.atStartOfDayIn(ChinaTimeZone), java.time.LocalDate.of(end.year, end.monthNumber, end.dayOfMonth).plusDays(1).let { LocalDate(it.year, it.monthValue, it.dayOfMonth) }.atStartOfDayIn(ChinaTimeZone))
+    if (pickingEnd) {
+        OmniDatePickerDialog(
+            initialDate = end,
+            onDateSelected = {
+                end = it
+                onRange(DateRange.ofClosedDates(start, end, AppTimeZone))
+            },
+            onDismissRequest = { pickingEnd = false },
+        )
+    }
 }
 
 @Composable
