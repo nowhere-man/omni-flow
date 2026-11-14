@@ -111,18 +111,19 @@ internal fun IconPickerGrid(
     ) {
         items(options, key = { it.key }) { option ->
             val selected = option.key == selectedKey
+            val colors = categoryBadgeColors(option.key)
             Surface(
                 onClick = { onSelected(option.key) },
                 modifier = Modifier.size(56.dp),
-                shape = MaterialTheme.shapes.medium,
-                color = if (selected) MaterialTheme.colorScheme.primaryContainer else surfaceInset(),
+                shape = CircleShape,
+                color = if (selected) MaterialTheme.colorScheme.primaryContainer else colors.container,
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = option.icon,
                         contentDescription = option.label,
                         modifier = Modifier.size(26.dp),
-                        tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
+                        tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else colors.content,
                     )
                 }
             }

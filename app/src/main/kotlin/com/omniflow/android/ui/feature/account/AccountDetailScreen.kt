@@ -252,10 +252,11 @@ private fun AccountOverviewCard(
     }
 
     ElevatedCard(
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         ),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.5.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.ExpandLess
@@ -28,7 +29,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.omniflow.android.ui.designsystem.components.OmniExpressiveSwitch
 import com.omniflow.core.domain.model.Category
 import com.omniflow.core.domain.model.ImportGroupMode
 import com.omniflow.core.domain.model.ImportItemBucket
@@ -232,8 +233,8 @@ private fun ImportDateFilterBar(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
         Column(
             Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -246,7 +247,7 @@ private fun ImportDateFilterBar(
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
-                Switch(
+                OmniExpressiveSwitch(
                     checked = filter.enabled,
                     onCheckedChange = { onFilter(filter.copy(enabled = it)) },
                 )
@@ -268,8 +269,8 @@ private fun ImportSummary(preview: ImportPreviewState, state: MoreUiState, viewM
     }
     Surface(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        shape = MaterialTheme.shapes.large,
-        color = surfaceCard(),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

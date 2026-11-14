@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
@@ -50,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.omniflow.android.ui.designsystem.tokens.categoryBadgeColors
 import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
 import com.omniflow.core.domain.model.TransactionSource
 import com.omniflow.core.domain.model.TransactionType
@@ -95,25 +97,26 @@ internal fun TransactionRecordDetailSheet(
                     }
                     item {
                         Surface(
-                            shape = RoundedCornerShape(OmniRadius.large),
-                            color = surfaceCard(),
+                            shape = RoundedCornerShape(24.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
                         ) {
                             Column(
                                 Modifier.fillMaxWidth().padding(20.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(10.dp),
                             ) {
+                                val catColors = categoryBadgeColors(state.categoryIconKey)
                                 Surface(
                                     modifier = Modifier.size(64.dp),
-                                    shape = RoundedCornerShape(OmniRadius.medium),
-                                    color = MaterialTheme.colorScheme.surface,
+                                    shape = CircleShape,
+                                    color = catColors.container,
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             imageVector = getCategoryIcon(state.categoryIconKey),
                                             contentDescription = null,
                                             modifier = Modifier.size(34.dp),
-                                            tint = MaterialTheme.colorScheme.primary,
+                                            tint = catColors.content,
                                         )
                                     }
                                 }
@@ -202,7 +205,7 @@ internal fun TransactionRecordDetailSheet(
 
 @Composable
 private fun DetailSection(content: @Composable () -> Unit) {
-    Surface(shape = RoundedCornerShape(OmniRadius.medium), color = surfaceCard()) {
+    Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) { content() }
     }
 }

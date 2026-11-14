@@ -167,8 +167,8 @@ internal fun LedgerDetailScreen(
                 val recent = state.transactions.take(15)
                 item {
                     Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = surfaceCard(),
+                        shape = RoundedCornerShape(24.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Column(Modifier.padding(horizontal = 12.dp)) {
@@ -240,10 +240,11 @@ private fun LedgerOverviewCard(
     onDeleteClick: () -> Unit,
 ) {
     ElevatedCard(
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         ),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.5.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(

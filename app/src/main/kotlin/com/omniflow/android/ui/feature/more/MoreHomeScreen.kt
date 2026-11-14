@@ -72,11 +72,12 @@ fun MoreHomeScreen(
         item {
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(OmniRadius.large),
+                shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.elevatedCardColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                 ),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.5.dp),
             ) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(

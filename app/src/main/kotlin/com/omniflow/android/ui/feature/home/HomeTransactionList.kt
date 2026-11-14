@@ -72,8 +72,8 @@ fun TransactionItems(
     when (displayMode) {
         TransactionDetailDisplayMode.LIST -> Surface(
             modifier = modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(OmniRadius.medium),
-            color = surfaceCard(),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
         ) {
             Column(Modifier.padding(horizontal = 12.dp)) {
                 items.forEachIndexed { index, item ->

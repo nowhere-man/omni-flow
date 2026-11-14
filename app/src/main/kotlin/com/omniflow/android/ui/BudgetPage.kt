@@ -131,8 +131,8 @@ private fun BudgetHeroCard(progress: BudgetProgress, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(OmniRadius.large),
-        color = surfaceCard(),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
         Column(Modifier.padding(OmniSpace.l), verticalArrangement = Arrangement.spacedBy(OmniSpace.m)) {
             Text("本月总预算", style = OmniText.caption, color = mutedContent())
@@ -184,8 +184,8 @@ private fun BudgetRow(progress: BudgetProgress, onClick: () -> Unit, onDelete: (
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(OmniRadius.medium),
-        color = surfaceInset(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

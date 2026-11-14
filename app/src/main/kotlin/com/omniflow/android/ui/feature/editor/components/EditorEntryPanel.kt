@@ -45,6 +45,7 @@ import com.omniflow.android.ui.OmniText
 import com.omniflow.android.ui.TransactionEditorUiState
 import com.omniflow.android.ui.amountColor
 import com.omniflow.android.ui.designsystem.components.OmniDatePickerDialog
+import com.omniflow.android.ui.designsystem.tokens.categoryBadgeColors
 import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
 import com.omniflow.android.ui.mutedContent
 import com.omniflow.android.ui.surfaceCard
@@ -94,13 +95,14 @@ fun TransactionEntryPanel(
                     )
                 } else {
                     if (primary != null) {
+                        val catColors = categoryBadgeColors(primary.iconKey)
                         Surface(
                             modifier = Modifier.size(28.dp),
-                            shape = MaterialTheme.shapes.small,
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f),
+                            shape = CircleShape,
+                            color = catColors.container,
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Icon(getCategoryIcon(primary.iconKey), contentDescription = null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                                Icon(getCategoryIcon(primary.iconKey), contentDescription = null, Modifier.size(18.dp), tint = catColors.content)
                             }
                         }
                         Spacer(Modifier.width(6.dp))

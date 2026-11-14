@@ -171,8 +171,8 @@ private fun ImportSourceTile(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier,
-        shape = RoundedCornerShape(OmniRadius.medium),
-        color = surfaceCard(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
         Column(
             Modifier.padding(vertical = 14.dp),
