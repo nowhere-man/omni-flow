@@ -9,6 +9,20 @@ value class Money(val minor: Long) : Comparable<Money> {
     operator fun unaryMinus() = Money(-minor)
     override fun compareTo(other: Money) = minor.compareTo(other.minor)
 
+    fun asFormattedRmb(): String {
+        val absolute = kotlin.math.abs(minor)
+        val prefix = if (minor < 0) "-" else ""
+        val yuan = absolute / 100
+        val cents = absolute % 100
+        val digits = yuan.toString()
+        val builder = StringBuilder()
+        digits.forEachIndexed { index, char ->
+            if (index > 0 && (digits.length - index) % 3 == 0) builder.append(',')
+            builder.append(char)
+        }
+        return "$prefix¥$builder.${cents.toString().padStart(2, '0')}"
+    }
+
     companion object {
         val Zero = Money(0)
 
