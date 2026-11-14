@@ -54,18 +54,19 @@ class SqlDelightAppPreferenceFacade(
         homeLedgerScope = decodeScope(values[AppPreferenceKey.HomeLedgerScope]),
         analyticsLedgerScope = decodeScope(values[AppPreferenceKey.AnalyticsLedgerScope]),
         transactionDetailDisplayMode = values[AppPreferenceKey.TransactionDetailDisplayMode]
-            ?.let { runCatching { TransactionDetailDisplayMode.valueOf(it) }.getOrNull() }
+            ?.let { runCatching { TransactionDetailDisplayMode.valueOf(it.trim().uppercase()) }.getOrNull() }
             ?: TransactionDetailDisplayMode.CARD,
         appearanceMode = values[AppPreferenceKey.AppearanceMode]
-            ?.let { runCatching { AppearanceMode.valueOf(it) }.getOrNull() }
+            ?.let { runCatching { AppearanceMode.valueOf(it.trim().uppercase()) }.getOrNull() }
             ?: AppearanceMode.SYSTEM,
         themeColor = values[AppPreferenceKey.ThemeColor]
-            ?.let { runCatching { ThemeColor.valueOf(it) }.getOrNull() }
+            ?.let { runCatching { ThemeColor.valueOf(it.trim().uppercase()) }.getOrNull() }
             ?: ThemeColor.LAVENDER,
-        appLockEnabled = values[AppPreferenceKey.AppLockEnabled]?.toBooleanStrictOrNull() ?: false,
+        appLockEnabled = values[AppPreferenceKey.AppLockEnabled]?.trim()?.toBooleanStrictOrNull() ?: false,
         syncTarget = values[AppPreferenceKey.SyncTarget]
-            ?.let { runCatching { SyncTarget.valueOf(it) }.getOrNull() },
+            ?.let { runCatching { SyncTarget.valueOf(it.trim().uppercase()) }.getOrNull() },
         backupRetention = values[AppPreferenceKey.BackupRetention]
+            ?.trim()
             ?.toIntOrNull()
             ?.takeIf { it > 0 }
             ?: DEFAULT_BACKUP_RETENTION.toInt(),
