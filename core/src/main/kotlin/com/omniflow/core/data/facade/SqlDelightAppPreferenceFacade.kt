@@ -39,6 +39,7 @@ class SqlDelightAppPreferenceFacade(
             save(AppPreferenceKey.AppLockEnabled, preferences.appLockEnabled.toString(), timestamp)
             save(AppPreferenceKey.SyncTarget, preferences.syncTarget?.name, timestamp)
             save(AppPreferenceKey.BackupRetention, preferences.backupRetention.toString(), timestamp)
+            save(AppPreferenceKey.UserName, preferences.userName, timestamp)
         }
     }
 
@@ -70,6 +71,7 @@ class SqlDelightAppPreferenceFacade(
             ?.toIntOrNull()
             ?.takeIf { it > 0 }
             ?: DEFAULT_BACKUP_RETENTION.toInt(),
+        userName = values[AppPreferenceKey.UserName]?.trim()?.takeIf { it.isNotEmpty() } ?: "我",
     )
 
     private fun encode(scope: LedgerScope): String = when (scope) {

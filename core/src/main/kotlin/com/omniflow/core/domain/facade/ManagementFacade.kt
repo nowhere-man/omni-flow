@@ -17,4 +17,5 @@ interface ManagementFacade {
     fun observeCategories(ledgerId: LedgerId): Flow<Result<List<Category>>>
     fun observeTags(ledgerId: LedgerId): Flow<Result<List<Tag>>>
     fun observeRules(ledgerId: LedgerId): Flow<Result<List<Rule>>>
+    fun observeEarliestTransactionOccurredAt(): Flow<kotlinx.datetime.Instant?>
 }

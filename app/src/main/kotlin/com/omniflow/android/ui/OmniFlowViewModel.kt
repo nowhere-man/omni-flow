@@ -161,6 +161,7 @@ data class MoreUiState(
     val budgets: List<BudgetProgress> = emptyList(),
     val ledgerStats: Map<String, LedgerStat> = emptyMap(),
     val preferences: AppPreferences = AppPreferences(),
+    val earliestTransactionOccurredAt: kotlinx.datetime.Instant? = null,
     val syncState: SyncState = SyncState(),
     val backups: List<RemoteBackupMeta> = emptyList(),
     val importPreview: ImportPreviewState? = null,
@@ -264,6 +265,11 @@ class OmniFlowViewModel(
         viewModelScope.launch {
             sharedApp.reminders.observe().collect { result ->
                 _moreUiState.value = _moreUiState.value.copy(reminders = result.getOrDefault(emptyList()))
+            }
+        }
+        viewModelScope.launch {
+            sharedApp.management.observeEarliestTransactionOccurredAt().collect { instant ->
+                _moreUiState.value = _moreUiState.value.copy(earliestTransactionOccurredAt = instant)
             }
         }
     }
@@ -732,6 +738,7 @@ class OmniFlowViewModel(
     fun setAppearanceMode(mode: AppearanceMode) = savePreferences(preferences.copy(appearanceMode = mode))
     fun setThemeColor(color: ThemeColor) = savePreferences(preferences.copy(themeColor = color))
     fun setAppLockEnabled(enabled: Boolean) = savePreferences(preferences.copy(appLockEnabled = enabled))
+    fun setUserName(name: String) = savePreferences(preferences.copy(userName = name))
     fun configureSync(target: SyncTarget, retention: Int) {
         viewModelScope.launch {
             sharedApp.sync.configure(SyncConfig(target, retention)).onFailure { error ->
@@ -1162,25 +1169,17 @@ class OmniFlowViewModelFactory(
 }
 
 internal fun monthRange(now: Instant): DateRange = DateRange.ofMonth(now.toLocalDateTime(AppTimeZone).date, AppTimeZone)
-
 internal fun monthRange(date: LocalDate): DateRange = DateRange.ofMonth(date, AppTimeZone)
-
 internal fun dateRange(date: LocalDate): DateRange = DateRange.ofDay(date, AppTimeZone)
-
 private fun javaDate(date: LocalDate) = JavaLocalDate.of(date.year, date.monthNumber, date.dayOfMonth)
 private fun JavaLocalDate.toKotlinDate() = LocalDate(year, monthValue, dayOfMonth)
-
-private val allExportDateRange = DateRange(
-    startInclusive = Instant.fromEpochMilliseconds(0),
-    endExclusive = Instant.fromEpochMilliseconds(Long.MAX_VALUE),
-)
+private val allExportDateRange = DateRange(Instant.fromEpochMilliseconds(0), Instant.fromEpochMilliseconds(Long.MAX_VALUE))
 
 private fun Money.toInputString(): String = "${minor / 100}.${kotlin.math.abs(minor % 100).toString().padStart(2, '0')}"
 
 private fun String.toSearchMoneyOrNull(): Money? {
     val value = trim().takeIf(String::isNotEmpty)?.toBigDecimalOrNull() ?: return null
-    if (value.signum() < 0 || value.scale() > 2) return null
-    return runCatching { Money(value.movePointRight(2).longValueExact()) }.getOrNull()
+    return if (value.signum() >= 0 && value.scale() <= 2) runCatching { Money(value.movePointRight(2).longValueExact()) }.getOrNull() else null
 }
 
 private fun evaluateAmount(expression: String): Long? {

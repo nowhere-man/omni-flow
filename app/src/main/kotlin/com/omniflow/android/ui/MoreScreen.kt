@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Settings
@@ -41,6 +42,7 @@ import com.omniflow.android.ui.feature.account.AccountViewModelFactory
 import com.omniflow.android.ui.feature.ledger.LedgerListScreen
 import com.omniflow.android.ui.feature.ledger.LedgerViewModel
 import com.omniflow.android.ui.feature.ledger.LedgerViewModelFactory
+import com.omniflow.android.ui.feature.more.AboutPage
 import com.omniflow.android.ui.feature.more.DataManagementPage
 import com.omniflow.android.ui.feature.more.ExportPage
 import com.omniflow.android.ui.feature.more.ImportPage
@@ -62,6 +64,7 @@ enum class MorePage(val label: String, val icon: ImageVector) {
     TAGS("标签管理", Icons.AutoMirrored.Filled.Label),
     REMINDERS("提醒", Icons.Default.Notifications),
     BUDGETS("预算管理", Icons.Default.Savings),
+    ABOUT("关于", Icons.Default.Info),
 }
 
 @Composable
@@ -80,7 +83,7 @@ internal fun MoreScreen(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxSize()) {
-        if (page != MorePage.HOME) {
+        if (page != MorePage.HOME && page != MorePage.ABOUT) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = mutedContent())
@@ -89,7 +92,12 @@ internal fun MoreScreen(
             }
         }
         when (page) {
-            MorePage.HOME -> MoreHomeScreen(state, onPage = onPage)
+            MorePage.HOME -> MoreHomeScreen(
+                state = state,
+                onPage = onPage,
+                onSaveName = { viewModel.setUserName(it) },
+            )
+            MorePage.ABOUT -> AboutPage(onBack = onBack)
             MorePage.SETTINGS -> SettingsPage(
                 state,
                 viewModel,

@@ -467,7 +467,7 @@ fun OmniFlowApp(
                 is OmniRoute.MoreAccounts,
                 is OmniRoute.MoreAssets,
                 is OmniRoute.MoreCategories,
-                is OmniRoute.MoreTags -> MoreScreen(
+                is OmniRoute.MoreTags, is OmniRoute.MoreAbout -> MoreScreen(
                     state = moreState,
                     viewModel = viewModel,
                     page = (key as OmniRoute).morePage() ?: MorePage.HOME,

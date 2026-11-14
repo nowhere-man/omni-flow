@@ -2,6 +2,7 @@ package com.omniflow.core.data.facade
 
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
+import app.cash.sqldelight.coroutines.mapToOneOrNull
 import com.omniflow.core.db.OmniFlowDatabase
 import com.omniflow.core.domain.facade.ManagementFacade
 import com.omniflow.core.domain.model.Account
@@ -115,4 +116,10 @@ class SqlDelightManagementFacade(
                 )
             }
         } }
+
+    override fun observeEarliestTransactionOccurredAt(): Flow<Instant?> = database.transactionQueries
+        .earliestTransactionOccurredAt()
+        .asFlow()
+        .mapToOneOrNull(Dispatchers.Default)
+        .map { it?.min_occurred_at?.let(Instant::fromEpochMilliseconds) }
 }

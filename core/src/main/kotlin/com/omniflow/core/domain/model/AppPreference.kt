@@ -10,6 +10,7 @@ object AppPreferenceKey {
     const val AppLockEnabled = "app_lock_enabled"
     const val SyncTarget = "sync_target"
     const val BackupRetention = "backup_retention"
+    const val UserName = "user_name"
 
     internal const val InitialDataSeeded = "initial_data_seeded"
 }
@@ -33,6 +34,7 @@ data class AppPreferences(
     val appLockEnabled: Boolean = false,
     val syncTarget: SyncTarget? = null,
     val backupRetention: Int = DEFAULT_BACKUP_RETENTION.toInt(),
+    val userName: String = "我",
 ) {
     init {
         require(backupRetention > 0) { "备份保留数必须大于零" }
