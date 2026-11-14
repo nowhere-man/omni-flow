@@ -63,19 +63,12 @@ internal fun EntityDetailScreen(
             }
         }
         item {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "最近明细",
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    "共 ${state.count} 笔",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            Text(
+                "最近明细",
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
         when {
             state.isLoading -> item {
@@ -119,7 +112,7 @@ internal fun EntityDetailScreen(
                 if (state.count > recent.size) {
                     item {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                            TextButton(onClick = onSeeAll) { Text("查看全部 ${state.count} 笔") }
+                            TextButton(onClick = onSeeAll) { Text("查看全部流水") }
                         }
                     }
                 }
@@ -207,11 +200,13 @@ private fun EntityDetailHeader(state: EntityDetailUiState, moreState: MoreUiStat
                             overflow = TextOverflow.Ellipsis,
                         )
                         val children = moreState.categories.count { it.parentId == state.entityId }
-                        Text(
-                            if (children > 0) "$children 个二级分类" else "无二级分类",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        if (children == 0) {
+                            Text(
+                                "无二级分类",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }

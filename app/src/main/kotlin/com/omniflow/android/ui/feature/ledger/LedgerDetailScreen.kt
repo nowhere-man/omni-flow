@@ -134,22 +134,11 @@ internal fun LedgerDetailScreen(
             }
 
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        text = "该账本流水",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = "共 ${state.totalCount} 笔",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Text(
+                    text = "该账本流水",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
 
             if (state.transactions.isEmpty()) {
@@ -195,7 +184,7 @@ internal fun LedgerDetailScreen(
                     item {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                             TextButton(onClick = { onSeeAll(ledgerId) }) {
-                                Text("查看全部 ${state.totalCount} 笔流水")
+                                Text("查看全部流水")
                             }
                         }
                     }
@@ -244,7 +233,7 @@ private fun LedgerOverviewCard(
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.5.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(

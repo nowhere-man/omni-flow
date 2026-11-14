@@ -77,61 +77,61 @@ object CategoryColorTokens {
     )
 
     private val DarkMap: Map<String, CategoryBadgeColors> = mapOf(
-        "utensils" to CategoryBadgeColors(Color(0xFF3D2214), Color(0xFFF8C8AE)),
-        "hot-beverage" to CategoryBadgeColors(Color(0xFF382516), Color(0xFFECC5A9)),
-        "bread" to CategoryBadgeColors(Color(0xFF3E2E10), Color(0xFFF9DE9E)),
-        "pizza" to CategoryBadgeColors(Color(0xFF3E2015), Color(0xFFF8C5B3)),
-        "hamburger" to CategoryBadgeColors(Color(0xFF3E2B0F), Color(0xFFF9D49E)),
-        "cake" to CategoryBadgeColors(Color(0xFF411927), Color(0xFFF9B7CB)),
-        "groceries" to CategoryBadgeColors(Color(0xFF14361E), Color(0xFFB3E8C1)),
-        "bus" to CategoryBadgeColors(Color(0xFF152C4D), Color(0xFFB3D3FA)),
-        "bicycle" to CategoryBadgeColors(Color(0xFF243714), Color(0xFFC3E7A2)),
-        "train" to CategoryBadgeColors(Color(0xFF172B44), Color(0xFFB4CCE9)),
-        "taxi" to CategoryBadgeColors(Color(0xFF3E2E0A), Color(0xFFF9DF98)),
-        "fuel" to CategoryBadgeColors(Color(0xFF3E2313), Color(0xFFF9C8AB)),
-        "parking" to CategoryBadgeColors(Color(0xFF182C40), Color(0xFFB5CEE5)),
-        "shopping-bag" to CategoryBadgeColors(Color(0xFF411736), Color(0xFFF8B5DF)),
-        "shirt" to CategoryBadgeColors(Color(0xFF1D2549), Color(0xFFBDC8F6)),
-        "beauty" to CategoryBadgeColors(Color(0xFF401C2B), Color(0xFFF8BDD3)),
-        "house" to CategoryBadgeColors(Color(0xFF39281B), Color(0xFFEACBB5)),
-        "furniture" to CategoryBadgeColors(Color(0xFF233220), Color(0xFFC3D8BD)),
-        "electricity" to CategoryBadgeColors(Color(0xFF3F3006), Color(0xFFF9E58E)),
-        "water" to CategoryBadgeColors(Color(0xFF103342), Color(0xFFA9E2F6)),
-        "internet" to CategoryBadgeColors(Color(0xFF103433), Color(0xFFB1EAE6)),
-        "phone" to CategoryBadgeColors(Color(0xFF162847), Color(0xFFB6D1FA)),
-        "smartphone" to CategoryBadgeColors(Color(0xFF271D3F), Color(0xFFD1BCF6)),
-        "education" to CategoryBadgeColors(Color(0xFF162541), Color(0xFFB3C8F2)),
-        "books" to CategoryBadgeColors(Color(0xFF372513), Color(0xFFE9C69E)),
-        "baby" to CategoryBadgeColors(Color(0xFF3E211A), Color(0xFFF9C9BB)),
-        "pet" to CategoryBadgeColors(Color(0xFF382514), Color(0xFFE8C7A5)),
-        "film" to CategoryBadgeColors(Color(0xFF281A3C), Color(0xFFCEB5F2)),
-        "game" to CategoryBadgeColors(Color(0xFF271D3E), Color(0xFFCFBBF3)),
-        "music" to CategoryBadgeColors(Color(0xFF371833), Color(0xFFE9B2E3)),
-        "sports" to CategoryBadgeColors(Color(0xFF411D18), Color(0xFFF9B7AC)),
-        "fitness" to CategoryBadgeColors(Color(0xFF123623), Color(0xFFAEE7C7)),
-        "camera" to CategoryBadgeColors(Color(0xFF192834), Color(0xFFB8CDDC)),
-        "party" to CategoryBadgeColors(Color(0xFF421720), Color(0xFFF9B9C0)),
-        "wine" to CategoryBadgeColors(Color(0xFF3C1424), Color(0xFFF4B0C7)),
-        "plane" to CategoryBadgeColors(Color(0xFF113248), Color(0xFFADE0F9)),
-        "car" to CategoryBadgeColors(Color(0xFF162943), Color(0xFFB7D1F3)),
-        "heart-pulse" to CategoryBadgeColors(Color(0xFF42151B), Color(0xFFF9B5B9)),
-        "medicine" to CategoryBadgeColors(Color(0xFF10332D), Color(0xFFAEE9DE)),
-        "insurance" to CategoryBadgeColors(Color(0xFF152C43), Color(0xFFB2CEEE)),
-        "wrench" to CategoryBadgeColors(Color(0xFF2E251D), Color(0xFFD7C7B3)),
-        "donation" to CategoryBadgeColors(Color(0xFF41192A), Color(0xFFF9B8CE)),
-        "tax" to CategoryBadgeColors(Color(0xFF1E2330), Color(0xFFC2C8D8)),
-        "refund" to CategoryBadgeColors(Color(0xFF11342D), Color(0xFFADE8DC)),
-        "banknote" to CategoryBadgeColors(Color(0xFF123720), Color(0xFFAEE8C2)),
-        "chart-line" to CategoryBadgeColors(Color(0xFF13352C), Color(0xFFB1E5D7)),
-        "briefcase-business" to CategoryBadgeColors(Color(0xFF172746), Color(0xFFB7CEF8)),
-        "office" to CategoryBadgeColors(Color(0xFF1A2734), Color(0xFFBED0E1)),
-        "trophy" to CategoryBadgeColors(Color(0xFF3E2F0A), Color(0xFFF9E198)),
-        "gift" to CategoryBadgeColors(Color(0xFF40182C), Color(0xFFF8B5CE)),
-        "wallet" to CategoryBadgeColors(Color(0xFF362415), Color(0xFFE5C5A4)),
-        "wallet-cards" to CategoryBadgeColors(Color(0xFF30241D), Color(0xFFDAC3B3)),
-        "landmark" to CategoryBadgeColors(Color(0xFF162842), Color(0xFFB4CBEA)),
-        "play" to CategoryBadgeColors(Color(0xFF411822), Color(0xFFF9B7C3)),
-        "category" to CategoryBadgeColors(Color(0xFF262420), Color(0xFFCECAC0)),
+        "utensils" to CategoryBadgeColors(Color(0xFFFDB481), Color(0xFF763404)),
+        "hot-beverage" to CategoryBadgeColors(Color(0xFFEEB78B), Color(0xFF4C2810)),
+        "bread" to CategoryBadgeColors(Color(0xFFFDD663), Color(0xFF6B4605)),
+        "pizza" to CategoryBadgeColors(Color(0xFFFCA582), Color(0xFF752807)),
+        "hamburger" to CategoryBadgeColors(Color(0xFFFAC880), Color(0xFF573404)),
+        "cake" to CategoryBadgeColors(Color(0xFFFDACD2), Color(0xFF8E004B)),
+        "groceries" to CategoryBadgeColors(Color(0xFF64C881), Color(0xFF09421A)),
+        "bus" to CategoryBadgeColors(Color(0xFF7ECEFD), Color(0xFF014A75)),
+        "bicycle" to CategoryBadgeColors(Color(0xFFB9ED8C), Color(0xFF2C4C10)),
+        "train" to CategoryBadgeColors(Color(0xFF8CBDF5), Color(0xFF083D6F)),
+        "taxi" to CategoryBadgeColors(Color(0xFFFDD663), Color(0xFF6B4605)),
+        "fuel" to CategoryBadgeColors(Color(0xFFFDB481), Color(0xFF763404)),
+        "parking" to CategoryBadgeColors(Color(0xFF98BDE1), Color(0xFF122E4A)),
+        "shopping-bag" to CategoryBadgeColors(Color(0xFFFDADE2), Color(0xFF8E0054)),
+        "shirt" to CategoryBadgeColors(Color(0xFF8196F9), Color(0xFF122049)),
+        "beauty" to CategoryBadgeColors(Color(0xFFFDADE2), Color(0xFF8E0054)),
+        "house" to CategoryBadgeColors(Color(0xFFEBB68E), Color(0xFF492912)),
+        "furniture" to CategoryBadgeColors(Color(0xFFBDCDB7), Color(0xFF283725)),
+        "electricity" to CategoryBadgeColors(Color(0xFFFAE280), Color(0xFF5A4102)),
+        "water" to CategoryBadgeColors(Color(0xFF6EDEF4), Color(0xFF004D5A)),
+        "internet" to CategoryBadgeColors(Color(0xFF6EDEF4), Color(0xFF004D5A)),
+        "phone" to CategoryBadgeColors(Color(0xFF7ECEFD), Color(0xFF014A75)),
+        "smartphone" to CategoryBadgeColors(Color(0xFFD8BAFA), Color(0xFF5529A4)),
+        "education" to CategoryBadgeColors(Color(0xFF87ABF3), Color(0xFF10264C)),
+        "books" to CategoryBadgeColors(Color(0xFFF0C28A), Color(0xFF4C2E0F)),
+        "baby" to CategoryBadgeColors(Color(0xFFFA9E80), Color(0xFF491E12)),
+        "pet" to CategoryBadgeColors(Color(0xFFEDBB8D), Color(0xFF4A2E12)),
+        "film" to CategoryBadgeColors(Color(0xFFD8BAFA), Color(0xFF5529A4)),
+        "game" to CategoryBadgeColors(Color(0xFFD8BAFA), Color(0xFF5529A4)),
+        "music" to CategoryBadgeColors(Color(0xFFE892DB), Color(0xFF491242)),
+        "sports" to CategoryBadgeColors(Color(0xFFFA9380), Color(0xFF4A1912)),
+        "fitness" to CategoryBadgeColors(Color(0xFF6ED58C), Color(0xFF0F5324)),
+        "camera" to CategoryBadgeColors(Color(0xFFB7C3CD), Color(0xFF252F37)),
+        "party" to CategoryBadgeColors(Color(0xFFFA8089), Color(0xFF49121D)),
+        "wine" to CategoryBadgeColors(Color(0xFFFA80AA), Color(0xFF4C1029)),
+        "plane" to CategoryBadgeColors(Color(0xFF7ECEFD), Color(0xFF014A75)),
+        "car" to CategoryBadgeColors(Color(0xFF85B6F5), Color(0xFF0A376F)),
+        "heart-pulse" to CategoryBadgeColors(Color(0xFFFA8085), Color(0xFF4C1017)),
+        "medicine" to CategoryBadgeColors(Color(0xFF91E9D7), Color(0xFF0C5046)),
+        "insurance" to CategoryBadgeColors(Color(0xFF88BDF1), Color(0xFF0F2E4D)),
+        "wrench" to CategoryBadgeColors(Color(0xFFCDC3B7), Color(0xFF372E25)),
+        "donation" to CategoryBadgeColors(Color(0xFFFA80A7), Color(0xFF49122A)),
+        "tax" to CategoryBadgeColors(Color(0xFFB7BCCD), Color(0xFF252A37)),
+        "refund" to CategoryBadgeColors(Color(0xFF6EDEF4), Color(0xFF004D5A)),
+        "banknote" to CategoryBadgeColors(Color(0xFF64C881), Color(0xFF09421A)),
+        "chart-line" to CategoryBadgeColors(Color(0xFF98E1CA), Color(0xFF12493A)),
+        "briefcase-business" to CategoryBadgeColors(Color(0xFF80A7FA), Color(0xFF11254B)),
+        "office" to CategoryBadgeColors(Color(0xFFB7C1CD), Color(0xFF252E37)),
+        "trophy" to CategoryBadgeColors(Color(0xFFFDD663), Color(0xFF6B4605)),
+        "gift" to CategoryBadgeColors(Color(0xFFFA80AA), Color(0xFF4A122C)),
+        "wallet" to CategoryBadgeColors(Color(0xFFE7BF93), Color(0xFF492C12)),
+        "wallet-cards" to CategoryBadgeColors(Color(0xFFCDC1B7), Color(0xFF372C25)),
+        "landmark" to CategoryBadgeColors(Color(0xFF8DB3ED), Color(0xFF10294B)),
+        "play" to CategoryBadgeColors(Color(0xFFFA8092), Color(0xFF4A1221)),
+        "category" to CategoryBadgeColors(Color(0xFFD3D7DD), Color(0xFF2C323B)),
     )
 
     private val DefaultLight = LightMap.getValue("category")
@@ -145,29 +145,29 @@ object CategoryColorTokens {
 
     fun accountTypeColors(type: AccountType, isDark: Boolean): CategoryBadgeColors = when (type) {
         AccountType.CASH -> if (isDark) {
-            CategoryBadgeColors(Color(0xFF1A3D25), Color(0xFFB4E8C2))
+            CategoryBadgeColors(Color(0xFF64C881), Color(0xFF09421A))
         } else {
-            CategoryBadgeColors(Color(0xFFD3EED9), Color(0xFF206337))
+            CategoryBadgeColors(Color(0xFFD3EED9), Color(0xFF09421A))
         }
         AccountType.DEBIT_CARD -> if (isDark) {
-            CategoryBadgeColors(Color(0xFF152C4D), Color(0xFFB3D3FA))
+            CategoryBadgeColors(Color(0xFF7ECEFD), Color(0xFF014A75))
         } else {
-            CategoryBadgeColors(Color(0xFFDDEAFB), Color(0xFF245898))
+            CategoryBadgeColors(Color(0xFFDDEAFB), Color(0xFF014A75))
         }
         AccountType.CREDIT_CARD -> if (isDark) {
-            CategoryBadgeColors(Color(0xFF4A3215), Color(0xFFFED8A7))
+            CategoryBadgeColors(Color(0xFFFDB481), Color(0xFF763404))
         } else {
-            CategoryBadgeColors(Color(0xFFFFE5C4), Color(0xFF7D4E15))
+            CategoryBadgeColors(Color(0xFFFEDEC5), Color(0xFF763404))
         }
         AccountType.E_WALLET -> if (isDark) {
-            CategoryBadgeColors(Color(0xFF153B4A), Color(0xFFB6E6F7))
+            CategoryBadgeColors(Color(0xFF6EDEF4), Color(0xFF004D5A))
         } else {
-            CategoryBadgeColors(Color(0xFFD7F0FA), Color(0xFF165F7B))
+            CategoryBadgeColors(Color(0xFFAEF0FE), Color(0xFF004D5A))
         }
         AccountType.INVESTMENT -> if (isDark) {
-            CategoryBadgeColors(Color(0xFF382A52), Color(0xFFD6C2FF))
+            CategoryBadgeColors(Color(0xFFD8BAFA), Color(0xFF5529A4))
         } else {
-            CategoryBadgeColors(Color(0xFFEDE4FF), Color(0xFF5A3E85))
+            CategoryBadgeColors(Color(0xFFEDE4FF), Color(0xFF5529A4))
         }
     }
 }

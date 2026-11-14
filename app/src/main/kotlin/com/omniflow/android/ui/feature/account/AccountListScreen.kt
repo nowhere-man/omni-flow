@@ -36,11 +36,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.asRmb
+import com.omniflow.android.ui.designsystem.components.OmniSettingsDivider
 import com.omniflow.android.ui.designsystem.components.OmniSettingsGroup
 import com.omniflow.android.ui.designsystem.components.OmniSettingsRow
 import com.omniflow.android.ui.designsystem.tokens.CategoryIconOptions
 import com.omniflow.android.ui.designsystem.tokens.OmniColorTokens
 import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
+import com.omniflow.android.ui.designsystem.tokens.accountTypeBadgeColors
 import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
 import com.omniflow.android.ui.expenseColor
 import com.omniflow.android.ui.label
@@ -134,7 +136,7 @@ private fun NetAssetsHeroCard(
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.5.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
@@ -216,10 +218,7 @@ private fun AccountGroupCard(
     hideAmount: Boolean,
     onOpenAccount: (AccountId) -> Unit,
 ) {
-    val subtotalText = if (hideAmount) "••••••" else group.subtotal.asRmb()
-    val groupTitle = "${group.type.label} · ${group.accounts.size} (小计 $subtotalText)"
-
-    OmniSettingsGroup(title = groupTitle) {
+    OmniSettingsGroup {
         group.accounts.forEachIndexed { index, account ->
             val isLiability = account.balance.minor < 0
             val details = listOfNotNull(
@@ -228,18 +227,10 @@ private fun AccountGroupCard(
                 account.note?.takeIf(String::isNotBlank),
             ).joinToString(" · ")
 
-            val badgeType = when (account.type) {
-                AccountType.CASH -> SemanticBadgeType.FINANCIAL
-                AccountType.DEBIT_CARD -> SemanticBadgeType.FINANCIAL
-                AccountType.CREDIT_CARD -> SemanticBadgeType.PLANNING
-                AccountType.E_WALLET -> SemanticBadgeType.DATA_SYNC
-                AccountType.INVESTMENT -> SemanticBadgeType.AI
-            }
-
             OmniSettingsRow(
                 title = account.name,
                 icon = getCategoryIcon(account.iconKey),
-                badgeType = badgeType,
+                badgeColors = accountTypeBadgeColors(account.type),
                 subtitle = details.ifBlank { null },
                 onClick = { onOpenAccount(account.id) },
                 trailing = {
@@ -253,7 +244,7 @@ private fun AccountGroupCard(
             )
 
             if (index < group.accounts.lastIndex) {
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                OmniSettingsDivider()
             }
         }
     }

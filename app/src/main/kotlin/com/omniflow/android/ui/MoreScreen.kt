@@ -75,8 +75,6 @@ internal fun MoreScreen(
     onOpenLedger: (String) -> Unit,
     onOpenAccount: (String) -> Unit,
     onOpenCategory: (String) -> Unit,
-    dynamicColorEnabled: Boolean,
-    onDynamicColorChanged: (Boolean) -> Unit,
     accountViewModel: AccountViewModel = viewModel(factory = AccountViewModelFactory(viewModel.sharedApp)),
     ledgerViewModel: LedgerViewModel = viewModel(factory = LedgerViewModelFactory(viewModel.sharedApp)),
     modifier: Modifier = Modifier,
@@ -95,8 +93,6 @@ internal fun MoreScreen(
             MorePage.SETTINGS -> SettingsPage(
                 state,
                 viewModel,
-                dynamicColorEnabled = dynamicColorEnabled,
-                onDynamicColorChanged = onDynamicColorChanged,
             )
             MorePage.DATA -> DataManagementPage(state, viewModel)
             MorePage.AI -> AiSettingsPage()

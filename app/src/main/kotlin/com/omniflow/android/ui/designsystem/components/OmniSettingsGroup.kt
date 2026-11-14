@@ -21,40 +21,30 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.designsystem.tokens.CategoryBadgeColors
+import com.omniflow.android.ui.designsystem.tokens.OmniTypographyTokens
 import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
 
 /**
  * Material 3 Expressive 分组大圆角卡片容器。
- * 对应 Gmail 新版设置页模板：小节标题 + 24dp 大圆角 ElevatedCard (surfaceContainerLow)。
+ * 对应 Gmail 新版设置页模板：24dp 大圆角 ElevatedCard (surfaceContainerLow)。
  */
 @Composable
 fun OmniSettingsGroup(
-    title: String? = null,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        if (!title.isNullOrBlank()) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
-            )
-        }
-        ElevatedCard(
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            ),
-            elevation = CardDefaults.elevatedCardElevation(
-                defaultElevation = 0.5.dp,
-            ),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                content()
-            }
+    ElevatedCard(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+        elevation = CardDefaults.elevatedCardElevation(
+            defaultElevation = 0.dp,
+        ),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            content()
         }
     }
 }
@@ -133,7 +123,8 @@ private fun OmniSettingsRowInternal(
         headlineContent = {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
+                style = OmniTypographyTokens.settingsRowTitle,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         },
         supportingContent = if (subtitle != null || content != null) {
@@ -142,7 +133,7 @@ private fun OmniSettingsRowInternal(
                     if (subtitle != null) {
                         Text(
                             text = subtitle,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = OmniTypographyTokens.settingsRowSubtitle,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -160,12 +151,12 @@ private fun OmniSettingsRowInternal(
 }
 
 /**
- * 设置列表项行间细分割线，图标后缩进 56dp。
+ * 设置列表项行间细分割线，图标与间距后对齐文字缩进 72dp。
  */
 @Composable
 fun OmniSettingsDivider(modifier: Modifier = Modifier) {
     HorizontalDivider(
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-        modifier = modifier.padding(start = 56.dp, end = 16.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+        modifier = modifier.padding(start = 72.dp, end = 16.dp),
     )
 }

@@ -9,7 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
+import com.omniflow.android.ui.designsystem.components.OmniExpressiveSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -90,7 +90,7 @@ internal fun AccountSheet(
                 Text("计入总资产")
                 Text("关闭后该账户不参与净资产统计", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Switch(included, { included = it })
+            OmniExpressiveSwitch(checked = included, onCheckedChange = { included = it })
         }
         if (account != null && onDelete != null) {
             TextButton(onClick = { confirmDelete = true }) {

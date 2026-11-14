@@ -34,7 +34,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
+import com.omniflow.android.ui.designsystem.components.OmniExpressiveSwitch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -143,7 +143,7 @@ private fun AssetManagement(state: MoreUiState, onOpenAccount: (String) -> Unit)
             }
         }
         if (excluded.isNotEmpty()) {
-            item { ManagementGroupHeader("不计入总资产", "${excluded.size} 个") }
+            item { ManagementGroupHeader("不计入总资产") }
             itemsIndexed(excluded, key = { _, account -> "excluded-${account.id}" }) { index, account ->
                 AssetRow(account, 0f, groupedOptionShape(index, excluded.size)) { onOpenAccount(account.id) }
             }
@@ -299,11 +299,13 @@ private fun CategoryCardRow(
                 Spacer(Modifier.size(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(primary.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(
-                        if (children.isEmpty()) "暂无二级分类" else "${children.size} 个二级分类",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    if (children.isEmpty()) {
+                        Text(
+                            "暂无二级分类",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
                 TextButton(onClick = onEdit) { Text("编辑") }
                 TextButton(onClick = onToggle) { Text(if (expanded) "收起" else "展开") }
@@ -679,7 +681,7 @@ private fun ReminderManagement(
                             maxLines = 1,
                         )
                     }
-                    Switch(!reminder.paused, { enabled ->
+                    OmniExpressiveSwitch(!reminder.paused, { enabled ->
                         if (enabled) onRequestNotificationPermission()
                         viewModel.setReminderPaused(reminder, !enabled)
                     })
@@ -777,7 +779,7 @@ private fun ReminderDialog(
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("暂停", modifier = Modifier.weight(1f))
-            Switch(paused, { paused = it })
+            OmniExpressiveSwitch(checked = paused, onCheckedChange = { paused = it })
         }
     }
 }

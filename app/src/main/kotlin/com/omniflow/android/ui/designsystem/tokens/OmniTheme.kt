@@ -1,11 +1,7 @@
 package com.omniflow.android.ui.designsystem.tokens
 
-import android.content.Context
-import android.os.Build
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 import com.omniflow.core.domain.model.ThemeColor
@@ -49,12 +45,7 @@ fun themeTertiaryColor(themeColor: ThemeColor, darkTheme: Boolean): Color = when
 fun omniColorScheme(
     themeColor: ThemeColor,
     darkTheme: Boolean,
-    dynamicColorEnabled: Boolean,
-    context: Context,
 ): ColorScheme {
-    if (dynamicColorEnabled && Build.VERSION.SDK_INT >= 31) {
-        return if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-    }
     val primary = themePrimaryColor(themeColor, darkTheme)
     val primaryContainer = themePrimaryContainerColor(themeColor, darkTheme)
     val secondary = themeSecondaryColor(themeColor, darkTheme)
@@ -73,13 +64,13 @@ fun omniColorScheme(
             onTertiary = Color(0xFF241E19),
             tertiaryContainer = Color(0xFF4C3E35),
             onTertiaryContainer = Color(0xFFF9EAE1),
-            surface = Color(0xFF1F1D19),
-            surfaceVariant = Color(0xFF49433B),
+            surface = OmniColorTokens.SurfaceBackgroundDark,
+            surfaceVariant = Color(0xFF2B2C2E),
             background = OmniColorTokens.SurfaceBackgroundDark,
-            onSurface = Color(0xFFEAE3D9),
-            onSurfaceVariant = Color(0xFFC7BFB2),
-            outline = Color(0xFF918A7D),
-            outlineVariant = Color(0xFF49433B),
+            onSurface = Color(0xFFE3E3E3),
+            onSurfaceVariant = Color(0xFFC7C7CA),
+            outline = Color(0xFF8E9093),
+            outlineVariant = Color(0xFF444547),
         )
     } else {
         lightColorScheme(
@@ -95,13 +86,13 @@ fun omniColorScheme(
             onTertiary = Color.White,
             tertiaryContainer = Color(0xFFF7E6DC),
             onTertiaryContainer = Color(0xFF3B2519),
-            surface = Color.White,
-            surfaceVariant = Color(0xFFE6E0D6),
+            surface = OmniColorTokens.SurfaceBackgroundLight,
+            surfaceVariant = Color(0xFFEFE6D8),
             background = OmniColorTokens.SurfaceBackgroundLight,
-            onSurface = Color(0xFF1E1B16),
-            onSurfaceVariant = Color(0xFF524C44),
-            outline = Color(0xFF7D756A),
-            outlineVariant = Color(0xFFD6CEBF),
+            onSurface = Color(0xFF1F1B13),
+            onSurfaceVariant = Color(0xFF534C43),
+            outline = Color(0xFF857E74),
+            outlineVariant = Color(0xFFD8D0C3),
         )
     }
     return scheme.copy(
@@ -109,15 +100,15 @@ fun omniColorScheme(
         onError = if (darkTheme) OmniColorTokens.OnExpenseDark else OmniColorTokens.OnExpenseLight,
         errorContainer = if (darkTheme) Color(0xFF521C18) else Color(0xFFFCEBE9),
         onErrorContainer = if (darkTheme) Color(0xFFF8CDC8) else Color(0xFF8C2D26),
-        surfaceDim = if (darkTheme) Color(0xFF171512) else Color(0xFFEBE5DB),
-        surfaceBright = if (darkTheme) Color(0xFF38342E) else Color.White,
-        surfaceContainerLowest = if (darkTheme) Color(0xFF12100D) else Color.White,
+        surfaceDim = if (darkTheme) Color(0xFF17181A) else Color(0xFFEBE2D4),
+        surfaceBright = if (darkTheme) Color(0xFF38393B) else Color(0xFFFFFDF8),
+        surfaceContainerLowest = if (darkTheme) Color(0xFF141517) else Color.White,
         surfaceContainerLow = if (darkTheme) OmniColorTokens.SurfaceContainerLowDark else OmniColorTokens.SurfaceContainerLowLight,
-        surfaceContainer = if (darkTheme) OmniColorTokens.SurfaceContainerDark else Color.White,
-        surfaceContainerHigh = if (darkTheme) OmniColorTokens.SurfaceContainerHighDark else Color(0xFFEBE5DB),
-        surfaceContainerHighest = if (darkTheme) Color(0xFF3A3530) else Color(0xFFE5DFD4),
-        inverseSurface = if (darkTheme) Color(0xFFEAE3D9) else Color(0xFF332F2A),
-        inverseOnSurface = if (darkTheme) Color(0xFF332F2A) else Color(0xFFF7F2EB),
+        surfaceContainer = if (darkTheme) OmniColorTokens.SurfaceContainerDark else OmniColorTokens.SurfaceContainerLight,
+        surfaceContainerHigh = if (darkTheme) OmniColorTokens.SurfaceContainerHighDark else OmniColorTokens.SurfaceContainerHighLight,
+        surfaceContainerHighest = if (darkTheme) OmniColorTokens.SurfaceContainerHighestDark else Color(0xFFE1D6C6),
+        inverseSurface = if (darkTheme) Color(0xFFE3E3E3) else Color(0xFF332F2A),
+        inverseOnSurface = if (darkTheme) Color(0xFF1E1F21) else Color(0xFFF5EDE0),
         inversePrimary = if (darkTheme) primary else primaryContainer,
     )
 }
