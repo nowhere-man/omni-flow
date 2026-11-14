@@ -39,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
+import com.omniflow.android.ui.designsystem.tokens.OmniColorTokens
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -245,8 +246,8 @@ internal fun ImportSourceIcon(format: ImportFormat, modifier: Modifier = Modifie
         return
     }
     val (background, content) = when (format) {
-        ImportFormat.MEITUAN -> Color(0xFFFFD100) to Color(0xFF1A1A1A)
-        else -> Color(0xFFAF1E24) to Color.White
+        ImportFormat.MEITUAN -> OmniColorTokens.ImportMeituanContainer to OmniColorTokens.ImportMeituanContent
+        else -> OmniColorTokens.ImportDefaultContainer to OmniColorTokens.ImportDefaultContent
     }
     Box(modifier.clip(shape).background(background), contentAlignment = Alignment.Center) {
         Text(format.label.take(1), color = content, style = OmniText.titleRow, fontWeight = FontWeight.Bold)

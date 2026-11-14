@@ -28,7 +28,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.omniflow.android.ui.designsystem.tokens.categoryBadgeColors
+import com.omniflow.android.ui.designsystem.tokens.expenseColor as tokenExpenseColor
 import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
+import com.omniflow.android.ui.designsystem.tokens.incomeColor as tokenIncomeColor
 import com.omniflow.core.domain.model.Money
 import com.omniflow.core.domain.model.TransactionType
 
@@ -201,32 +204,25 @@ internal fun amountColor(type: TransactionType?): Color = when (type) {
 
 // 收支语义色固定，不跟随主题色，也不用 error/tertiary——那两个会随主题色漂移，
 // 结果日历、首页汇总和明细列表的收支颜色对不上。避开纯红纯绿，深浅模式各一套。
-private val IncomeLight = Color(0xFF4E9367)
-private val IncomeDark = Color(0xFF7FC49A)
-private val ExpenseLight = Color(0xFFC2635C)
-private val ExpenseDark = Color(0xFFE09A94)
+@Composable
+internal fun incomeColor(): Color = tokenIncomeColor()
 
 @Composable
-internal fun incomeColor(): Color = if (isDarkColorScheme()) IncomeDark else IncomeLight
-
-@Composable
-internal fun expenseColor(): Color = if (isDarkColorScheme()) ExpenseDark else ExpenseLight
-
-@Composable
-private fun isDarkColorScheme(): Boolean = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+internal fun expenseColor(): Color = tokenExpenseColor()
 
 @Composable
 internal fun CategoryIcon(iconKey: String?, dimmed: Boolean = false, size: Int = 36) {
+    val colors = categoryBadgeColors(iconKey)
     Surface(
         modifier = Modifier.size(size.dp),
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = if (dimmed) 0.45f else 1f),
+        color = colors.container.copy(alpha = if (dimmed) 0.45f else 1f),
     ) {
         Icon(
             imageVector = getCategoryIcon(iconKey),
             contentDescription = null,
             modifier = Modifier.padding((size * 0.22).toInt().dp),
-            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+            tint = colors.content,
         )
     }
 }

@@ -44,6 +44,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import com.omniflow.android.ui.designsystem.tokens.CategoryIconOption
+import com.omniflow.android.ui.designsystem.tokens.OmniColorTokens
+import com.omniflow.android.ui.designsystem.tokens.categoryBadgeColors
 import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -135,14 +137,14 @@ internal data class LedgerCover(val key: String, val label: String, val start: C
  * 所以不需要图片存储、也不影响备份恢复；以前这里是让用户手输 key 的裸文本框。
  */
 internal val LedgerCovers = listOf(
-    LedgerCover("cover-daily", "日常", Color(0xFF6C8AE4), Color(0xFF8FB0F5), "shopping-bag"),
-    LedgerCover("cover-family", "家庭", Color(0xFFE4826C), Color(0xFFF5AC93), "house"),
-    LedgerCover("cover-travel", "旅行", Color(0xFF44B0A6), Color(0xFF7FD6CB), "plane"),
-    LedgerCover("cover-work", "工作", Color(0xFF7A6CE4), Color(0xFFA79BF5), "briefcase-business"),
-    LedgerCover("cover-study", "学习", Color(0xFFCE7BB8), Color(0xFFEBA6D8), "books"),
-    LedgerCover("cover-car", "爱车", Color(0xFF4E7CA8), Color(0xFF83AACF), "car"),
-    LedgerCover("cover-fitness", "健康", Color(0xFF66A85B), Color(0xFF9BD08F), "fitness"),
-    LedgerCover("cover-invest", "理财", Color(0xFFC79A45), Color(0xFFE8C583), "chart-line"),
+    LedgerCover("cover-daily", "日常", OmniColorTokens.LedgerCoverDailyStart, OmniColorTokens.LedgerCoverDailyEnd, "shopping-bag"),
+    LedgerCover("cover-family", "家庭", OmniColorTokens.LedgerCoverFamilyStart, OmniColorTokens.LedgerCoverFamilyEnd, "house"),
+    LedgerCover("cover-travel", "旅行", OmniColorTokens.LedgerCoverTravelStart, OmniColorTokens.LedgerCoverTravelEnd, "plane"),
+    LedgerCover("cover-work", "工作", OmniColorTokens.LedgerCoverWorkStart, OmniColorTokens.LedgerCoverWorkEnd, "briefcase-business"),
+    LedgerCover("cover-study", "学习", OmniColorTokens.LedgerCoverStudyStart, OmniColorTokens.LedgerCoverStudyEnd, "books"),
+    LedgerCover("cover-car", "爱车", OmniColorTokens.LedgerCoverCarStart, OmniColorTokens.LedgerCoverCarEnd, "car"),
+    LedgerCover("cover-fitness", "健康", OmniColorTokens.LedgerCoverFitnessStart, OmniColorTokens.LedgerCoverFitnessEnd, "fitness"),
+    LedgerCover("cover-invest", "理财", OmniColorTokens.LedgerCoverInvestStart, OmniColorTokens.LedgerCoverInvestEnd, "chart-line"),
 )
 
 internal fun ledgerCover(coverKey: String?): LedgerCover =
@@ -266,17 +268,18 @@ internal fun ManagementGroupHeader(title: String, trailing: String? = null) {
 /** 圆形图标底，账户行和分类行共用。 */
 @Composable
 internal fun RoundIcon(iconKey: String?, modifier: Modifier = Modifier, size: Int = 40) {
+    val colors = categoryBadgeColors(iconKey)
     Surface(
         modifier = modifier.size(size.dp),
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.secondaryContainer,
+        color = colors.container,
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
                 imageVector = getCategoryIcon(iconKey),
                 contentDescription = null,
                 modifier = Modifier.size((size * 0.55).toInt().dp),
-                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                tint = colors.content,
             )
         }
     }

@@ -9,9 +9,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.Dp
 import com.omniflow.android.ui.designsystem.tokens.OmniIconTokens
 import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
+import com.omniflow.android.ui.designsystem.tokens.categoryBadgeColors
+import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
 import com.omniflow.android.ui.designsystem.tokens.semanticBadgeColors
 
 /**
@@ -26,18 +30,60 @@ fun OmniBadgeIcon(
     contentDescription: String? = null,
 ) {
     val colors = semanticBadgeColors(badgeType)
+    OmniBadgeIcon(
+        icon = icon,
+        containerColor = colors.container,
+        contentColor = colors.content,
+        modifier = modifier,
+        contentDescription = contentDescription,
+    )
+}
+
+@Composable
+fun OmniBadgeIcon(
+    icon: ImageVector,
+    containerColor: Color,
+    contentColor: Color,
+    modifier: Modifier = Modifier,
+    containerSize: Dp = OmniIconTokens.badgeContainerSize,
+    iconSize: Dp = OmniIconTokens.badgeIconSize,
+    contentDescription: String? = null,
+) {
     Box(
         modifier = modifier
-            .size(OmniIconTokens.badgeContainerSize)
+            .size(containerSize)
             .clip(CircleShape)
-            .background(colors.container),
+            .background(containerColor),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            tint = colors.content,
-            modifier = Modifier.size(OmniIconTokens.badgeIconSize),
+            tint = contentColor,
+            modifier = Modifier.size(iconSize),
         )
     }
+}
+
+/**
+ * 分类专属 Expressive 粉彩徽章：从 CategoryColorTokens 自动获取对应的低饱和配色。
+ */
+@Composable
+fun OmniCategoryBadgeIcon(
+    iconKey: String?,
+    modifier: Modifier = Modifier,
+    containerSize: Dp = OmniIconTokens.badgeContainerSize,
+    iconSize: Dp = OmniIconTokens.badgeIconSize,
+    contentDescription: String? = null,
+) {
+    val colors = categoryBadgeColors(iconKey)
+    OmniBadgeIcon(
+        icon = getCategoryIcon(iconKey),
+        containerColor = colors.container,
+        contentColor = colors.content,
+        modifier = modifier,
+        containerSize = containerSize,
+        iconSize = iconSize,
+        contentDescription = contentDescription,
+    )
 }

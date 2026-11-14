@@ -20,11 +20,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.omniflow.android.ui.designsystem.tokens.CategoryBadgeColors
 import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
 
 /**
  * Material 3 Expressive 分组大圆角卡片容器。
- * 对应 Gmail 新版设置页模板：小节标题 + 16dp 大圆角 ElevatedCard (surfaceContainerLow)。
+ * 对应 Gmail 新版设置页模板：小节标题 + 24dp 大圆角 ElevatedCard (surfaceContainerLow)。
  */
 @Composable
 fun OmniSettingsGroup(
@@ -37,14 +38,17 @@ fun OmniSettingsGroup(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
             )
         }
         ElevatedCard(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.elevatedCardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            ),
+            elevation = CardDefaults.elevatedCardElevation(
+                defaultElevation = 0.5.dp,
             ),
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -64,6 +68,55 @@ fun OmniSettingsRow(
     title: String,
     icon: ImageVector,
     badgeType: SemanticBadgeType,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    onClick: (() -> Unit)? = null,
+    trailing: @Composable (() -> Unit)? = null,
+    content: @Composable (() -> Unit)? = null,
+) {
+    OmniSettingsRowInternal(
+        title = title,
+        leading = { OmniBadgeIcon(icon = icon, badgeType = badgeType) },
+        modifier = modifier,
+        subtitle = subtitle,
+        onClick = onClick,
+        trailing = trailing,
+        content = content,
+    )
+}
+
+@Composable
+fun OmniSettingsRow(
+    title: String,
+    icon: ImageVector,
+    badgeColors: CategoryBadgeColors,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    onClick: (() -> Unit)? = null,
+    trailing: @Composable (() -> Unit)? = null,
+    content: @Composable (() -> Unit)? = null,
+) {
+    OmniSettingsRowInternal(
+        title = title,
+        leading = {
+            OmniBadgeIcon(
+                icon = icon,
+                containerColor = badgeColors.container,
+                contentColor = badgeColors.content,
+            )
+        },
+        modifier = modifier,
+        subtitle = subtitle,
+        onClick = onClick,
+        trailing = trailing,
+        content = content,
+    )
+}
+
+@Composable
+private fun OmniSettingsRowInternal(
+    title: String,
+    leading: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     onClick: (() -> Unit)? = null,
@@ -97,9 +150,7 @@ fun OmniSettingsRow(
                 }
             }
         } else null,
-        leadingContent = {
-            OmniBadgeIcon(icon = icon, badgeType = badgeType)
-        },
+        leadingContent = leading,
         trailingContent = trailing,
         colors = ListItemDefaults.colors(
             containerColor = Color.Transparent,
