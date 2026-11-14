@@ -33,6 +33,94 @@ object OmniColorTokens {
 
     val SurfaceContainerHighLight = Color(0xFFE5E5EB)
     val SurfaceContainerHighDark = Color(0xFF25252A)
+
+    // Expressive 语义徽章色彩（容器色 + 图标色）对
+    // Light: Pastel 容器 + 深色图标；Dark: 暗色调容器 + 浅色图标
+    val BadgeSystemContainerLight = Color(0xFFEADDFF)
+    val BadgeSystemContentLight = Color(0xFF21005D)
+    val BadgeSystemContainerDark = Color(0xFF4F378B)
+    val BadgeSystemContentDark = Color(0xFFEADDFF)
+
+    val BadgeDataSyncContainerLight = Color(0xFFD3E3FD)
+    val BadgeDataSyncContentLight = Color(0xFF041E49)
+    val BadgeDataSyncContainerDark = Color(0xFF0842A0)
+    val BadgeDataSyncContentDark = Color(0xFFD3E3FD)
+
+    val BadgeFinancialContainerLight = Color(0xFFC4EED0)
+    val BadgeFinancialContentLight = Color(0xFF072711)
+    val BadgeFinancialContainerDark = Color(0xFF0F5223)
+    val BadgeFinancialContentDark = Color(0xFFC4EED0)
+
+    val BadgePlanningContainerLight = Color(0xFFFFDDB3)
+    val BadgePlanningContentLight = Color(0xFF2B1700)
+    val BadgePlanningContainerDark = Color(0xFF6B3B00)
+    val BadgePlanningContentDark = Color(0xFFFFDDB3)
+
+    val BadgeAiContainerLight = Color(0xFFF3DAFF)
+    val BadgeAiContentLight = Color(0xFF32004A)
+    val BadgeAiContainerDark = Color(0xFF641B8D)
+    val BadgeAiContentDark = Color(0xFFF3DAFF)
+
+    val BadgeCategoryContainerLight = Color(0xFFFFD8E4)
+    val BadgeCategoryContentLight = Color(0xFF31111D)
+    val BadgeCategoryContainerDark = Color(0xFF633B48)
+    val BadgeCategoryContentDark = Color(0xFFFFD8E4)
+
+    val BadgeImportExportContainerLight = Color(0xFFDDF4FF)
+    val BadgeImportExportContentLight = Color(0xFF001F2A)
+    val BadgeImportExportContainerDark = Color(0xFF004D63)
+    val BadgeImportExportContentDark = Color(0xFFDDF4FF)
+}
+
+enum class SemanticBadgeType {
+    SYSTEM,        // 系统设置、应用锁、外观
+    DATA_SYNC,     // 数据备份、WebDAV、云同步
+    FINANCIAL,     // 账本、账户、资产
+    PLANNING,      // 预算、规划、提醒、规则
+    AI,            // AI 助手、智能分类
+    CATEGORY,      // 分类、标签
+    IMPORT_EXPORT, // 导入、导出
+}
+
+data class SemanticBadgeColors(
+    val container: Color,
+    val content: Color,
+)
+
+@Composable
+@ReadOnlyComposable
+fun semanticBadgeColors(type: SemanticBadgeType): SemanticBadgeColors {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    return when (type) {
+        SemanticBadgeType.SYSTEM -> SemanticBadgeColors(
+            container = if (isDark) OmniColorTokens.BadgeSystemContainerDark else OmniColorTokens.BadgeSystemContainerLight,
+            content = if (isDark) OmniColorTokens.BadgeSystemContentDark else OmniColorTokens.BadgeSystemContentLight,
+        )
+        SemanticBadgeType.DATA_SYNC -> SemanticBadgeColors(
+            container = if (isDark) OmniColorTokens.BadgeDataSyncContainerDark else OmniColorTokens.BadgeDataSyncContainerLight,
+            content = if (isDark) OmniColorTokens.BadgeDataSyncContentDark else OmniColorTokens.BadgeDataSyncContentLight,
+        )
+        SemanticBadgeType.FINANCIAL -> SemanticBadgeColors(
+            container = if (isDark) OmniColorTokens.BadgeFinancialContainerDark else OmniColorTokens.BadgeFinancialContainerLight,
+            content = if (isDark) OmniColorTokens.BadgeFinancialContentDark else OmniColorTokens.BadgeFinancialContentLight,
+        )
+        SemanticBadgeType.PLANNING -> SemanticBadgeColors(
+            container = if (isDark) OmniColorTokens.BadgePlanningContainerDark else OmniColorTokens.BadgePlanningContainerLight,
+            content = if (isDark) OmniColorTokens.BadgePlanningContentDark else OmniColorTokens.BadgePlanningContentLight,
+        )
+        SemanticBadgeType.AI -> SemanticBadgeColors(
+            container = if (isDark) OmniColorTokens.BadgeAiContainerDark else OmniColorTokens.BadgeAiContainerLight,
+            content = if (isDark) OmniColorTokens.BadgeAiContentDark else OmniColorTokens.BadgeAiContentLight,
+        )
+        SemanticBadgeType.CATEGORY -> SemanticBadgeColors(
+            container = if (isDark) OmniColorTokens.BadgeCategoryContainerDark else OmniColorTokens.BadgeCategoryContainerLight,
+            content = if (isDark) OmniColorTokens.BadgeCategoryContentDark else OmniColorTokens.BadgeCategoryContentLight,
+        )
+        SemanticBadgeType.IMPORT_EXPORT -> SemanticBadgeColors(
+            container = if (isDark) OmniColorTokens.BadgeImportExportContainerDark else OmniColorTokens.BadgeImportExportContainerLight,
+            content = if (isDark) OmniColorTokens.BadgeImportExportContentDark else OmniColorTokens.BadgeImportExportContentLight,
+        )
+    }
 }
 
 @Composable
