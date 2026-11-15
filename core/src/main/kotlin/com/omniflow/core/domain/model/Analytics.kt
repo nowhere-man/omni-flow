@@ -11,6 +11,7 @@ data class AnalyticsQuery(
     val categoryShareType: TransactionType = TransactionType.EXPENSE,
     val tagAnalysisType: TransactionType = TransactionType.EXPENSE,
     val trendGranularity: TimeGranularity = TimeGranularity.DAY,
+    val trendRange: DateRange? = null,
 )
 
 data class ChartPoint(

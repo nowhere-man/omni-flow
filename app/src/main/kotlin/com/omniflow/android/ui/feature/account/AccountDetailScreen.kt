@@ -1,5 +1,7 @@
 package com.omniflow.android.ui.feature.account
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,7 +47,10 @@ import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.TransactionRow
 import com.omniflow.android.ui.asRmb
 import com.omniflow.android.ui.designsystem.components.OmniBadgeIcon
+import com.omniflow.android.ui.designsystem.components.OmniEmptyState
+import com.omniflow.android.ui.designsystem.components.OmniSubPageScaffold
 import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
+import com.omniflow.android.ui.designsystem.tokens.accountCardGradient
 import com.omniflow.android.ui.designsystem.tokens.accountTypeBadgeColors
 import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
 import com.omniflow.android.ui.expenseColor
@@ -78,45 +84,28 @@ internal fun AccountDetailScreen(
 
     val account = state.account
 
-    Column(modifier = modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+    OmniSubPageScaffold(
+        title = account?.name ?: "账户详情",
+        onBack = onBack,
+        modifier = modifier,
+    ) {
+        when {
+            state.isLoading -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
             }
-            Text(
-                text = account?.name ?: "账户详情",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-
-        if (state.isLoading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-            return
-        }
-
-        if (account == null) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = state.error ?: "未找到账户信息",
-                    color = MaterialTheme.colorScheme.error,
+            account == null -> {
+                OmniEmptyState(
+                    message = state.error ?: "未找到账户信息",
                 )
             }
-            return
-        }
-
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .readableContentWidth()
-                .padding(horizontal = 16.dp),
+            else -> {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .readableContentWidth()
+                        .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item {
@@ -145,13 +134,8 @@ internal fun AccountDetailScreen(
 
             if (state.transactions.isEmpty()) {
                 item {
-                    Text(
-                        text = "该账户暂无交易记录",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 32.dp),
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    OmniEmptyState(
+                        message = "该账户暂无交易记录",
                     )
                 }
             } else {
@@ -195,6 +179,8 @@ internal fun AccountDetailScreen(
 
             item { Spacer(Modifier.height(88.dp)) }
         }
+            }
+        }
     }
 
     if (showCalibrateDialog && account != null) {
@@ -234,19 +220,22 @@ private fun AccountOverviewCard(
 ) {
     val isLiability = account.balance.minor < 0
     val badgeColors = accountTypeBadgeColors(account.type)
+    val cardGradient = accountCardGradient(account.type)
 
-    ElevatedCard(
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
-        modifier = Modifier.fillMaxWidth(),
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(cardGradient)
+            .border(
+                1.dp,
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                RoundedCornerShape(24.dp),
+            )
+            .padding(20.dp),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Row(

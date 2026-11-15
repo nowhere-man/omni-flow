@@ -174,3 +174,9 @@ WHERE deleted_at IS NULL
   AND occurred_at >= :start_inclusive
   AND occurred_at < :end_exclusive
   AND (:ledger_filter IS NULL OR ledger_id = :ledger_filter);
+
+earliestTransactionOccurredAt:
+SELECT MIN(occurred_at) AS min_occurred_at
+FROM transaction_record
+WHERE deleted_at IS NULL;
+

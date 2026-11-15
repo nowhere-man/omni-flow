@@ -51,6 +51,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.omniflow.android.ui.designsystem.components.OmniEmptyState
+import com.omniflow.android.ui.designsystem.components.OmniSheetScaffold
+import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
 import com.omniflow.android.ui.designsystem.tokens.categoryBadgeColors
 import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
 import com.omniflow.core.domain.model.TransactionSource
@@ -66,124 +69,108 @@ internal fun TransactionRecordDetailSheet(
     onDelete: () -> Unit,
 ) {
     var confirmDelete by remember(state.transaction?.id) { mutableStateOf(false) }
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    OmniSheetScaffold(
+        title = "明细详情",
+        onDismiss = onDismiss,
+        trailingAction = if (state.transaction != null) {
+            {
+                IconButton(onClick = { confirmDelete = true }, enabled = !state.isDeleting) {
+                    Icon(Icons.Default.DeleteOutline, contentDescription = "删除明细", tint = MaterialTheme.colorScheme.error)
+                }
+            }
+        } else null,
     ) {
         when {
-            state.isLoading -> Box(Modifier.fillMaxWidth().height(320.dp), contentAlignment = Alignment.Center) {
+            state.isLoading -> Box(Modifier.fillMaxWidth().height(240.dp), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
             state.transaction != null -> {
                 val transaction = state.transaction
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    item {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, contentDescription = "关闭明细") }
-                            Text(
-                                "明细详情",
-                                modifier = Modifier.weight(1f),
-                                textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            IconButton(onClick = { confirmDelete = true }, enabled = !state.isDeleting) {
-                                Icon(Icons.Default.DeleteOutline, contentDescription = "删除明细", tint = MaterialTheme.colorScheme.error)
-                            }
-                        }
-                    }
-                    item {
-                        Surface(
-                            shape = RoundedCornerShape(24.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    Surface(
+                        shape = OmniShapeTokens.card,
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    ) {
+                        Column(
+                            Modifier.fillMaxWidth().padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
-                            Column(
-                                Modifier.fillMaxWidth().padding(20.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                            val catColors = categoryBadgeColors(state.categoryIconKey)
+                            Surface(
+                                modifier = Modifier.size(64.dp),
+                                shape = CircleShape,
+                                color = catColors.container,
                             ) {
-                                val catColors = categoryBadgeColors(state.categoryIconKey)
-                                Surface(
-                                    modifier = Modifier.size(64.dp),
-                                    shape = CircleShape,
-                                    color = catColors.container,
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = getCategoryIcon(state.categoryIconKey),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(34.dp),
-                                            tint = catColors.content,
-                                        )
-                                    }
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = getCategoryIcon(state.categoryIconKey),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(34.dp),
+                                        tint = catColors.content,
+                                    )
                                 }
-                                Text(state.categoryDisplayName, style = OmniText.titleRow)
-                                Text(
-                                    "${if (transaction.type == TransactionType.EXPENSE) "-" else "+"}${transaction.amount.asPlainAmount()}",
-                                    style = OmniText.amountHero,
-                                    color = amountColor(transaction.type),
-                                )
                             }
-                        }
-                    }
-                    item {
-                        DetailSection {
-                            DetailRow(Icons.Default.Payments, "金额", transaction.amount.asRmb())
-                            DetailRow(Icons.Default.SwapHoriz, "类型", if (transaction.type == TransactionType.EXPENSE) "支出" else "收入")
-                            DetailRow(Icons.AutoMirrored.Filled.Label, "一级分类", state.primaryCategoryName)
-                            DetailRow(Icons.AutoMirrored.Filled.Label, "二级分类", state.secondaryCategoryName ?: "未设置")
-                            DetailRow(
-                                Icons.Default.CalendarMonth,
-                                "日期",
-                                transaction.occurredAt.transactionDateTimeText(),
-                                maxLines = 1,
+                            Text(state.categoryDisplayName, style = OmniText.titleRow)
+                            Text(
+                                "${if (transaction.type == TransactionType.EXPENSE) "-" else "+"}${transaction.amount.asPlainAmount()}",
+                                style = OmniText.amountHero,
+                                color = amountColor(transaction.type),
                             )
-                            DetailRow(Icons.Default.AccountBalanceWallet, "账户", state.accountName)
-                            DetailRow(Icons.AutoMirrored.Filled.MenuBook, "账本", state.ledgerName)
-                            DetailRow(Icons.AutoMirrored.Filled.Label, "标签", state.tagNames.takeIf { it.isNotEmpty() }?.joinToString(" · ") ?: "未设置")
-                            DetailRow(Icons.AutoMirrored.Filled.Notes, "备注", transaction.note?.takeIf(String::isNotBlank) ?: "未设置")
-                            transaction.source?.let { DetailRow(Icons.Default.SyncAlt, "来源", it.displayName()) }
-                            DetailRow(Icons.Default.Block, "统计", if (transaction.isExcluded) "不计入统计" else "计入统计")
                         }
                     }
-                    state.error?.let { error -> item { Text(error, color = MaterialTheme.colorScheme.error) } }
-                    item {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            OutlinedButton(
-                                onClick = { confirmDelete = true },
-                                modifier = Modifier.weight(1f).height(52.dp),
-                                enabled = !state.isDeleting,
-                                shape = RoundedCornerShape(OmniRadius.medium),
-                            ) {
-                                Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                                Spacer(Modifier.width(6.dp))
-                                Text(if (state.isDeleting) "删除中" else "删除", color = MaterialTheme.colorScheme.error)
-                            }
-                            Button(
-                                onClick = { onEdit(transaction.id) },
-                                modifier = Modifier.weight(2f).height(52.dp),
-                                enabled = !state.isDeleting,
-                                shape = RoundedCornerShape(OmniRadius.medium),
-                            ) {
-                                Icon(Icons.Default.Edit, contentDescription = null)
-                                Spacer(Modifier.width(6.dp))
-                                Text("编辑")
-                            }
-                        }
-                        Spacer(Modifier.height(24.dp))
+
+                    DetailSection {
+                        DetailRow(Icons.Default.Payments, "金额", transaction.amount.asRmb())
+                        DetailRow(Icons.Default.SwapHoriz, "类型", if (transaction.type == TransactionType.EXPENSE) "支出" else "收入")
+                        DetailRow(Icons.AutoMirrored.Filled.Label, "一级分类", state.primaryCategoryName)
+                        DetailRow(Icons.AutoMirrored.Filled.Label, "二级分类", state.secondaryCategoryName ?: "未设置")
+                        DetailRow(
+                            Icons.Default.CalendarMonth,
+                            "日期",
+                            transaction.occurredAt.transactionDateTimeText(),
+                            maxLines = 1,
+                        )
+                        DetailRow(Icons.Default.AccountBalanceWallet, "账户", state.accountName)
+                        DetailRow(Icons.AutoMirrored.Filled.MenuBook, "账本", state.ledgerName)
+                        DetailRow(Icons.AutoMirrored.Filled.Label, "标签", state.tagNames.takeIf { it.isNotEmpty() }?.joinToString(" · ") ?: "未设置")
+                        DetailRow(Icons.AutoMirrored.Filled.Notes, "备注", transaction.note?.takeIf(String::isNotBlank) ?: "未设置")
+                        transaction.source?.let { DetailRow(Icons.Default.SyncAlt, "来源", it.displayName()) }
+                        DetailRow(Icons.Default.Block, "统计", if (transaction.isExcluded) "不计入统计" else "计入统计")
                     }
+
+                    state.error?.let { error -> Text(error, color = MaterialTheme.colorScheme.error) }
+
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedButton(
+                            onClick = { confirmDelete = true },
+                            modifier = Modifier.weight(1f).height(52.dp),
+                            enabled = !state.isDeleting,
+                            shape = OmniShapeTokens.button,
+                        ) {
+                            Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                            Spacer(Modifier.width(6.dp))
+                            Text(if (state.isDeleting) "删除中" else "删除", color = MaterialTheme.colorScheme.error)
+                        }
+                        Button(
+                            onClick = { onEdit(transaction.id) },
+                            modifier = Modifier.weight(2f).height(52.dp),
+                            enabled = !state.isDeleting,
+                            shape = OmniShapeTokens.button,
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = null)
+                            Spacer(Modifier.width(6.dp))
+                            Text("编辑")
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
                 }
             }
-            else -> Column(
-                Modifier.fillMaxWidth().padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Text(state.error ?: "无法读取这条明细", color = MaterialTheme.colorScheme.error)
-                TextButton(onClick = onDismiss) { Text("关闭") }
+            else -> {
+                OmniEmptyState(message = state.error ?: "无法读取这条明细")
             }
         }
     }

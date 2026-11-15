@@ -36,9 +36,9 @@ class SqlDelightAppPreferenceFacade(
             save(AppPreferenceKey.TransactionDetailDisplayMode, preferences.transactionDetailDisplayMode.name, timestamp)
             save(AppPreferenceKey.AppearanceMode, preferences.appearanceMode.name, timestamp)
             save(AppPreferenceKey.ThemeColor, preferences.themeColor.name, timestamp)
-            save(AppPreferenceKey.AppLockEnabled, preferences.appLockEnabled.toString(), timestamp)
             save(AppPreferenceKey.SyncTarget, preferences.syncTarget?.name, timestamp)
             save(AppPreferenceKey.BackupRetention, preferences.backupRetention.toString(), timestamp)
+            save(AppPreferenceKey.UserName, preferences.userName, timestamp)
         }
     }
 
@@ -62,7 +62,6 @@ class SqlDelightAppPreferenceFacade(
         themeColor = values[AppPreferenceKey.ThemeColor]
             ?.let { runCatching { ThemeColor.valueOf(it.trim().uppercase()) }.getOrNull() }
             ?: ThemeColor.LAVENDER,
-        appLockEnabled = values[AppPreferenceKey.AppLockEnabled]?.trim()?.toBooleanStrictOrNull() ?: false,
         syncTarget = values[AppPreferenceKey.SyncTarget]
             ?.let { runCatching { SyncTarget.valueOf(it.trim().uppercase()) }.getOrNull() },
         backupRetention = values[AppPreferenceKey.BackupRetention]
@@ -70,6 +69,7 @@ class SqlDelightAppPreferenceFacade(
             ?.toIntOrNull()
             ?.takeIf { it > 0 }
             ?: DEFAULT_BACKUP_RETENTION.toInt(),
+        userName = values[AppPreferenceKey.UserName]?.trim()?.takeIf { it.isNotEmpty() } ?: "我",
     )
 
     private fun encode(scope: LedgerScope): String = when (scope) {

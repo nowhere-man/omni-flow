@@ -1,5 +1,6 @@
 package com.omniflow.android.ui.feature.more
 
+import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,125 +14,153 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Badge
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.MorePage
 import com.omniflow.android.ui.MoreUiState
 import com.omniflow.android.ui.OmniRadius
 import com.omniflow.android.ui.OmniText
-import com.omniflow.android.ui.asRmb
-import com.omniflow.android.ui.designsystem.components.OmniSettingsDivider
 import com.omniflow.android.ui.designsystem.components.OmniSettingsGroup
 import com.omniflow.android.ui.designsystem.components.OmniSettingsRow
+import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
+import com.omniflow.android.ui.designsystem.tokens.OmniSpacingTokens
 import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
 import com.omniflow.android.ui.mutedContent
 import com.omniflow.android.ui.readableContentWidth
+import com.omniflow.core.domain.model.AppTimeZone
 import com.omniflow.core.domain.model.SyncPhase
+import kotlinx.datetime.Clock
+import kotlinx.datetime.toLocalDateTime
 
 /**
  * 更多页主视图：遵循 Gmail M3 Expressive 规范。
- * 顶部净资产 Hero 卡片 + 分组圆角大卡片（Pastel 语义图标徽章、标准 M3 ListItem、行间细分割线）。
+ * 顶部个人名片头 + 分组圆角大卡片（Pastel 语义图标徽章、独立 8dp 行卡片、无金额/笔数数字）。
  */
 @Composable
 fun MoreHomeScreen(
     state: MoreUiState,
     onPage: (MorePage) -> Unit,
     modifier: Modifier = Modifier,
+    onSaveName: (String) -> Unit = {},
 ) {
-    var hideAmount by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
+    var showProfileSheet by remember { mutableStateOf(false) }
+    var avatarVersion by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val avatarBitmap = remember(avatarVersion) { loadAvatarBitmap(context) }
+    val versionName = remember(context) { resolveVersionName(context) }
 
     LazyColumn(
         modifier
             .readableContentWidth()
             .fillMaxHeight()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(horizontal = OmniSpacingTokens.pageHorizontal),
+        verticalArrangement = Arrangement.spacedBy(OmniSpacingTokens.groupSpacing),
     ) {
-        item { Spacer(Modifier.height(8.dp)) }
+        item { Spacer(Modifier.height(OmniSpacingTokens.small)) }
 
-        // 顶部净资产 Hero 卡片
+        // 顶部个人名片 Hero 卡片 (24dp 大圆角，替代原净资产 banner)
         item {
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
+                shape = OmniShapeTokens.card,
                 colors = CardDefaults.elevatedCardColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
                 ),
                 elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
+                onClick = { showProfileSheet = true },
             ) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text("净资产", style = OmniText.caption, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f))
-                        IconButton(
-                            onClick = { hideAmount = !hideAmount },
-                            modifier = Modifier.size(24.dp),
-                        ) {
-                            Icon(
-                                if (hideAmount) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = if (hideAmount) "显示金额" else "隐藏金额",
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
-                            )
-                        }
-                    }
-                    Text(
-                        if (hideAmount) "••••••" else state.accountSummary.netAssets.asRmb(),
-                        style = OmniText.amountHero,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        maxLines = 1,
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(OmniSpacingTokens.medium),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // 60dp 圆形头像 (有图显示图，图缺失回退 Canvas Monogram)
+                    OmniAvatar(
+                        userName = state.preferences.userName,
+                        avatarBitmap = avatarBitmap,
+                        size = 60.dp,
                     )
-                    Text(
-                        if (hideAmount) {
-                            "资产 •••••• · 负债 ••••••"
-                        } else {
-                            "资产 ${state.accountSummary.assets.asRmb()} · 负债 ${state.accountSummary.liabilities.asRmb()}"
-                        },
-                        style = OmniText.caption,
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
+
+                    Spacer(Modifier.width(OmniSpacingTokens.mediumSmall))
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(OmniSpacingTokens.extraSmall),
+                    ) {
+                        Text(
+                            text = state.preferences.userName.ifBlank { "我" },
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+
+                        // 状态副题：有数据「已坚持记账 N 天」/ 无数据「记录每一笔，理清每一分」
+                        val subtitleText = remember(state.earliestTransactionOccurredAt) {
+                            state.earliestTransactionOccurredAt?.let { earliest ->
+                                val today = Clock.System.now().toLocalDateTime(AppTimeZone).date
+                                val firstDate = earliest.toLocalDateTime(AppTimeZone).date
+                                val days = (today.toEpochDays() - firstDate.toEpochDays() + 1).coerceAtLeast(1)
+                                "已坚持记账 $days 天"
+                            } ?: "记录每一笔，理清每一分"
+                        }
+
+                        Text(
+                            text = subtitleText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = "编辑个人资料",
+                        modifier = Modifier.size(20.dp),
+                        tint = mutedContent(),
                     )
                 }
             }
         }
 
-        // 分组 1：{通用设置、数据与同步} — 配色：SYSTEM
+        // 分组 1：{通用设置、数据与同步、关于} — 配色：SYSTEM (共 14 条目)
         item {
             OmniSettingsGroup {
                 MoreOptionItem(
                     page = MorePage.SETTINGS,
                     badgeType = SemanticBadgeType.SYSTEM,
                     state = state,
+                    versionName = versionName,
                     onClick = { onPage(MorePage.SETTINGS) },
                 )
-                OmniSettingsDivider()
                 MoreOptionItem(
                     page = MorePage.DATA,
                     badgeType = SemanticBadgeType.SYSTEM,
                     state = state,
+                    versionName = versionName,
                     onClick = { onPage(MorePage.DATA) },
+                )
+                MoreOptionItem(
+                    page = MorePage.ABOUT,
+                    badgeType = SemanticBadgeType.SYSTEM,
+                    state = state,
+                    versionName = versionName,
+                    onClick = { onPage(MorePage.ABOUT) },
                 )
             }
         }
@@ -143,20 +172,21 @@ fun MoreHomeScreen(
                     page = MorePage.LEDGERS,
                     badgeType = SemanticBadgeType.FINANCIAL,
                     state = state,
+                    versionName = versionName,
                     onClick = { onPage(MorePage.LEDGERS) },
                 )
-                OmniSettingsDivider()
                 MoreOptionItem(
                     page = MorePage.ACCOUNTS,
                     badgeType = SemanticBadgeType.FINANCIAL,
                     state = state,
+                    versionName = versionName,
                     onClick = { onPage(MorePage.ACCOUNTS) },
                 )
-                OmniSettingsDivider()
                 MoreOptionItem(
                     page = MorePage.ASSETS,
                     badgeType = SemanticBadgeType.FINANCIAL,
                     state = state,
+                    versionName = versionName,
                     onClick = { onPage(MorePage.ASSETS) },
                 )
             }
@@ -169,27 +199,28 @@ fun MoreHomeScreen(
                     page = MorePage.IMPORT,
                     badgeType = SemanticBadgeType.DATA_SYNC,
                     state = state,
+                    versionName = versionName,
                     onClick = { onPage(MorePage.IMPORT) },
                 )
-                OmniSettingsDivider()
                 MoreOptionItem(
                     page = MorePage.AI,
                     badgeType = SemanticBadgeType.DATA_SYNC,
                     state = state,
+                    versionName = versionName,
                     onClick = { onPage(MorePage.AI) },
                 )
-                OmniSettingsDivider()
                 MoreOptionItem(
                     page = MorePage.RULES,
                     badgeType = SemanticBadgeType.DATA_SYNC,
                     state = state,
+                    versionName = versionName,
                     onClick = { onPage(MorePage.RULES) },
                 )
-                OmniSettingsDivider()
                 MoreOptionItem(
                     page = MorePage.EXPORT,
                     badgeType = SemanticBadgeType.DATA_SYNC,
                     state = state,
+                    versionName = versionName,
                     onClick = { onPage(MorePage.EXPORT) },
                 )
             }
@@ -202,13 +233,14 @@ fun MoreHomeScreen(
                     page = MorePage.CATEGORIES,
                     badgeType = SemanticBadgeType.CATEGORY,
                     state = state,
+                    versionName = versionName,
                     onClick = { onPage(MorePage.CATEGORIES) },
                 )
-                OmniSettingsDivider()
                 MoreOptionItem(
                     page = MorePage.TAGS,
                     badgeType = SemanticBadgeType.CATEGORY,
                     state = state,
+                    versionName = versionName,
                     onClick = { onPage(MorePage.TAGS) },
                 )
             }
@@ -221,19 +253,29 @@ fun MoreHomeScreen(
                     page = MorePage.REMINDERS,
                     badgeType = SemanticBadgeType.PLANNING,
                     state = state,
+                    versionName = versionName,
                     onClick = { onPage(MorePage.REMINDERS) },
                 )
-                OmniSettingsDivider()
                 MoreOptionItem(
                     page = MorePage.BUDGETS,
                     badgeType = SemanticBadgeType.PLANNING,
                     state = state,
+                    versionName = versionName,
                     onClick = { onPage(MorePage.BUDGETS) },
                 )
             }
         }
 
-        item { Spacer(Modifier.height(24.dp)) }
+        item { Spacer(Modifier.height(OmniSpacingTokens.extraLarge)) }
+    }
+
+    if (showProfileSheet) {
+        ProfileEditSheet(
+            currentName = state.preferences.userName,
+            onDismiss = { showProfileSheet = false },
+            onSaveName = onSaveName,
+            onAvatarUpdated = { avatarVersion = System.currentTimeMillis() },
+        )
     }
 }
 
@@ -242,6 +284,7 @@ private fun MoreOptionItem(
     page: MorePage,
     badgeType: SemanticBadgeType,
     state: MoreUiState,
+    versionName: String,
     onClick: () -> Unit,
 ) {
     OmniSettingsRow(
@@ -252,7 +295,7 @@ private fun MoreOptionItem(
         onClick = onClick,
         trailing = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                page.badge(state)?.let { badgeText ->
+                page.badge(state, versionName)?.let { badgeText ->
                     Surface(
                         shape = RoundedCornerShape(OmniRadius.small),
                         color = MaterialTheme.colorScheme.surfaceVariant,
@@ -277,14 +320,15 @@ private fun MoreOptionItem(
     )
 }
 
-private fun MorePage.badge(state: MoreUiState): String? = when (this) {
+private fun MorePage.badge(state: MoreUiState, versionName: String): String? = when (this) {
     MorePage.DATA -> if (state.syncState.phase == SyncPhase.RUNNING) "同步中" else null
+    MorePage.ABOUT -> "v$versionName"
     else -> null
 }
 
 private fun MorePage.description(state: MoreUiState): String = when (this) {
     MorePage.HOME -> ""
-    MorePage.SETTINGS -> "外观、主题色、应用锁与缓存"
+    MorePage.SETTINGS -> "外观、记账习惯与提醒设置"
     MorePage.DATA -> syncLabel(state)
     MorePage.LEDGERS -> "账本封面、默认账本与收支概览"
     MorePage.ACCOUNTS -> "账户余额、卡片信息与流水"
@@ -297,6 +341,7 @@ private fun MorePage.description(state: MoreUiState): String = when (this) {
     MorePage.TAGS -> "账本标签"
     MorePage.REMINDERS -> "还款与周期记账提醒"
     MorePage.BUDGETS -> budgetLabel(state)
+    MorePage.ABOUT -> "版本、开源许可与协议"
 }
 
 private fun budgetLabel(state: MoreUiState): String {

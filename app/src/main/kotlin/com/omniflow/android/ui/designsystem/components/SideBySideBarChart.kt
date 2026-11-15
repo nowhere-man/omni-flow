@@ -150,8 +150,15 @@ fun SideBySideBarChart(
                 )
             }
         } else {
-            val isDense = points.size > 14
+            val isDense = points.size > 12
             val scrollState = rememberScrollState()
+
+            androidx.compose.runtime.LaunchedEffect(points, isDense, scrollState.maxValue) {
+                if (isDense && scrollState.maxValue > 0) {
+                    scrollState.scrollTo(scrollState.maxValue)
+                }
+            }
+
             val rowModifier = if (isDense) {
                 Modifier
                     .fillMaxWidth()
@@ -169,14 +176,22 @@ fun SideBySideBarChart(
             ) {
                 points.forEach { point ->
                     val isSelected = point.id == selectedPointId
-                    val barWidth = if (isDense) 8.dp else 10.dp
+                    val barWidth = if (points.size >= 12) 6.dp else if (isDense) 8.dp else 10.dp
+
+                    val colModifier = if (isDense) {
+                        Modifier
+                            .fillMaxHeight()
+                            .widthIn(min = 24.dp)
+                    } else {
+                        Modifier
+                            .fillMaxHeight()
+                            .weight(1f)
+                    }
 
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Bottom,
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .widthIn(min = if (isDense) 24.dp else 28.dp)
+                        modifier = colModifier
                             .semantics { contentDescription = point.contentDescription }
                             .clickable {
                                 onPointSelect?.invoke(if (isSelected) null else point)
@@ -224,14 +239,17 @@ fun SideBySideBarChart(
                         // Label
                         Text(
                             text = point.label,
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = if (points.size >= 12) androidx.compose.ui.unit.TextUnit(10f, androidx.compose.ui.unit.TextUnitType.Sp) else androidx.compose.ui.unit.TextUnit.Unspecified,
+                            ),
                             color = if (isSelected) {
                                 MaterialTheme.colorScheme.primary
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+                            softWrap = false,
+                            overflow = TextOverflow.Visible,
                             textAlign = TextAlign.Center,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                         )

@@ -2,6 +2,7 @@ package com.omniflow.android.ui.feature.analytics
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -13,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.omniflow.android.ui.designsystem.components.OmniEmptyState
 import com.omniflow.android.ui.readableContentWidth
 import com.omniflow.core.domain.model.ChartPoint
 import com.omniflow.core.domain.model.DateRange
@@ -35,16 +37,26 @@ fun AnalyticsScreen(
     onViewStatementTable: (Int) -> Unit,
     onDismissStatementTable: () -> Unit,
     onPointClick: ((ChartPoint) -> Unit)? = null,
+    onRetry: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val dashboard = state.dashboard
 
     if (state.isLoading && dashboard == null) {
         Box(
-            modifier = modifier.fillMaxSize(),
+            modifier = modifier.fillMaxSize().padding(16.dp),
             contentAlignment = Alignment.Center,
         ) {
-            CircularProgressIndicator()
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                CircularProgressIndicator()
+                OmniEmptyState(
+                    message = "正在生成统计分析…",
+                    subtitle = "分析收支趋势与分类占比中",
+                )
+            }
         }
         return
     }
@@ -54,10 +66,11 @@ fun AnalyticsScreen(
             modifier = modifier.fillMaxSize().padding(16.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = "加载统计失败: ${state.error}",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.error,
+            OmniEmptyState(
+                message = "加载统计失败",
+                subtitle = state.error,
+                actionLabel = "重试",
+                onAction = onRetry,
             )
         }
         return

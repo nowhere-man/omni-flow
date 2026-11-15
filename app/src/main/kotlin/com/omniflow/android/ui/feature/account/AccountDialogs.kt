@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
@@ -21,9 +22,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.IconPickerGrid
-import com.omniflow.android.ui.ManagementSheet
 import com.omniflow.android.ui.OmniTextField
 import com.omniflow.android.ui.asRmb
+import com.omniflow.android.ui.designsystem.components.OmniSheetScaffold
 import com.omniflow.android.ui.designsystem.tokens.CategoryIconOptions
 import com.omniflow.android.ui.label
 import com.omniflow.android.ui.toDecimal
@@ -33,6 +34,7 @@ import com.omniflow.core.domain.model.AccountId
 import com.omniflow.core.domain.model.AccountType
 import com.omniflow.core.domain.model.Money
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 internal fun AccountSheet(
     account: Account?,
@@ -50,7 +52,7 @@ internal fun AccountSheet(
     var balanceError by remember(account) { mutableStateOf<String?>(null) }
     var confirmDelete by remember(account) { mutableStateOf(false) }
 
-    ManagementSheet(
+    OmniSheetScaffold(
         title = if (account == null) "新建账户" else "编辑账户",
         onDismiss = onDismiss,
         onSave = {
@@ -113,6 +115,7 @@ internal fun AccountSheet(
     }
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 internal fun CalibrateBalanceDialog(
     currentBalance: Money,
@@ -124,50 +127,49 @@ internal fun CalibrateBalanceDialog(
     val newBalance = input.toMoneyOrNull()
     val delta = if (newBalance != null) newBalance - currentBalance else null
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("调整账户余额") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    OmniSheetScaffold(
+        title = "调整账户余额",
+        onDismiss = onDismiss,
+        saveText = "确认调整",
+        saveEnabled = input.isNotBlank(),
+        onSave = {
+            val parsed = input.toMoneyOrNull()
+            if (parsed == null) {
+                error = "请输入有效金额"
+            } else {
+                onCalibrate(parsed)
+            }
+        },
+        cancelText = "取消",
+        onCancel = onDismiss,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                "当前系统记录余额：${currentBalance.asRmb()}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OmniTextField(
+                value = input,
+                onValueChange = { input = it; error = null },
+                label = "实际余额",
+                placeholder = "0.00",
+                supportingText = error,
+                isError = error != null,
+            )
+            if (delta != null && delta.minor != 0L) {
+                val prefix = if (delta.minor > 0) "+" else ""
                 Text(
-                    "当前系统记录余额：${currentBalance.asRmb()}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    "将产生校准差额：$prefix${delta.asRmb()}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
                 )
-                OmniTextField(
-                    value = input,
-                    onValueChange = { input = it; error = null },
-                    label = "实际余额",
-                    placeholder = "0.00",
-                    supportingText = error,
-                )
-                if (delta != null && delta.minor != 0L) {
-                    val prefix = if (delta.minor > 0) "+" else ""
-                    Text(
-                        "将产生校准差额：$prefix${delta.asRmb()}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val parsed = input.toMoneyOrNull()
-                    if (parsed == null) {
-                        error = "请输入有效金额"
-                    } else {
-                        onCalibrate(parsed)
-                    }
-                },
-                enabled = input.isNotBlank(),
-            ) {
-                Text("确认调整")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
-        },
-    )
+        }
+    }
 }

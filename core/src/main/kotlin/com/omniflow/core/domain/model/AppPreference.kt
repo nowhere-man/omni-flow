@@ -7,9 +7,9 @@ object AppPreferenceKey {
     const val TransactionDetailDisplayMode = "transaction_detail_display_mode"
     const val AppearanceMode = "appearance_mode"
     const val ThemeColor = "theme_color"
-    const val AppLockEnabled = "app_lock_enabled"
     const val SyncTarget = "sync_target"
     const val BackupRetention = "backup_retention"
+    const val UserName = "user_name"
 
     internal const val InitialDataSeeded = "initial_data_seeded"
 }
@@ -30,9 +30,9 @@ data class AppPreferences(
     val transactionDetailDisplayMode: TransactionDetailDisplayMode = TransactionDetailDisplayMode.CARD,
     val appearanceMode: AppearanceMode = AppearanceMode.SYSTEM,
     val themeColor: ThemeColor = ThemeColor.LAVENDER,
-    val appLockEnabled: Boolean = false,
     val syncTarget: SyncTarget? = null,
     val backupRetention: Int = DEFAULT_BACKUP_RETENTION.toInt(),
+    val userName: String = "我",
 ) {
     init {
         require(backupRetention > 0) { "备份保留数必须大于零" }

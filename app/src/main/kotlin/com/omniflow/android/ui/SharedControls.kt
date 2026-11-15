@@ -281,6 +281,7 @@ internal fun OmniTextField(
     supportingText: String? = null,
     isPassword: Boolean = false,
     singleLine: Boolean = true,
+    isError: Boolean = false,
     trailingIcon: @Composable (() -> Unit)? = null,
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
@@ -290,6 +291,7 @@ internal fun OmniTextField(
         label = { Text(label) },
         placeholder = placeholder?.let { { Text(it, color = mutedContent().copy(alpha = 0.6f)) } },
         supportingText = supportingText?.let { { Text(it, style = OmniText.caption) } },
+        isError = isError,
         leadingIcon = leadingIcon?.let {
             { Icon(it, contentDescription = null, tint = mutedContent(), modifier = Modifier.size(20.dp)) }
         },

@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -44,6 +45,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.omniflow.android.ui.designsystem.components.OmniEmptyState
 import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
 import com.omniflow.android.ui.feature.batch.BatchActionBar
 import com.omniflow.android.ui.feature.batch.BatchAccountPickerDialog
@@ -164,20 +166,35 @@ internal fun SearchScreen(
                 }
                 if (state.isLoading) {
                     item {
-                        Text(
-                            "搜索中…",
-                            Modifier.fillMaxWidth().padding(24.dp),
-                            style = OmniText.caption,
-                            color = mutedContent(),
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 48.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator()
+                        }
                     }
                 }
                 if (!state.isLoading && state.error == null && state.result == null) {
-                    item { SearchHint("输入关键词或选择筛选条件，点「搜索」开始") }
+                    item {
+                        OmniEmptyState(
+                            message = "开始搜索",
+                            subtitle = "输入关键词或选择筛选条件，点「搜索」开始",
+                            icon = Icons.Default.Search,
+                        )
+                    }
                 }
                 state.result?.let { result ->
                     item { SearchSummary(result.items.size, result.summary.incomeTotal, result.summary.expenseTotal) }
-                    if (result.items.isEmpty()) item { SearchHint("没有符合条件的交易") }
+                    if (result.items.isEmpty()) {
+                        item {
+                            OmniEmptyState(
+                                message = "没有符合条件的交易",
+                                subtitle = "尝试调整关键词或筛选条件后重试",
+                            )
+                        }
+                    }
                     items(result.items, key = { it.transaction.id }) { item ->
                         Surface(
                             modifier = Modifier
@@ -366,15 +383,4 @@ private fun SearchSummary(count: Int, income: Money, expense: Money) {
             Text("支 ${expense.asPlainAmount()}", style = OmniText.caption, color = MaterialTheme.colorScheme.onSurface)
         }
     }
-}
-
-@Composable
-private fun SearchHint(message: String) {
-    Text(
-        message,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 28.dp),
-        style = OmniText.caption,
-        color = mutedContent(),
-        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-    )
 }

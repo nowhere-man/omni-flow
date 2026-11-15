@@ -12,12 +12,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.SuggestionChipDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -92,27 +92,24 @@ fun HealthSummaryCard(
                     )
                 }
 
-                SuggestionChip(
-                    onClick = {},
-                    label = {
-                        Text(
-                            text = rateLabel,
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                fontFeatureSettings = "tnum",
-                            ),
-                        )
+                Surface(
+                    shape = CircleShape,
+                    color = if (isNetPositive) {
+                        incomeColor().copy(alpha = 0.12f)
+                    } else {
+                        expenseColor().copy(alpha = 0.12f)
                     },
-                    colors = SuggestionChipDefaults.suggestionChipColors(
-                        containerColor = if (isNetPositive) {
-                            incomeColor().copy(alpha = 0.12f)
-                        } else {
-                            expenseColor().copy(alpha = 0.12f)
-                        },
-                        labelColor = savingsColor,
-                    ),
-                    border = null,
-                )
+                ) {
+                    Text(
+                        text = rateLabel,
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            fontFeatureSettings = "tnum",
+                        ),
+                        color = savingsColor,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    )
+                }
             }
 
             // Sub-indicators: Total Income | Total Expense | Daily Average

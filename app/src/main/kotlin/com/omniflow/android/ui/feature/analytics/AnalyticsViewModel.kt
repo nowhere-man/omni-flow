@@ -17,6 +17,7 @@ import com.omniflow.core.domain.model.LedgerScope
 import com.omniflow.core.domain.model.StatementTable
 import com.omniflow.core.domain.model.TimeGranularity
 import com.omniflow.core.domain.model.TransactionType
+import com.omniflow.core.domain.model.TrendTimeWindowCalculator
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -158,9 +159,14 @@ class AnalyticsViewModel(
         _uiState.value = _uiState.value.copy(statementTable = null)
     }
 
+    fun retry() {
+        observeAnalytics()
+    }
+
     private fun observeAnalytics() {
         observeJob?.cancel()
         val current = _uiState.value
+        val tRange = trendRange(current.rangeMode, anchorDate)
         _uiState.value = current.copy(isLoading = true, error = null)
         observeJob = viewModelScope.launch {
             analytics.observeDashboard(
@@ -171,6 +177,7 @@ class AnalyticsViewModel(
                     categoryShareType = current.categoryShareType,
                     tagAnalysisType = TransactionType.EXPENSE,
                     trendGranularity = analyticsGranularity(current.rangeMode, current.range),
+                    trendRange = tRange,
                 ),
             ).collect { result ->
                 _uiState.value = _uiState.value.copy(
@@ -190,6 +197,17 @@ internal fun analyticsRange(mode: AnalyticsRangeMode, anchor: LocalDate): DateRa
     AnalyticsRangeMode.WEEK -> DateRange.ofWeek(anchor, AppTimeZone)
     AnalyticsRangeMode.MONTH -> DateRange.ofMonth(anchor, AppTimeZone)
     AnalyticsRangeMode.YEAR -> DateRange.ofYear(anchor.year, AppTimeZone)
+    AnalyticsRangeMode.CUSTOM -> DateRange.ofMonth(anchor, AppTimeZone)
+}
+
+internal fun trendRange(
+    mode: AnalyticsRangeMode,
+    anchor: LocalDate,
+    today: LocalDate = Clock.System.now().toLocalDateTime(AppTimeZone).date,
+): DateRange = when (mode) {
+    AnalyticsRangeMode.WEEK -> DateRange.ofWeek(anchor, AppTimeZone)
+    AnalyticsRangeMode.MONTH -> TrendTimeWindowCalculator.monthToDate(anchor, today, AppTimeZone)
+    AnalyticsRangeMode.YEAR -> TrendTimeWindowCalculator.rolling12Months(anchor, AppTimeZone)
     AnalyticsRangeMode.CUSTOM -> DateRange.ofMonth(anchor, AppTimeZone)
 }
 

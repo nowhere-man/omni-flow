@@ -181,3 +181,25 @@ fun categoryBadgeColors(key: String?): CategoryBadgeColors =
 @ReadOnlyComposable
 fun accountTypeBadgeColors(type: AccountType): CategoryBadgeColors =
     CategoryColorTokens.accountTypeColors(type, MaterialTheme.colorScheme.background.luminance() < 0.5f)
+
+@Composable
+@ReadOnlyComposable
+fun accountCardGradient(type: AccountType): androidx.compose.ui.graphics.Brush {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val base = CategoryColorTokens.accountTypeColors(type, isDark).container
+    return if (isDark) {
+        androidx.compose.ui.graphics.Brush.horizontalGradient(
+            colors = listOf(
+                base.copy(alpha = 0.32f),
+                base.copy(alpha = 0.16f),
+            ),
+        )
+    } else {
+        androidx.compose.ui.graphics.Brush.horizontalGradient(
+            colors = listOf(
+                base.copy(alpha = 0.70f),
+                base.copy(alpha = 0.35f),
+            ),
+        )
+    }
+}

@@ -1,12 +1,10 @@
 package com.omniflow.android.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.Rule
 import androidx.compose.material.icons.filled.AccountBalance
@@ -15,14 +13,13 @@ import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,22 +27,27 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.omniflow.android.ui.feature.account.AccountListScreen
 import com.omniflow.android.ui.feature.account.AccountViewModel
 import com.omniflow.android.ui.feature.account.AccountViewModelFactory
+import com.omniflow.android.ui.feature.asset.AssetScreen
+import com.omniflow.android.ui.feature.category.CategoryScreen
 import com.omniflow.android.ui.feature.ledger.LedgerListScreen
 import com.omniflow.android.ui.feature.ledger.LedgerViewModel
 import com.omniflow.android.ui.feature.ledger.LedgerViewModelFactory
+import com.omniflow.android.ui.feature.more.AboutPage
+import com.omniflow.android.ui.feature.more.AiSettingsPage
 import com.omniflow.android.ui.feature.more.DataManagementPage
 import com.omniflow.android.ui.feature.more.ExportPage
 import com.omniflow.android.ui.feature.more.ImportPage
 import com.omniflow.android.ui.feature.more.MoreHomeScreen
 import com.omniflow.android.ui.feature.more.SettingsPage
+import com.omniflow.android.ui.feature.reminder.ReminderScreen
+import com.omniflow.android.ui.feature.rule.RuleScreen
+import com.omniflow.android.ui.feature.tag.TagScreen
 
 enum class MorePage(val label: String, val icon: ImageVector) {
     HOME("更多", Icons.Default.Settings),
@@ -62,6 +64,7 @@ enum class MorePage(val label: String, val icon: ImageVector) {
     TAGS("标签管理", Icons.AutoMirrored.Filled.Label),
     REMINDERS("提醒", Icons.Default.Notifications),
     BUDGETS("预算管理", Icons.Default.Savings),
+    ABOUT("关于", Icons.Default.Info),
 }
 
 @Composable
@@ -79,41 +82,37 @@ internal fun MoreScreen(
     ledgerViewModel: LedgerViewModel = viewModel(factory = LedgerViewModelFactory(viewModel.sharedApp)),
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier.fillMaxSize()) {
-        if (page != MorePage.HOME) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = mutedContent())
-                }
-                Text(page.label, style = OmniText.titleRow)
-            }
-        }
+    Box(modifier.fillMaxSize()) {
         when (page) {
-            MorePage.HOME -> MoreHomeScreen(state, onPage = onPage)
-            MorePage.SETTINGS -> SettingsPage(
-                state,
-                viewModel,
-            )
-            MorePage.DATA -> DataManagementPage(state, viewModel)
-            MorePage.AI -> AiSettingsPage()
-            MorePage.BUDGETS -> BudgetPage(state, viewModel)
-            MorePage.IMPORT -> ImportPage(state, viewModel)
-            MorePage.EXPORT -> ExportPage(state, viewModel)
-            MorePage.LEDGERS -> LedgerListScreen(ledgerViewModel, onOpenLedger = onOpenLedger)
-            MorePage.ACCOUNTS -> AccountListScreen(accountViewModel, onOpenAccount = onOpenAccount)
-            MorePage.RULES,
-            MorePage.REMINDERS,
-            MorePage.ASSETS,
-            MorePage.CATEGORIES,
-            MorePage.TAGS -> ManagementPage(
-                page,
-                state,
-                viewModel,
+            MorePage.HOME -> MoreHomeScreen(
+                state = state,
                 onPage = onPage,
-                onRequestNotificationPermission = onRequestNotificationPermission,
-                onOpenAccount = onOpenAccount,
-                onOpenCategory = onOpenCategory,
+                onSaveName = { viewModel.setUserName(it) },
             )
+            MorePage.ABOUT -> AboutPage(onBack = onBack)
+            MorePage.SETTINGS -> SettingsPage(state, viewModel, onBack = onBack)
+            MorePage.DATA -> DataManagementPage(state, viewModel, onBack = onBack)
+            MorePage.AI -> AiSettingsPage(onBack = onBack)
+            MorePage.BUDGETS -> BudgetPage(state, viewModel, onBack = onBack)
+            MorePage.IMPORT -> ImportPage(
+                state = state,
+                viewModel = viewModel,
+                onBack = onBack,
+                onNavigateToAccounts = { onPage(MorePage.ACCOUNTS) },
+            )
+            MorePage.EXPORT -> ExportPage(state, viewModel, onBack = onBack)
+            MorePage.LEDGERS -> LedgerListScreen(ledgerViewModel, onOpenLedger = onOpenLedger, onBack = onBack)
+            MorePage.ACCOUNTS -> AccountListScreen(accountViewModel, onOpenAccount = onOpenAccount, onBack = onBack)
+            MorePage.ASSETS -> AssetScreen(state, onBack = onBack, onPage = onPage)
+            MorePage.CATEGORIES -> CategoryScreen(state, viewModel, onBack = onBack, onOpenCategory = onOpenCategory)
+            MorePage.TAGS -> TagScreen(state, viewModel, onBack = onBack)
+            MorePage.REMINDERS -> ReminderScreen(
+                state = state,
+                viewModel = viewModel,
+                onRequestNotificationPermission = onRequestNotificationPermission,
+                onBack = onBack,
+            )
+            MorePage.RULES -> RuleScreen(state, viewModel, onBack = onBack)
         }
     }
 }

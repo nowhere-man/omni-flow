@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.omniflow.android.ui.CategoryPickerSheet
 import com.omniflow.android.ui.OmniRadius
 import com.omniflow.android.ui.OmniText
 import com.omniflow.android.ui.designsystem.components.OmniDatePickerDialog
@@ -244,7 +245,7 @@ fun SearchFilterPanel(
     }
 
     if (showCategoryPicker) {
-        SearchCategoryPickerSheet(
+        CategoryPickerSheet(
             categories = state.categories,
             initialType = state.query.type,
             selectedPrimaryName = state.query.primaryCategoryText,
