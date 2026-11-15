@@ -737,7 +737,6 @@ class OmniFlowViewModel(
 
     fun setAppearanceMode(mode: AppearanceMode) = savePreferences(preferences.copy(appearanceMode = mode))
     fun setThemeColor(color: ThemeColor) = savePreferences(preferences.copy(themeColor = color))
-    fun setAppLockEnabled(enabled: Boolean) = savePreferences(preferences.copy(appLockEnabled = enabled))
     fun setUserName(name: String) = savePreferences(preferences.copy(userName = name))
     fun configureSync(target: SyncTarget, retention: Int) {
         viewModelScope.launch {

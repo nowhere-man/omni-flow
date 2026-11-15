@@ -159,6 +159,10 @@ class AnalyticsViewModel(
         _uiState.value = _uiState.value.copy(statementTable = null)
     }
 
+    fun retry() {
+        observeAnalytics()
+    }
+
     private fun observeAnalytics() {
         observeJob?.cancel()
         val current = _uiState.value

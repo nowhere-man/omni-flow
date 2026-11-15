@@ -83,7 +83,6 @@ import com.omniflow.android.ui.designsystem.tokens.omniColorScheme
 import com.omniflow.android.ui.designsystem.tokens.themePrimaryColor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -139,14 +138,10 @@ import java.time.LocalDate as JavaLocalDate
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.omniflow.android.ui.feature.account.AccountDetailScreen
 import com.omniflow.android.ui.feature.account.AccountViewModel
@@ -157,9 +152,6 @@ import com.omniflow.android.ui.feature.analytics.AnalyticsViewModelFactory
 import com.omniflow.android.ui.feature.ledger.LedgerDetailScreen
 import com.omniflow.android.ui.feature.ledger.LedgerViewModel
 import com.omniflow.android.ui.feature.ledger.LedgerViewModelFactory
-import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricPrompt
-import androidx.fragment.app.FragmentActivity
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
@@ -303,7 +295,6 @@ fun OmniFlowApp(
                 controller.isAppearanceLightNavigationBars = !darkTheme
             }
         }
-        AppLockGate(moreState.preferences.appLockEnabled) {
         BoxWithConstraints {
             val useNavigationRail = maxWidth >= 600.dp
             // 记账弹层高度：屏幕高度减状态栏；首页筛选明细弹层高度：占屏幕高度 2/3，顶部 1/3 遮罩留空
@@ -399,6 +390,7 @@ fun OmniFlowApp(
                     },
                     onViewStatementTable = analyticsViewModel::loadStatementTable,
                     onDismissStatementTable = analyticsViewModel::dismissStatementTable,
+                    onRetry = analyticsViewModel::retry,
                     modifier = Modifier.padding(padding),
                 )
                 OmniRoute.TransactionEditor -> ModalBottomSheet(
@@ -628,7 +620,6 @@ fun OmniFlowApp(
             )
         }
         }
-        }
     }
 }
 
@@ -710,80 +701,6 @@ private fun PrimaryNavigationRail(
                 label = { Text(item.label) },
             )
         }
-    }
-}
-
-@Composable
-private fun AppLockGate(enabled: Boolean, content: @Composable () -> Unit) {
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    var locked by rememberSaveable { mutableStateOf(enabled) }
-    var authInProgress by remember { mutableStateOf(false) }
-    var authError by remember { mutableStateOf<String?>(null) }
-    val activity = context as? FragmentActivity
-    val biometricPrompt = remember(activity) {
-        activity?.let { fragmentActivity ->
-            BiometricPrompt(
-                fragmentActivity,
-                ContextCompat.getMainExecutor(fragmentActivity),
-                object : BiometricPrompt.AuthenticationCallback() {
-                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                        authInProgress = false
-                        authError = null
-                        locked = false
-                    }
-
-                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                        authInProgress = false
-                        if (errorCode != BiometricPrompt.ERROR_USER_CANCELED &&
-                            errorCode != BiometricPrompt.ERROR_NEGATIVE_BUTTON
-                        ) {
-                            authError = errString.toString()
-                        }
-                    }
-                },
-            )
-        }
-    }
-    fun requestUnlock() {
-        if (biometricPrompt == null) {
-            authError = "当前设备无法使用系统身份验证"
-        } else {
-            authError = null
-            authInProgress = true
-            biometricPrompt.authenticate(
-                BiometricPrompt.PromptInfo.Builder()
-                    .setTitle("解锁 OmniFlow")
-                    .setSubtitle("请验证生物识别或设备凭据")
-                    .setAllowedAuthenticators(
-                        BiometricManager.Authenticators.BIOMETRIC_WEAK or
-                            BiometricManager.Authenticators.DEVICE_CREDENTIAL,
-                    )
-                    .build(),
-            )
-        }
-    }
-    DisposableEffect(lifecycleOwner, enabled) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP && enabled && !authInProgress) locked = true
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-    LaunchedEffect(enabled) { locked = enabled }
-    LaunchedEffect(enabled, locked) {
-        if (enabled && locked && !authInProgress) requestUnlock()
-    }
-    if (enabled && locked) {
-        Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("OmniFlow 已锁定", style = MaterialTheme.typography.headlineSmall)
-                authError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                Button(onClick = ::requestUnlock) { Text("解锁") }
-            }
-        }
-    } else {
-        content()
     }
 }
 
@@ -875,9 +792,9 @@ private fun HomeScreen(
                 }
                 if (state.ledgers.isEmpty()) {
                     item {
-                        HomeEmptyState(
-                            title = "先创建一个账本",
-                            message = "账本准备好后，就可以开始记录每一笔交易。",
+                        OmniEmptyState(
+                            message = "先创建一个账本",
+                            subtitle = "账本准备好后，就可以开始记录每一笔交易。",
                             actionLabel = "管理账本",
                             onAction = onManageLedgers,
                         )
@@ -885,12 +802,9 @@ private fun HomeScreen(
                 } else if (home.groups.isEmpty()) {
                     // 本月没有账单时只留一句状态说明，右下角本来就有记账按钮，不必再放一个
                     item {
-                        Text(
-                            "本月还没有账单",
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 28.dp),
-                            textAlign = TextAlign.Center,
-                            style = OmniText.caption,
-                            color = mutedContent(),
+                        OmniEmptyState(
+                            message = "本月还没有账单",
+                            subtitle = "点击右下角记账按钮添加第一笔交易",
                         )
                     }
                 } else {
@@ -982,29 +896,6 @@ private fun SummaryAmount(label: String, amount: Money, color: Color) {
     Column {
         Text(label, style = OmniText.caption, color = mutedContent())
         Text(amount.asRmb(), color = color, style = OmniText.amountPrimary, maxLines = 1)
-    }
-}
-
-@Composable
-private fun HomeEmptyState(
-    title: String,
-    message: String,
-    actionLabel: String,
-    onAction: () -> Unit,
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        Text(
-            message,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodySmall,
-        )
-        Button(onClick = onAction) { Text(actionLabel) }
     }
 }
 

@@ -30,6 +30,7 @@ import com.omniflow.android.ui.LedgerPickerBar
 import com.omniflow.android.ui.MoreUiState
 import com.omniflow.android.ui.OmniFlowViewModel
 import com.omniflow.android.ui.OmniText
+import com.omniflow.android.ui.designsystem.components.OmniEmptyState
 import com.omniflow.android.ui.designsystem.components.OmniSubPageScaffold
 import com.omniflow.android.ui.mutedContent
 import com.omniflow.core.domain.model.ImportPreviewPhase
@@ -48,6 +49,7 @@ fun ImportPage(
     state: MoreUiState,
     viewModel: OmniFlowViewModel,
     onBack: () -> Unit,
+    onNavigateToAccounts: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -131,10 +133,11 @@ fun ImportPage(
 
                         if (state.accounts.isEmpty()) {
                             item {
-                                Text(
-                                    "请先在「账户」里创建至少一个账户，导入的交易需要落到账户上。",
-                                    color = MaterialTheme.colorScheme.error,
-                                    style = OmniText.caption,
+                                OmniEmptyState(
+                                    message = "暂无可用账户",
+                                    subtitle = "导入的交易需要落到具体账户，请先在账户管理中创建账户",
+                                    actionLabel = "管理账户",
+                                    onAction = onNavigateToAccounts,
                                 )
                             }
                         }

@@ -27,7 +27,6 @@ class SqlDelightAppPreferenceFacadeTest {
             transactionDetailDisplayMode = TransactionDetailDisplayMode.CARD,
             appearanceMode = AppearanceMode.DARK,
             themeColor = ThemeColor.LAVENDER,
-            appLockEnabled = true,
             syncTarget = SyncTarget.WEBDAV,
             backupRetention = 3,
         )
@@ -47,7 +46,6 @@ class SqlDelightAppPreferenceFacadeTest {
         database.appPreferenceQueries.upsertPreference(AppPreferenceKey.TransactionDetailDisplayMode, "UNKNOWN_MODE", 3L)
         database.appPreferenceQueries.upsertPreference(AppPreferenceKey.SyncTarget, "INVALID_TARGET", 4L)
         database.appPreferenceQueries.upsertPreference(AppPreferenceKey.BackupRetention, "-5", 5L)
-        database.appPreferenceQueries.upsertPreference(AppPreferenceKey.AppLockEnabled, "invalid_bool", 6L)
 
         val prefs = facade.observe().first().getOrThrow()
         assertEquals(AppearanceMode.DARK, prefs.appearanceMode)
@@ -55,6 +53,5 @@ class SqlDelightAppPreferenceFacadeTest {
         assertEquals(TransactionDetailDisplayMode.CARD, prefs.transactionDetailDisplayMode)
         assertEquals(null, prefs.syncTarget)
         assertEquals(10, prefs.backupRetention)
-        assertEquals(false, prefs.appLockEnabled)
     }
 }

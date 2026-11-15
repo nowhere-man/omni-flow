@@ -94,7 +94,12 @@ internal fun MoreScreen(
             MorePage.DATA -> DataManagementPage(state, viewModel, onBack = onBack)
             MorePage.AI -> AiSettingsPage(onBack = onBack)
             MorePage.BUDGETS -> BudgetPage(state, viewModel, onBack = onBack)
-            MorePage.IMPORT -> ImportPage(state, viewModel, onBack = onBack)
+            MorePage.IMPORT -> ImportPage(
+                state = state,
+                viewModel = viewModel,
+                onBack = onBack,
+                onNavigateToAccounts = { onPage(MorePage.ACCOUNTS) },
+            )
             MorePage.EXPORT -> ExportPage(state, viewModel, onBack = onBack)
             MorePage.LEDGERS -> LedgerListScreen(ledgerViewModel, onOpenLedger = onOpenLedger, onBack = onBack)
             MorePage.ACCOUNTS -> AccountListScreen(accountViewModel, onOpenAccount = onOpenAccount, onBack = onBack)
