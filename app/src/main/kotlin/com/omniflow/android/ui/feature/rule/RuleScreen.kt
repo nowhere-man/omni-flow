@@ -44,8 +44,10 @@ import com.omniflow.android.ui.OmniFlowViewModel
 import com.omniflow.android.ui.OmniText
 import com.omniflow.android.ui.ReorderableColumn
 import com.omniflow.android.ui.designsystem.components.OmniEmptyState
+import com.omniflow.android.ui.designsystem.components.OmniSheetScaffold
 import com.omniflow.android.ui.designsystem.components.OmniSubPageScaffold
 import com.omniflow.android.ui.designsystem.tokens.OmniColorTokens
+import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
 import com.omniflow.android.ui.mutedContent
 import com.omniflow.core.domain.model.Rule
 import com.omniflow.core.domain.model.RuleConditionType
@@ -203,48 +205,44 @@ fun RuleScreen(
     }
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun RuleTemplatePickerDialog(
     onDismiss: () -> Unit,
     onSelect: (RuleConditionType) -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                "选择规则模板",
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+    OmniSheetScaffold(
+        title = "选择规则模板",
+        onDismiss = onDismiss,
+        cancelText = "取消",
+        onCancel = onDismiss,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TemplateOptionRow(
+                title = "商户或备注关键词",
+                desc = "如交易备注包含“星巴克”时自动归入餐饮",
+                icon = Icons.Default.Store,
+                onClick = { onSelect(RuleConditionType.NOTE_CONTAINS) },
             )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                TemplateOptionRow(
-                    title = "商户或备注关键词",
-                    desc = "如交易备注包含“星巴克”时自动归入餐饮",
-                    icon = Icons.Default.Store,
-                    onClick = { onSelect(RuleConditionType.NOTE_CONTAINS) },
-                )
-                TemplateOptionRow(
-                    title = "按收支类型分类",
-                    desc = "如收入类型交易自动归入薪资或奖金",
-                    icon = Icons.Default.SwapHoriz,
-                    onClick = { onSelect(RuleConditionType.TRANSACTION_TYPE) },
-                )
-                TemplateOptionRow(
-                    title = "按支付来源平台分类",
-                    desc = "如微信或支付宝支付的特定流水规则",
-                    icon = Icons.Default.Description,
-                    onClick = { onSelect(RuleConditionType.TRANSACTION_SOURCE) },
-                )
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
-        },
-    )
+            TemplateOptionRow(
+                title = "按收支类型分类",
+                desc = "如收入类型交易自动归入薪资或奖金",
+                icon = Icons.Default.SwapHoriz,
+                onClick = { onSelect(RuleConditionType.TRANSACTION_TYPE) },
+            )
+            TemplateOptionRow(
+                title = "按支付来源平台分类",
+                desc = "如微信或支付宝支付的特定流水规则",
+                icon = Icons.Default.Description,
+                onClick = { onSelect(RuleConditionType.TRANSACTION_SOURCE) },
+            )
+        }
+    }
 }
 
 @Composable
@@ -257,7 +255,7 @@ private fun TemplateOptionRow(
     ElevatedCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = OmniShapeTokens.medium,
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),

@@ -21,14 +21,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.omniflow.android.ui.OmniTextField
+import com.omniflow.android.ui.designsystem.components.OmniSheetScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -263,6 +263,7 @@ fun CategoryTile(
     }
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun NewSecondaryCategoryDialog(
     primaryName: String,
@@ -270,21 +271,26 @@ fun NewSecondaryCategoryDialog(
     onCreate: (String) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("$primaryName · 新建二级分类") },
-        text = {
-            OutlinedTextField(
+    OmniSheetScaffold(
+        title = "$primaryName · 新建二级分类",
+        onDismiss = onDismiss,
+        saveText = "创建",
+        saveEnabled = name.isNotBlank(),
+        onSave = { onCreate(name.trim()) },
+        cancelText = "取消",
+        onCancel = onDismiss,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            OmniTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("分类名称") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
+                label = "分类名称",
             )
-        },
-        confirmButton = {
-            Button(onClick = { onCreate(name.trim()) }, enabled = name.isNotBlank()) { Text("创建") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
-    )
+        }
+    }
 }
