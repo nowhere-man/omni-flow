@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
@@ -26,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.ValueMenu
 import com.omniflow.android.ui.designsystem.components.OmniSheetScaffold
+import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
 import com.omniflow.android.ui.label
 import com.omniflow.android.ui.toDecimal
 import com.omniflow.android.ui.toMoneyOrNull
@@ -131,7 +131,7 @@ internal fun ReminderEditSheet(
                 label = { Text("提醒名称") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
+                shape = OmniShapeTokens.mediumSmall,
             )
 
             OutlinedTextField(
@@ -140,7 +140,7 @@ internal fun ReminderEditSheet(
                 label = { Text("预估金额（可选）") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
+                shape = OmniShapeTokens.mediumSmall,
             )
 
             ValueMenu(
@@ -159,7 +159,7 @@ internal fun ReminderEditSheet(
                         label = { Text("每月几号（1-31）") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = OmniShapeTokens.mediumSmall,
                     )
                 }
                 ReminderScheduleKind.DAYS_AFTER_STATEMENT -> {
@@ -169,7 +169,7 @@ internal fun ReminderEditSheet(
                         label = { Text("账单日（1-31）") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = OmniShapeTokens.mediumSmall,
                     )
                     OutlinedTextField(
                         value = daysAfter,
@@ -177,7 +177,7 @@ internal fun ReminderEditSheet(
                         label = { Text("账单日后几天") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = OmniShapeTokens.mediumSmall,
                     )
                 }
                 ReminderScheduleKind.WEEKLY -> {
@@ -187,7 +187,7 @@ internal fun ReminderEditSheet(
                         label = { Text("周几（1=周一 … 7=周日）") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = OmniShapeTokens.mediumSmall,
                     )
                 }
                 ReminderScheduleKind.YEARLY -> {
@@ -197,7 +197,7 @@ internal fun ReminderEditSheet(
                         label = { Text("几月（1-12）") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = OmniShapeTokens.mediumSmall,
                     )
                     OutlinedTextField(
                         value = day,
@@ -205,7 +205,7 @@ internal fun ReminderEditSheet(
                         label = { Text("几号（1-31）") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = OmniShapeTokens.mediumSmall,
                     )
                 }
                 ReminderScheduleKind.DAILY -> Unit

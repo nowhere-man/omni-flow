@@ -109,7 +109,7 @@ fun AiSettingsPage(
                 AiPlayableDemoBox()
             }
 
-            // 2. 自动分类强度三段胶囊
+            // 2. 分类建议强度胶囊
             item {
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -140,7 +140,7 @@ fun AiSettingsPage(
                         }
 
                         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                            val options = listOf("关", "仅建议", "自动入账")
+                            val options = listOf("关", "仅建议")
                             val selectedIndex = if (!enabled) 0 else 1
                             options.forEachIndexed { index, label ->
                                 SegmentedButton(

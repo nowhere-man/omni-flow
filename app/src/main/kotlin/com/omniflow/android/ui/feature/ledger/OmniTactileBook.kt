@@ -41,7 +41,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.omniflow.android.ui.designsystem.tokens.OmniColorTokens
+import com.omniflow.android.ui.expenseColor
 import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
 import com.omniflow.android.ui.designsystem.tokens.ledgerCoverGradient
 import com.omniflow.core.domain.model.LedgerCoverSpec
@@ -83,6 +83,7 @@ fun OmniTactileBook(
 
     val gradient = effectivePreset?.let { ledgerCoverGradient(it.colorKey) }
     val iconKey = effectivePreset?.iconKey ?: "books"
+    val ribbonColor = expenseColor()
     val patternKey = effectivePreset?.patternKey ?: "clean"
 
     Box(
@@ -147,7 +148,7 @@ fun OmniTactileBook(
             )
 
             if (isDefault) {
-                drawBookmarkRibbon()
+                drawBookmarkRibbon(ribbonColor)
             }
         }
 
@@ -249,11 +250,10 @@ private fun DrawScope.drawPattern(patternKey: String) {
     }
 }
 
-private fun DrawScope.drawBookmarkRibbon() {
+private fun DrawScope.drawBookmarkRibbon(ribbonColor: Color) {
     val ribbonWidth = 16.dp.toPx()
     val ribbonHeight = 28.dp.toPx()
     val x = size.width - 24.dp.toPx()
-    val ribbonColor = OmniColorTokens.ExpenseLight
 
     val ribbonPath = Path().apply {
         moveTo(x, 0f)

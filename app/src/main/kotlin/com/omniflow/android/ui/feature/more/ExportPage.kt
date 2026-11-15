@@ -147,7 +147,7 @@ fun ExportPage(
                 item {
                     ElevatedCard(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
+                        shape = OmniShapeTokens.card,
                         colors = CardDefaults.elevatedCardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                         ),
@@ -191,7 +191,7 @@ fun ExportPage(
                 item {
                     ElevatedCard(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
+                        shape = OmniShapeTokens.card,
                         colors = CardDefaults.elevatedCardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                         ),
@@ -234,7 +234,7 @@ fun ExportPage(
                 item {
                     ElevatedCard(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
+                        shape = OmniShapeTokens.card,
                         colors = CardDefaults.elevatedCardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                         ),
@@ -274,7 +274,7 @@ fun ExportPage(
                 item {
                     ElevatedCard(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
+                        shape = OmniShapeTokens.card,
                         colors = CardDefaults.elevatedCardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                         ),

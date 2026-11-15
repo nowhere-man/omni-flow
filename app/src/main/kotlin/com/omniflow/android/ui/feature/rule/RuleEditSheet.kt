@@ -144,7 +144,7 @@ internal fun RuleEditSheet(
                                         },
                                     )
                                 },
-                                shape = RoundedCornerShape(10.dp),
+                                shape = OmniShapeTokens.mediumSmall,
                             )
                         }
                     }
@@ -170,7 +170,7 @@ internal fun RuleEditSheet(
                                         selected = conditionValue == typeVal,
                                         onClick = { conditionValue = typeVal },
                                         label = { Text(typeLabel) },
-                                        shape = RoundedCornerShape(10.dp),
+                                        shape = OmniShapeTokens.mediumSmall,
                                     )
                                 }
                             }
@@ -182,7 +182,7 @@ internal fun RuleEditSheet(
                                         selected = conditionValue == src,
                                         onClick = { conditionValue = src },
                                         label = { Text(src) },
-                                        shape = RoundedCornerShape(10.dp),
+                                        shape = OmniShapeTokens.mediumSmall,
                                     )
                                 }
                             }
@@ -230,7 +230,7 @@ internal fun RuleEditSheet(
                                         },
                                     )
                                 },
-                                shape = RoundedCornerShape(10.dp),
+                                shape = OmniShapeTokens.mediumSmall,
                             )
                         }
                     }
@@ -246,7 +246,7 @@ internal fun RuleEditSheet(
                                     selected = actionValue == category.id,
                                     onClick = { actionValue = category.id },
                                     label = { Text(category.name) },
-                                    shape = RoundedCornerShape(10.dp),
+                                    shape = OmniShapeTokens.mediumSmall,
                                 )
                             }
                         }

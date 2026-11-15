@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
 import com.omniflow.android.ui.designsystem.tokens.categoryBadgeColors
 import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
 import com.omniflow.core.domain.model.TransactionSource
@@ -156,7 +157,7 @@ internal fun TransactionRecordDetailSheet(
                                 onClick = { confirmDelete = true },
                                 modifier = Modifier.weight(1f).height(52.dp),
                                 enabled = !state.isDeleting,
-                                shape = RoundedCornerShape(OmniRadius.medium),
+                                shape = OmniShapeTokens.button,
                             ) {
                                 Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                                 Spacer(Modifier.width(6.dp))
@@ -166,7 +167,7 @@ internal fun TransactionRecordDetailSheet(
                                 onClick = { onEdit(transaction.id) },
                                 modifier = Modifier.weight(2f).height(52.dp),
                                 enabled = !state.isDeleting,
-                                shape = RoundedCornerShape(OmniRadius.medium),
+                                shape = OmniShapeTokens.button,
                             ) {
                                 Icon(Icons.Default.Edit, contentDescription = null)
                                 Spacer(Modifier.width(6.dp))

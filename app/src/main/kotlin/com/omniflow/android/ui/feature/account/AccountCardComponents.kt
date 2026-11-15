@@ -33,7 +33,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.OmniText
 import com.omniflow.android.ui.asRmb
-import com.omniflow.android.ui.designsystem.tokens.OmniColorTokens
 import com.omniflow.android.ui.designsystem.tokens.accountCardGradient
 import com.omniflow.android.ui.designsystem.tokens.accountTypeBadgeColors
 import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
@@ -141,7 +140,7 @@ internal fun OmniBankCard(
                 if (isLiability) {
                     Surface(
                         shape = CircleShape,
-                        color = OmniColorTokens.ExpenseLight.copy(alpha = 0.25f),
+                        color = expenseColor().copy(alpha = 0.25f),
                     ) {
                         Text(
                             text = "负债",

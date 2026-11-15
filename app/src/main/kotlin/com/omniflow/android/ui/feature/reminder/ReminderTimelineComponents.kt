@@ -35,7 +35,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.asRmb
-import com.omniflow.android.ui.designsystem.tokens.OmniColorTokens
 import com.omniflow.android.ui.designsystem.tokens.categoryBadgeColors
 import com.omniflow.android.ui.expenseColor
 import com.omniflow.android.ui.label
@@ -71,7 +70,7 @@ internal fun ReminderCountdownHero(
                 )
                 Surface(
                     shape = CircleShape,
-                    color = if (daysLeft <= 1) OmniColorTokens.ExpenseLight.copy(alpha = 0.25f) else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                    color = if (daysLeft <= 1) expenseColor().copy(alpha = 0.25f) else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
                 ) {
                     Text(
                         text = if (daysLeft == 0) "今天到期" else "还有 $daysLeft 天",

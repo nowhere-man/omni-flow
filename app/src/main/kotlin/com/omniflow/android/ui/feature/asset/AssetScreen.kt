@@ -43,7 +43,6 @@ import com.omniflow.android.ui.designsystem.components.OmniBarSegment
 import com.omniflow.android.ui.designsystem.components.OmniEmptyState
 import com.omniflow.android.ui.designsystem.components.OmniSegmentBar
 import com.omniflow.android.ui.designsystem.components.OmniSubPageScaffold
-import com.omniflow.android.ui.designsystem.tokens.OmniColorTokens
 import com.omniflow.android.ui.designsystem.tokens.accountTypeBadgeColors
 import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
 import com.omniflow.android.ui.expenseColor
@@ -92,9 +91,11 @@ internal fun AssetScreen(
     val totalAssets = state.accountSummary.assets
     val totalLiabilities = state.accountSummary.liabilities
     val totalVolume = totalAssets.minor + totalLiabilities.minor
+    val incColor = incomeColor()
+    val expColor = expenseColor()
 
     // Prepare OmniSegmentBar items
-    val segmentItems: List<OmniBarSegment> = remember(assetAggregates, totalLiabilities, totalVolume) {
+    val segmentItems: List<OmniBarSegment> = remember(assetAggregates, totalLiabilities, totalVolume, incColor, expColor) {
         if (totalVolume <= 0L) emptyList()
         else {
             val list = mutableListOf<OmniBarSegment>()
@@ -103,7 +104,7 @@ internal fun AssetScreen(
                     OmniBarSegment(
                         key = type.name,
                         weight = amount.minor.toFloat(),
-                        color = OmniColorTokens.IncomeLight,
+                        color = incColor,
                         label = type.label,
                     ),
                 )
@@ -113,7 +114,7 @@ internal fun AssetScreen(
                     OmniBarSegment(
                         key = "LIABILITY",
                         weight = totalLiabilities.minor.toFloat(),
-                        color = OmniColorTokens.ExpenseLight,
+                        color = expColor,
                         label = "负债",
                     ),
                 )

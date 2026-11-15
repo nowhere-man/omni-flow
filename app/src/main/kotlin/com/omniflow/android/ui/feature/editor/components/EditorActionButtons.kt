@@ -15,6 +15,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
 
 /**
  * 记账操作按钮组：采用 M3 互补/分段主次按钮形态，
@@ -42,7 +43,7 @@ fun EditorActionButtons(
             modifier = Modifier
                 .weight(0.3f)
                 .height(48.dp),
-            shape = MaterialTheme.shapes.medium,
+            shape = OmniShapeTokens.button,
             colors = ButtonDefaults.filledTonalButtonColors(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -64,7 +65,7 @@ fun EditorActionButtons(
             modifier = Modifier
                 .weight(0.7f)
                 .height(48.dp),
-            shape = MaterialTheme.shapes.medium,
+            shape = OmniShapeTokens.button,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
