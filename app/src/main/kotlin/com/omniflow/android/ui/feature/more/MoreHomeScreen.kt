@@ -2,6 +2,7 @@ package com.omniflow.android.ui.feature.more
 
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
@@ -29,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -74,32 +77,28 @@ fun MoreHomeScreen(
     ) {
         item { Spacer(Modifier.height(OmniSpacingTokens.small)) }
 
-        // 顶部个人名片 Hero 卡片 (24dp 大圆角，替代原净资产 banner)
+        // 顶部个人名片（轻盈无底色，现代 M3 Expressive）
         item {
-            ElevatedCard(
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = OmniShapeTokens.card,
-                colors = CardDefaults.elevatedCardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                ),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
+                color = Color.Transparent,
                 onClick = { showProfileSheet = true },
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(OmniSpacingTokens.medium),
+                        .padding(horizontal = 4.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // 60dp 圆形头像 (有图显示图，图缺失回退 Canvas Monogram)
+                    // 64dp 圆形头像 (有图显示图，图缺失回退 Canvas Monogram)
                     OmniAvatar(
                         userName = state.preferences.userName,
                         avatarBitmap = avatarBitmap,
-                        size = 60.dp,
+                        size = 64.dp,
                     )
 
-                    Spacer(Modifier.width(OmniSpacingTokens.mediumSmall))
+                    Spacer(Modifier.width(OmniSpacingTokens.medium))
 
                     Column(
                         modifier = Modifier.weight(1f),
@@ -107,7 +106,7 @@ fun MoreHomeScreen(
                     ) {
                         Text(
                             text = state.preferences.userName.ifBlank { "我" },
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface,
                         )
 
@@ -128,141 +127,183 @@ fun MoreHomeScreen(
                         )
                     }
 
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = "编辑个人资料",
-                        modifier = Modifier.size(20.dp),
-                        tint = mutedContent(),
-                    )
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        modifier = Modifier.size(36.dp),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = "编辑个人资料",
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                 }
             }
         }
 
-        // 分组 1：{通用设置、数据与同步、关于} — 配色：SYSTEM (共 14 条目)
+        // 分组 1：{通用设置、数据与同步} — 配色：SYSTEM
         item {
             OmniSettingsGroup {
-                MoreOptionItem(
-                    page = MorePage.SETTINGS,
-                    badgeType = SemanticBadgeType.SYSTEM,
-                    state = state,
-                    versionName = versionName,
-                    onClick = { onPage(MorePage.SETTINGS) },
-                )
-                MoreOptionItem(
-                    page = MorePage.DATA,
-                    badgeType = SemanticBadgeType.SYSTEM,
-                    state = state,
-                    versionName = versionName,
-                    onClick = { onPage(MorePage.DATA) },
-                )
-                MoreOptionItem(
-                    page = MorePage.ABOUT,
-                    badgeType = SemanticBadgeType.SYSTEM,
-                    state = state,
-                    versionName = versionName,
-                    onClick = { onPage(MorePage.ABOUT) },
-                )
+                item {
+                    MoreOptionItem(
+                        page = MorePage.SETTINGS,
+                        badgeType = SemanticBadgeType.SYSTEM,
+                        state = state,
+                        versionName = versionName,
+                        onClick = { onPage(MorePage.SETTINGS) },
+                    )
+                }
+                item {
+                    MoreOptionItem(
+                        page = MorePage.DATA,
+                        badgeType = SemanticBadgeType.SYSTEM,
+                        state = state,
+                        versionName = versionName,
+                        onClick = { onPage(MorePage.DATA) },
+                    )
+                }
             }
         }
 
         // 分组 2：{账本管理、账户管理、资产管理} — 配色：FINANCIAL
         item {
             OmniSettingsGroup {
-                MoreOptionItem(
-                    page = MorePage.LEDGERS,
-                    badgeType = SemanticBadgeType.FINANCIAL,
-                    state = state,
-                    versionName = versionName,
-                    onClick = { onPage(MorePage.LEDGERS) },
-                )
-                MoreOptionItem(
-                    page = MorePage.ACCOUNTS,
-                    badgeType = SemanticBadgeType.FINANCIAL,
-                    state = state,
-                    versionName = versionName,
-                    onClick = { onPage(MorePage.ACCOUNTS) },
-                )
-                MoreOptionItem(
-                    page = MorePage.ASSETS,
-                    badgeType = SemanticBadgeType.FINANCIAL,
-                    state = state,
-                    versionName = versionName,
-                    onClick = { onPage(MorePage.ASSETS) },
-                )
+                item {
+                    MoreOptionItem(
+                        page = MorePage.LEDGERS,
+                        badgeType = SemanticBadgeType.FINANCIAL,
+                        state = state,
+                        versionName = versionName,
+                        onClick = { onPage(MorePage.LEDGERS) },
+                    )
+                }
+                item {
+                    MoreOptionItem(
+                        page = MorePage.ACCOUNTS,
+                        badgeType = SemanticBadgeType.FINANCIAL,
+                        state = state,
+                        versionName = versionName,
+                        onClick = { onPage(MorePage.ACCOUNTS) },
+                    )
+                }
+                item {
+                    MoreOptionItem(
+                        page = MorePage.ASSETS,
+                        badgeType = SemanticBadgeType.FINANCIAL,
+                        state = state,
+                        versionName = versionName,
+                        onClick = { onPage(MorePage.ASSETS) },
+                    )
+                }
             }
         }
 
         // 分组 3：{导入账单、智能分类、规则管理、导出账单} — 配色：DATA_SYNC
         item {
             OmniSettingsGroup {
-                MoreOptionItem(
-                    page = MorePage.IMPORT,
-                    badgeType = SemanticBadgeType.DATA_SYNC,
-                    state = state,
-                    versionName = versionName,
-                    onClick = { onPage(MorePage.IMPORT) },
-                )
-                MoreOptionItem(
-                    page = MorePage.AI,
-                    badgeType = SemanticBadgeType.DATA_SYNC,
-                    state = state,
-                    versionName = versionName,
-                    onClick = { onPage(MorePage.AI) },
-                )
-                MoreOptionItem(
-                    page = MorePage.RULES,
-                    badgeType = SemanticBadgeType.DATA_SYNC,
-                    state = state,
-                    versionName = versionName,
-                    onClick = { onPage(MorePage.RULES) },
-                )
-                MoreOptionItem(
-                    page = MorePage.EXPORT,
-                    badgeType = SemanticBadgeType.DATA_SYNC,
-                    state = state,
-                    versionName = versionName,
-                    onClick = { onPage(MorePage.EXPORT) },
-                )
+                item {
+                    MoreOptionItem(
+                        page = MorePage.IMPORT,
+                        badgeType = SemanticBadgeType.DATA_SYNC,
+                        state = state,
+                        versionName = versionName,
+                        onClick = { onPage(MorePage.IMPORT) },
+                    )
+                }
+                item {
+                    MoreOptionItem(
+                        page = MorePage.AI,
+                        badgeType = SemanticBadgeType.DATA_SYNC,
+                        state = state,
+                        versionName = versionName,
+                        onClick = { onPage(MorePage.AI) },
+                    )
+                }
+                item {
+                    MoreOptionItem(
+                        page = MorePage.RULES,
+                        badgeType = SemanticBadgeType.DATA_SYNC,
+                        state = state,
+                        versionName = versionName,
+                        onClick = { onPage(MorePage.RULES) },
+                    )
+                }
+                item {
+                    MoreOptionItem(
+                        page = MorePage.EXPORT,
+                        badgeType = SemanticBadgeType.DATA_SYNC,
+                        state = state,
+                        versionName = versionName,
+                        onClick = { onPage(MorePage.EXPORT) },
+                    )
+                }
             }
         }
 
         // 分组 4：{分类管理、标签管理} — 配色：CATEGORY
         item {
             OmniSettingsGroup {
-                MoreOptionItem(
-                    page = MorePage.CATEGORIES,
-                    badgeType = SemanticBadgeType.CATEGORY,
-                    state = state,
-                    versionName = versionName,
-                    onClick = { onPage(MorePage.CATEGORIES) },
-                )
-                MoreOptionItem(
-                    page = MorePage.TAGS,
-                    badgeType = SemanticBadgeType.CATEGORY,
-                    state = state,
-                    versionName = versionName,
-                    onClick = { onPage(MorePage.TAGS) },
-                )
+                item {
+                    MoreOptionItem(
+                        page = MorePage.CATEGORIES,
+                        badgeType = SemanticBadgeType.CATEGORY,
+                        state = state,
+                        versionName = versionName,
+                        onClick = { onPage(MorePage.CATEGORIES) },
+                    )
+                }
+                item {
+                    MoreOptionItem(
+                        page = MorePage.TAGS,
+                        badgeType = SemanticBadgeType.CATEGORY,
+                        state = state,
+                        versionName = versionName,
+                        onClick = { onPage(MorePage.TAGS) },
+                    )
+                }
             }
         }
 
         // 分组 5：{提醒、预算管理} — 配色：PLANNING
         item {
             OmniSettingsGroup {
-                MoreOptionItem(
-                    page = MorePage.REMINDERS,
-                    badgeType = SemanticBadgeType.PLANNING,
-                    state = state,
-                    versionName = versionName,
-                    onClick = { onPage(MorePage.REMINDERS) },
-                )
-                MoreOptionItem(
-                    page = MorePage.BUDGETS,
-                    badgeType = SemanticBadgeType.PLANNING,
-                    state = state,
-                    versionName = versionName,
-                    onClick = { onPage(MorePage.BUDGETS) },
-                )
+                item {
+                    MoreOptionItem(
+                        page = MorePage.REMINDERS,
+                        badgeType = SemanticBadgeType.PLANNING,
+                        state = state,
+                        versionName = versionName,
+                        onClick = { onPage(MorePage.REMINDERS) },
+                    )
+                }
+                item {
+                    MoreOptionItem(
+                        page = MorePage.BUDGETS,
+                        badgeType = SemanticBadgeType.PLANNING,
+                        state = state,
+                        versionName = versionName,
+                        onClick = { onPage(MorePage.BUDGETS) },
+                    )
+                }
+            }
+        }
+
+        // 分组 6：{关于} — 独立置底单项分组
+        item {
+            OmniSettingsGroup {
+                item {
+                    MoreOptionItem(
+                        page = MorePage.ABOUT,
+                        badgeType = SemanticBadgeType.SYSTEM,
+                        state = state,
+                        versionName = versionName,
+                        onClick = { onPage(MorePage.ABOUT) },
+                    )
+                }
             }
         }
 

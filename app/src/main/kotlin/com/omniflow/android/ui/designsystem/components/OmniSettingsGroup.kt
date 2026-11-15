@@ -2,14 +2,15 @@ package com.omniflow.android.ui.designsystem.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -23,27 +24,63 @@ import com.omniflow.android.ui.designsystem.tokens.OmniTypographyTokens
 import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
 
 /**
+ * Material 3 Expressive 设置分组作用域。
+ */
+interface OmniSettingsGroupScope {
+    fun item(content: @Composable () -> Unit)
+}
+
+private class OmniSettingsGroupScopeImpl : OmniSettingsGroupScope {
+    val items = mutableListOf<@Composable () -> Unit>()
+    override fun item(content: @Composable () -> Unit) {
+        items.add(content)
+    }
+}
+
+/**
  * Material 3 Expressive 设置分组容器。
  *
- * 依据 Jack 2026-11-15 决策（推翻第 5 轮贴合大卡片方案）：
- * 组内各行不再是同一卡片内的切片，而是各自渲染为独立圆角卡片，
- * 行与行之间留出 8.dp 页面底色间隙 (intraGroupSpacing)；组与组之间保持 16.dp 间距 (groupSpacing)。
+ * 规范遵循 Google 账号卡片分组规范（对齐 M3 标准）：
+ * - 同一分组包裹在统一的 24dp 圆角卡片中 (surfaceContainerLow)。
+ * - 组内只有第一项顶部和最后一项底部是圆角，中间项为矩形直角。
+ * - 组内相邻项之间由细分割线 (HorizontalDivider) 连接，组与组之间保持 16dp 间距。
+ * - 单项目分组自动呈现全圆角 (24dp)。
  */
 @Composable
 fun OmniSettingsGroup(
     modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit,
+    content: OmniSettingsGroupScope.() -> Unit,
 ) {
-    Column(
+    val scope = OmniSettingsGroupScopeImpl().apply(content)
+
+    ElevatedCard(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(OmniSpacingTokens.intraGroupSpacing),
-        content = content,
-    )
+        shape = OmniShapeTokens.card,
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+        elevation = CardDefaults.elevatedCardElevation(
+            defaultElevation = 0.dp,
+        ),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            scope.items.forEachIndexed { index, itemContent ->
+                if (index > 0) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                        thickness = 0.5.dp,
+                    )
+                }
+                itemContent()
+            }
+        }
+    }
 }
 
 /**
  * 列表型设置行：官方 M3 ListItem 标准实现。
- * 自身为独立 24dp 大圆角卡片 (surfaceContainerLow)，左侧粉彩色圆形图标徽章、标题、副标题、尾随控件。
+ * 自身无外层独立卡片，左侧粉彩色圆形图标徽章、标题、副标题、尾随控件。
+ * 遵循所属 OmniSettingsGroup 的圆角边界与涟漪范围。
  */
 @Composable
 fun OmniSettingsRow(
@@ -105,7 +142,12 @@ private fun OmniSettingsRowInternal(
     trailing: @Composable (() -> Unit)? = null,
     content: @Composable (() -> Unit)? = null,
 ) {
-    val cardContent = @Composable {
+    Surface(
+        onClick = onClick ?: {},
+        enabled = onClick != null,
+        color = Color.Transparent,
+        modifier = modifier.fillMaxWidth(),
+    ) {
         ListItem(
             headlineContent = {
                 Text(
@@ -134,34 +176,5 @@ private fun OmniSettingsRowInternal(
                 containerColor = Color.Transparent,
             ),
         )
-    }
-
-    if (onClick != null) {
-        ElevatedCard(
-            onClick = onClick,
-            shape = OmniShapeTokens.card,
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            ),
-            elevation = CardDefaults.elevatedCardElevation(
-                defaultElevation = 0.dp,
-            ),
-            modifier = modifier.fillMaxWidth(),
-        ) {
-            cardContent()
-        }
-    } else {
-        ElevatedCard(
-            shape = OmniShapeTokens.card,
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            ),
-            elevation = CardDefaults.elevatedCardElevation(
-                defaultElevation = 0.dp,
-            ),
-            modifier = modifier.fillMaxWidth(),
-        ) {
-            cardContent()
-        }
     }
 }

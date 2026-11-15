@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -28,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.designsystem.tokens.OmniSpacingTokens
+import com.omniflow.android.ui.readableContentWidth
 
 /**
  * 更多家族统一全页脚手架。
@@ -53,8 +55,8 @@ fun OmniSubPageScaffold(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .readableContentWidth()
                 .statusBarsPadding()
-                .navigationBarsPadding()
                 .imePadding(),
         ) {
             // 64dp TopBar
@@ -65,22 +67,26 @@ fun OmniSubPageScaffold(
                     .padding(horizontal = OmniSpacingTokens.pageHorizontal),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    modifier = Modifier.size(40.dp),
+                IconButton(
                     onClick = onBack,
+                    modifier = Modifier.size(48.dp),
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "返回",
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(20.dp),
-                        )
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        modifier = Modifier.size(40.dp),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "返回",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
                     }
                 }
-                Spacer(Modifier.width(OmniSpacingTokens.mediumSmall))
+                Spacer(Modifier.width(OmniSpacingTokens.extraSmall))
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),

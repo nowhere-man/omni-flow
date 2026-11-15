@@ -28,6 +28,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -355,12 +356,17 @@ private fun KeywordField(value: String, onValue: (String) -> Unit, onSearch: () 
                 )
             }
             if (value.isNotEmpty()) {
-                Icon(
-                    Icons.Default.Close,
-                    contentDescription = "清除关键词",
-                    modifier = Modifier.size(18.dp).clickable { onValue("") },
-                    tint = mutedContent(),
-                )
+                IconButton(
+                    onClick = { onValue("") },
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "清除关键词",
+                        modifier = Modifier.size(18.dp),
+                        tint = mutedContent(),
+                    )
+                }
             }
         }
     }

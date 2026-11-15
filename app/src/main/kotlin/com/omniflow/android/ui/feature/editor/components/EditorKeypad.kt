@@ -15,6 +15,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.OmniRadius
@@ -60,6 +62,16 @@ fun EditorKeypad(
                         MaterialTheme.colorScheme.onSurface
                     }
 
+                    val keyDescription = when (key) {
+                        "+" -> "加"
+                        "-" -> "减"
+                        "=" -> "计算结果"
+                        "C" -> "清空金额"
+                        "退格" -> "退格删除"
+                        "." -> "小数点"
+                        else -> key
+                    }
+
                     Surface(
                         onClick = {
                             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -68,7 +80,8 @@ fun EditorKeypad(
                         enabled = enabled,
                         modifier = Modifier
                             .weight(1f)
-                            .height(52.dp),
+                            .height(52.dp)
+                            .semantics { contentDescription = keyDescription },
                         shape = MaterialTheme.shapes.small,
                         color = color,
                         contentColor = contentColor,

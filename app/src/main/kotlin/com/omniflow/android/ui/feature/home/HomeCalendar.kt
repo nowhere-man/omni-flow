@@ -21,6 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -87,10 +89,23 @@ private fun CalendarCell(
         Spacer(modifier.height(CalendarCellHeight))
         return
     }
+    val cellDescription = remember(date, isToday, summary) {
+        buildString {
+            append("${date.monthNumber}月${date.dayOfMonth}日")
+            if (isToday) append("，今天")
+            summary?.incomeTotal?.takeIf { it.minor > 0 }?.let {
+                append("，收入${it.calendarAmountText()}元")
+            }
+            summary?.expenseTotal?.takeIf { it.minor > 0 }?.let {
+                append("，支出${it.calendarAmountText()}元")
+            }
+        }
+    }
     Column(
         modifier = modifier
             .height(CalendarCellHeight)
             .clip(RoundedCornerShape(6.dp))
+            .clearAndSetSemantics { contentDescription = cellDescription }
             .clickable { onDateSelected(date) }
             .padding(vertical = 1.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

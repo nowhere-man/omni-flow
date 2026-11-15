@@ -194,10 +194,10 @@ internal fun AmountText(
     )
 }
 
-/** 明细里支出用中性色，只有收入上色；日历格子和图表另外走 [expenseColor]。 */
+/** 支出与收入统一使用专有语义色。 */
 @Composable
 internal fun amountColor(type: TransactionType?): Color = when (type) {
-    TransactionType.EXPENSE -> MaterialTheme.colorScheme.onSurface
+    TransactionType.EXPENSE -> expenseColor()
     TransactionType.INCOME -> incomeColor()
     TransactionType.TRANSFER, null -> MaterialTheme.colorScheme.onSurfaceVariant
 }

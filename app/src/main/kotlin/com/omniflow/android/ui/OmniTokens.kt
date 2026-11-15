@@ -58,12 +58,15 @@ internal fun mutedContent(): Color = MaterialTheme.colorScheme.onSurfaceVariant
  * 不再让金额和标题挤在同一档。
  */
 object OmniText {
+    private const val FontFeatureSettingsTnum = "tnum"
+
     /** 净资产、详情页主数字。 */
     val amountHero: TextStyle
         @Composable get() = MaterialTheme.typography.headlineMedium.copy(
             fontSize = 30.sp,
             lineHeight = 36.sp,
             fontWeight = FontWeight.Bold,
+            fontFeatureSettings = FontFeatureSettingsTnum,
         )
 
     /** 汇总卡数值、明细行金额。 */
@@ -72,6 +75,7 @@ object OmniText {
             fontSize = 22.sp,
             lineHeight = 26.sp,
             fontWeight = FontWeight.Bold,
+            fontFeatureSettings = FontFeatureSettingsTnum,
         )
 
     /**
@@ -87,6 +91,7 @@ object OmniText {
             else -> 14.sp
         },
         lineHeight = 22.sp,
+        fontFeatureSettings = FontFeatureSettingsTnum,
     )
 
     /**
@@ -102,6 +107,7 @@ object OmniText {
             else -> 15.sp
         },
         lineHeight = 24.sp,
+        fontFeatureSettings = FontFeatureSettingsTnum,
     )
 
     /** 卡片标题、列表行标题。 */

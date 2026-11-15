@@ -207,7 +207,8 @@ private fun DashedNewTagChip(
     val strokeColor = MaterialTheme.colorScheme.outlineVariant
     Box(
         modifier = modifier
-            .height(34.dp)
+            .defaultMinSize(minHeight = 40.dp)
+            .height(38.dp)
             .clip(CircleShape)
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp),

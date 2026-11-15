@@ -22,19 +22,24 @@ object OmniColorTokens {
     val WarningLight = Color(0xFF8B6012)
     val WarningDark = Color(0xFFE8B661)
 
-    // Tonal Surface 暖调容器阶梯规范 (对标 Gmail M3 Expressive & Google Account M3E Dark)
-    val SurfaceBackgroundLight = Color(0xFFF5EDE0)
-    val SurfaceBackgroundDark = Color(0xFF1E1F21)
+    // Tonal Surface 现代中性容器阶梯规范 (对标 Google M3 现代设计基准，告别暗黄暗沉)
+    val SurfaceBackgroundLight = Color(0xFFF7F9FB)
+    val SurfaceBackgroundDark = Color(0xFF131315)
 
-    val SurfaceContainerLowLight = Color(0xFFFFFDF8)
-    val SurfaceContainerLowDark = Color(0xFF38393B)
+    val SurfaceContainerLowestLight = Color(0xFFFFFFFF)
+    val SurfaceContainerLowestDark = Color(0xFF0E0E10)
 
-    val SurfaceContainerLight = Color(0xFFEFE6D8)
-    val SurfaceContainerDark = Color(0xFF2B2C2E)
+    val SurfaceContainerLowLight = Color(0xFFFFFFFF)
+    val SurfaceContainerLowDark = Color(0xFF1C1D20)
 
-    val SurfaceContainerHighLight = Color(0xFFE8DECF)
-    val SurfaceContainerHighDark = Color(0xFF444547)
-    val SurfaceContainerHighestDark = Color(0xFF4E5052)
+    val SurfaceContainerLight = Color(0xFFEFF1F4)
+    val SurfaceContainerDark = Color(0xFF232528)
+
+    val SurfaceContainerHighLight = Color(0xFFE7E9ED)
+    val SurfaceContainerHighDark = Color(0xFF2C2E33)
+
+    val SurfaceContainerHighestLight = Color(0xFFDFE2E6)
+    val SurfaceContainerHighestDark = Color(0xFF37393F)
 
     // Expressive 语义徽章色彩（容器色 + 图标色）对
     // 浅/深两模式统一为「亮粉彩圆盘 + 同色相深色 glyph」，深色模式不再使用深底浅图标

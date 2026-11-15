@@ -24,6 +24,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -184,15 +185,17 @@ fun SearchFilterPanel(
                         overflow = TextOverflow.Ellipsis,
                     )
                     if (hasSelectedCategory) {
-                        Icon(
-                            imageVector = Icons.Default.Clear,
-                            contentDescription = "清除分类",
-                            modifier = Modifier
-                                .size(18.dp)
-                                .clickable { onCategorySelected(null, null) },
-                            tint = mutedContent(),
-                        )
-                        Spacer(Modifier.width(4.dp))
+                        IconButton(
+                            onClick = { onCategorySelected(null, null) },
+                            modifier = Modifier.size(36.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Clear,
+                                contentDescription = "清除分类",
+                                modifier = Modifier.size(18.dp),
+                                tint = mutedContent(),
+                            )
+                        }
                     }
                     Icon(
                         imageVector = Icons.Default.ExpandMore,

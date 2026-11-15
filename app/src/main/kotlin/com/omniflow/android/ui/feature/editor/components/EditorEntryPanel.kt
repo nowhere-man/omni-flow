@@ -144,8 +144,15 @@ fun TransactionEntryPanel(
                             label = { Text(category.name, maxLines = 1) },
                         )
                     }
-                    Surface(onClick = onAddSecondary, shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer) {
-                        Icon(Icons.Default.Add, contentDescription = "新建二级分类", modifier = Modifier.padding(8.dp).size(16.dp))
+                    Surface(
+                        onClick = onAddSecondary,
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        modifier = Modifier.size(36.dp),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Add, contentDescription = "新建二级分类", modifier = Modifier.size(18.dp))
+                        }
                     }
                 }
             }

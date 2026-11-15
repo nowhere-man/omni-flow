@@ -101,7 +101,7 @@ fun AnalyticsControlHeader(
                 SingleChoiceSegmentedButtonRow(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(36.dp),
+                        .height(40.dp),
                 ) {
                     modes.forEachIndexed { index, mode ->
                         SegmentedButton(
@@ -132,7 +132,7 @@ fun AnalyticsControlHeader(
                         ) {
                             FilledTonalButton(
                                 onClick = { showStartPicker = true },
-                                modifier = Modifier.height(34.dp),
+                                modifier = Modifier.height(40.dp),
                             ) {
                                 Text(
                                     text = range.displayLabel(rangeMode),
@@ -143,7 +143,7 @@ fun AnalyticsControlHeader(
                     } else {
                         IconButton(
                             onClick = { onShiftRange(-1) },
-                            modifier = Modifier.size(34.dp),
+                            modifier = Modifier.size(44.dp),
                         ) {
                             Icon(
                                 imageVector = Icons.Default.ArrowBackIosNew,
@@ -163,7 +163,7 @@ fun AnalyticsControlHeader(
                             if (showReset) {
                                 IconButton(
                                     onClick = onResetRange,
-                                    modifier = Modifier.size(28.dp),
+                                    modifier = Modifier.size(40.dp),
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Today,
@@ -177,7 +177,7 @@ fun AnalyticsControlHeader(
 
                         IconButton(
                             onClick = { onShiftRange(1) },
-                            modifier = Modifier.size(34.dp),
+                            modifier = Modifier.size(44.dp),
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,

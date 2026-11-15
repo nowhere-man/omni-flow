@@ -84,47 +84,57 @@ fun AboutPage(
 
             Spacer(Modifier.height(OmniSpacingTokens.xxl))
 
-            // 功能行 (8dp 独立卡片，所属第 1 组 SYSTEM 配色)
+            // 功能卡片组 (24dp 大圆角卡片，细分割线相连，所属第 1 组 SYSTEM 配色)
             OmniSettingsGroup {
-                OmniSettingsRow(
-                    title = "检查更新",
-                    icon = Icons.Default.SystemUpdate,
-                    badgeType = SemanticBadgeType.SYSTEM,
-                    subtitle = "前往 GitHub Releases 查看新版本",
-                    onClick = {
-                        openUrl(context, "https://github.com/nowhere-man/omni-flow/releases")
-                    },
-                )
-                OmniSettingsRow(
-                    title = "意见反馈",
-                    icon = Icons.Default.Feedback,
-                    badgeType = SemanticBadgeType.SYSTEM,
-                    subtitle = "提交 Issue 与改进建议",
-                    onClick = {
-                        openUrl(context, "https://github.com/nowhere-man/omni-flow/issues")
-                    },
-                )
-                OmniSettingsRow(
-                    title = "用户协议",
-                    icon = Icons.Default.Description,
-                    badgeType = SemanticBadgeType.SYSTEM,
-                    subtitle = "服务条款与使用准则",
-                    onClick = { activeSheet = AboutDialogType.TERMS },
-                )
-                OmniSettingsRow(
-                    title = "隐私政策",
-                    icon = Icons.Default.Security,
-                    badgeType = SemanticBadgeType.SYSTEM,
-                    subtitle = "本地优先、零上传承诺",
-                    onClick = { activeSheet = AboutDialogType.PRIVACY },
-                )
-                OmniSettingsRow(
-                    title = "开源许可",
-                    icon = Icons.Default.Code,
-                    badgeType = SemanticBadgeType.SYSTEM,
-                    subtitle = "第三方开源组件声明",
-                    onClick = { activeSheet = AboutDialogType.LICENSES },
-                )
+                item {
+                    OmniSettingsRow(
+                        title = "检查更新",
+                        icon = Icons.Default.SystemUpdate,
+                        badgeType = SemanticBadgeType.SYSTEM,
+                        subtitle = "前往 GitHub Releases 查看新版本",
+                        onClick = {
+                            openUrl(context, "https://github.com/nowhere-man/omni-flow/releases")
+                        },
+                    )
+                }
+                item {
+                    OmniSettingsRow(
+                        title = "意见反馈",
+                        icon = Icons.Default.Feedback,
+                        badgeType = SemanticBadgeType.SYSTEM,
+                        subtitle = "提交 Issue 与改进建议",
+                        onClick = {
+                            openUrl(context, "https://github.com/nowhere-man/omni-flow/issues")
+                        },
+                    )
+                }
+                item {
+                    OmniSettingsRow(
+                        title = "用户协议",
+                        icon = Icons.Default.Description,
+                        badgeType = SemanticBadgeType.SYSTEM,
+                        subtitle = "服务条款与使用准则",
+                        onClick = { activeSheet = AboutDialogType.TERMS },
+                    )
+                }
+                item {
+                    OmniSettingsRow(
+                        title = "隐私政策",
+                        icon = Icons.Default.Security,
+                        badgeType = SemanticBadgeType.SYSTEM,
+                        subtitle = "本地优先、零上传承诺",
+                        onClick = { activeSheet = AboutDialogType.PRIVACY },
+                    )
+                }
+                item {
+                    OmniSettingsRow(
+                        title = "开源许可",
+                        icon = Icons.Default.Code,
+                        badgeType = SemanticBadgeType.SYSTEM,
+                        subtitle = "第三方开源组件声明",
+                        onClick = { activeSheet = AboutDialogType.LICENSES },
+                    )
+                }
             }
 
             Spacer(Modifier.height(OmniSpacingTokens.xxl))

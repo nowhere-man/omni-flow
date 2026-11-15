@@ -173,8 +173,7 @@ internal fun SummaryCardRow(
     // 字号按最长的那个数算，三张卡共用：各算各的会让并排的三个数字大小不一
     val style = OmniText.amountCard(texts.maxOf(String::length))
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        // 支出占绝大多数，全标红会让整屏发碎；只给收入和结余语义色
-        SummaryCard("总支出", texts[0], style, MaterialTheme.colorScheme.onSurface, onExpense, Modifier.weight(1f))
+        SummaryCard("总支出", texts[0], style, expenseColor(), onExpense, Modifier.weight(1f))
         SummaryCard("总收入", texts[1], style, incomeColor(), onIncome, Modifier.weight(1f))
         SummaryCard(
             "总结余",

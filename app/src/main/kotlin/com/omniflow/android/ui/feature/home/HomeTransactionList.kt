@@ -53,7 +53,7 @@ fun TransactionDayGroupItem(
                     Text("收 ${group.incomeTotal.asCompactRmb()}", color = incomeColor(), style = OmniText.caption)
                 }
                 if (group.expenseTotal != Money.Zero) {
-                    Text("支 ${group.expenseTotal.asCompactRmb()}", color = mutedContent(), style = OmniText.caption)
+                    Text("支 ${group.expenseTotal.asCompactRmb()}", color = expenseColor(), style = OmniText.caption)
                 }
             }
         }

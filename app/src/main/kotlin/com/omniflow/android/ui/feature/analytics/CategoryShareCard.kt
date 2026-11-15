@@ -166,7 +166,7 @@ fun CategoryShareCard(
                 if (onTypeChange != null) {
                     val types = listOf(TransactionType.EXPENSE, TransactionType.INCOME)
                     SingleChoiceSegmentedButtonRow(
-                        modifier = Modifier.height(32.dp),
+                        modifier = Modifier.height(38.dp),
                     ) {
                         types.forEachIndexed { index, type ->
                             SegmentedButton(

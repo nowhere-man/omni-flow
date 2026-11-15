@@ -15,6 +15,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.PI
@@ -43,9 +45,15 @@ fun DonutChart(
     val density = LocalDensity.current
     val strokeWidthPx = with(density) { strokeWidth.toPx() }
     val emptyRingColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+    val chartDescription = androidx.compose.runtime.remember(slices) {
+        if (slices.isEmpty()) "分类占比图表，暂无数据"
+        else "分类占比图表，包含 " + slices.joinToString("，") { it.label }
+    }
 
     Box(
-        modifier = modifier.size(chartSize),
+        modifier = modifier
+            .size(chartSize)
+            .semantics { contentDescription = chartDescription },
         contentAlignment = Alignment.Center,
     ) {
         val total = slices.sumOf { it.value }

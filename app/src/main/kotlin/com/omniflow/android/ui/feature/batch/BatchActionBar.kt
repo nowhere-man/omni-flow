@@ -76,7 +76,7 @@ fun BatchActionBar(
                 ) {
                     Text(if (isAllSelected) "取消全选" else "全选")
                 }
-                IconButton(onClick = onExit, modifier = Modifier.size(32.dp)) {
+                IconButton(onClick = onExit, modifier = Modifier.size(40.dp)) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "退出多选",
