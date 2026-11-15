@@ -21,9 +21,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.IconPickerGrid
-import com.omniflow.android.ui.ManagementSheet
 import com.omniflow.android.ui.OmniTextField
 import com.omniflow.android.ui.asRmb
+import com.omniflow.android.ui.designsystem.components.OmniSheetScaffold
 import com.omniflow.android.ui.designsystem.tokens.CategoryIconOptions
 import com.omniflow.android.ui.label
 import com.omniflow.android.ui.toDecimal
@@ -33,6 +33,7 @@ import com.omniflow.core.domain.model.AccountId
 import com.omniflow.core.domain.model.AccountType
 import com.omniflow.core.domain.model.Money
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 internal fun AccountSheet(
     account: Account?,
@@ -50,7 +51,7 @@ internal fun AccountSheet(
     var balanceError by remember(account) { mutableStateOf<String?>(null) }
     var confirmDelete by remember(account) { mutableStateOf(false) }
 
-    ManagementSheet(
+    OmniSheetScaffold(
         title = if (account == null) "新建账户" else "编辑账户",
         onDismiss = onDismiss,
         onSave = {

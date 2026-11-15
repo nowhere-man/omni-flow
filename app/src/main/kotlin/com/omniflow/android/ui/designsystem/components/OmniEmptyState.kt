@@ -116,14 +116,16 @@ fun OmniEmptyState(
             textAlign = TextAlign.Center,
         )
 
-        Spacer(Modifier.height(OmniSpacingTokens.extraSmall))
+        if (value.isNotBlank()) {
+            Spacer(Modifier.height(OmniSpacingTokens.extraSmall))
 
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
 
         if (actionLabel != null && onAction != null) {
             Spacer(Modifier.height(OmniSpacingTokens.extraLarge))
@@ -151,6 +153,26 @@ fun OmniEmptyState(
 ) = OmniEmptyState(
     status = message,
     value = subtitle,
+    modifier = modifier,
+    icon = icon,
+    actionLabel = actionLabel,
+    onAction = onAction,
+)
+
+/**
+ * 简洁单文案/双文案空态便捷重载。
+ */
+@Composable
+fun OmniEmptyState(
+    message: String,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    icon: ImageVector? = null,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null,
+) = OmniEmptyState(
+    status = message,
+    value = subtitle.orEmpty(),
     modifier = modifier,
     icon = icon,
     actionLabel = actionLabel,

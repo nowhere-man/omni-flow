@@ -25,7 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
+import com.omniflow.android.ui.OmniTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -175,13 +175,10 @@ fun ProfileEditSheet(
             Spacer(Modifier.height(OmniSpacingTokens.large))
 
             // 用户名输入框 (16dp 圆角，不胶囊化)
-            OutlinedTextField(
+            OmniTextField(
                 value = nameInput,
                 onValueChange = { nameInput = it.take(20) },
-                label = { Text("用户名") },
-                singleLine = true,
-                shape = OmniShapeTokens.textField,
-                modifier = Modifier.fillMaxWidth(),
+                label = "用户名",
             )
 
             Spacer(Modifier.height(OmniSpacingTokens.mediumSmall))

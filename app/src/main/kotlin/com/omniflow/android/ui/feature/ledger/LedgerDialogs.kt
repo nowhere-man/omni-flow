@@ -22,7 +22,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
+import com.omniflow.android.ui.OmniTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -93,13 +93,10 @@ internal fun LedgerSheet(
 
             Spacer(Modifier.height(OmniSpacingTokens.large))
 
-            OutlinedTextField(
+            OmniTextField(
                 value = name,
                 onValueChange = { name = it.take(20) },
-                label = { Text("账本名称") },
-                singleLine = true,
-                shape = OmniShapeTokens.textField,
-                modifier = Modifier.fillMaxWidth(),
+                label = "账本名称",
             )
         }
     }

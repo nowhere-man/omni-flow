@@ -77,6 +77,8 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.omniflow.android.ui.designsystem.components.OmniEmptyState
+import com.omniflow.android.ui.designsystem.components.OmniSheetScaffold
 import com.omniflow.android.ui.designsystem.tokens.omniColorScheme
 import com.omniflow.android.ui.designsystem.tokens.themePrimaryColor
 import androidx.compose.runtime.Composable
@@ -508,9 +510,10 @@ fun OmniFlowApp(
                     },
                     modifier = Modifier.padding(padding),
                 )
-                is OmniRoute.CategoryDetail -> EntityDetailScreen(
+                is OmniRoute.CategoryDetail -> CategoryDetailScreen(
                     state = entityDetailState,
                     moreState = moreState,
+                    onBack = { navigationState.goBack() },
                     onLoad = { viewModel.showEntityDetail(EntityDetailKind.CATEGORY, key.id) },
                     onOpenTransaction = { navigationState.navigate(OmniRoute.TransactionDetail(it)) },
                     onSeeAll = {
@@ -1018,46 +1021,39 @@ private fun DateDetailSheet(
     var displayMode by remember(state?.date?.startInclusive, state?.type) {
         mutableStateOf(TransactionDetailDisplayMode.CARD)
     }
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        contentWindowInsets = { WindowInsets(0) },
+    OmniSheetScaffold(
+        title = state?.date?.detailLabel() ?: "明细详情",
+        onDismiss = onDismiss,
+        trailingAction = if (state != null) {
+            {
+                IconButton(onClick = {
+                    displayMode = when (displayMode) {
+                        TransactionDetailDisplayMode.CARD -> TransactionDetailDisplayMode.LIST
+                        TransactionDetailDisplayMode.LIST -> TransactionDetailDisplayMode.CARD
+                    }
+                }) {
+                    Icon(
+                        if (displayMode == TransactionDetailDisplayMode.CARD) {
+                            Icons.AutoMirrored.Filled.List
+                        } else {
+                            Icons.Default.ViewModule
+                        },
+                        contentDescription = "切换卡片和列表",
+                        tint = mutedContent(),
+                    )
+                }
+            }
+        } else null,
+        scrollable = false,
     ) {
-        // 高度和记账弹层一致：上方只留一个状态栏，不再一个太满一个太空
-        Column(Modifier.fillMaxWidth().height(sheetHeight)) {
+        Box(Modifier.fillMaxWidth().height(sheetHeight)) {
             when {
                 isLoading -> LoadingState()
-                error != null -> ErrorState(error)
+                error != null -> OmniEmptyState(message = error)
                 state != null -> LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    item {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                state.date.detailLabel(),
-                                modifier = Modifier.weight(1f),
-                                style = OmniText.titleRow,
-                                maxLines = 1,
-                            )
-                            IconButton(onClick = {
-                                displayMode = when (displayMode) {
-                                    TransactionDetailDisplayMode.CARD -> TransactionDetailDisplayMode.LIST
-                                    TransactionDetailDisplayMode.LIST -> TransactionDetailDisplayMode.CARD
-                                }
-                            }) {
-                                Icon(
-                                    if (displayMode == TransactionDetailDisplayMode.CARD) {
-                                        Icons.AutoMirrored.Filled.List
-                                    } else {
-                                        Icons.Default.ViewModule
-                                    },
-                                    contentDescription = "切换卡片和列表",
-                                    tint = mutedContent(),
-                                )
-                            }
-                        }
-                    }
                     item {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                             if (state.type != TransactionType.INCOME) {
@@ -1070,12 +1066,8 @@ private fun DateDetailSheet(
                     }
                     if (state.items.isEmpty()) {
                         item {
-                            Text(
-                                "当前范围暂无交易",
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 28.dp),
-                                textAlign = TextAlign.Center,
-                                style = OmniText.caption,
-                                color = mutedContent(),
+                            OmniEmptyState(
+                                message = "当前范围暂无交易",
                             )
                         }
                     } else {
@@ -1097,10 +1089,5 @@ private fun LoadingState() {
 
 @Composable
 private fun ErrorState(message: String) {
-    Text(
-        message,
-        modifier = Modifier.fillMaxWidth().padding(24.dp),
-        color = MaterialTheme.colorScheme.error,
-        textAlign = TextAlign.Center,
-    )
+    OmniEmptyState(message = message)
 }

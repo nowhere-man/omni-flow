@@ -6,13 +6,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -21,19 +19,13 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,49 +44,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.omniflow.core.domain.model.Ledger
-
-/**
- * 管理页统一的新建/编辑表单。以前用 AlertDialog，字段一多就挤，
- * 图标选择还得再叠一层对话框；底部弹层空间够，也和记账页、分类选择器的交互一致。
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun ManagementSheet(
-    title: String,
-    onDismiss: () -> Unit,
-    onSave: () -> Unit,
-    saveEnabled: Boolean = true,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .imePadding()
-                .padding(horizontal = 20.dp),
-        ) {
-            Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(12.dp))
-            Column(
-                modifier = Modifier
-                    .weight(1f, fill = false)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                content = content,
-            )
-            Spacer(Modifier.height(16.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = onDismiss) { Text("取消") }
-                Spacer(Modifier.size(8.dp))
-                Button(onClick = onSave, enabled = saveEnabled) { Text("保存") }
-            }
-            Spacer(Modifier.height(20.dp))
-        }
-    }
-}
 
 /** 图标选择网格，账户和分类共用；以前账户是把 `wallet-cards` 这种 key 字符串直接列给用户看。 */
 @Composable
@@ -166,41 +115,6 @@ internal fun LedgerCoverBox(
     )
 }
 
-@Composable
-internal fun LedgerCoverPicker(selectedKey: String?, onSelected: (String) -> Unit) {
-    val selected = ledgerCover(selectedKey).key
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(64.dp),
-        modifier = Modifier.heightIn(max = 180.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        items(LedgerCovers, key = { it.key }) { cover ->
-            val isSelected = cover.key == selected
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Surface(
-                    onClick = { onSelected(cover.key) },
-                    modifier = Modifier
-                        .size(56.dp)
-                        .border(
-                            width = if (isSelected) 2.dp else 0.dp,
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                            shape = CircleShape,
-                        ),
-                    shape = CircleShape,
-                    color = Color.Transparent,
-                ) {
-                    OmniLedgerBadge(cover.key, Modifier.padding(3.dp), iconSize = 24.dp)
-                }
-                Text(cover.label, style = MaterialTheme.typography.labelSmall, maxLines = 1)
-            }
-        }
-    }
-}
-
 /** 分类/标签/规则页顶部的账本选择条，取代原来那个裸 ValueMenu。 */
 @Composable
 internal fun LedgerPickerBar(
@@ -248,18 +162,6 @@ internal fun LedgerPickerBar(
                 )
             }
         }
-    }
-}
-
-/** 管理页统一的分组标题。 */
-@Composable
-internal fun ManagementGroupHeader(title: String, trailing: String? = null) {
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(title, modifier = Modifier.weight(1f), style = OmniText.caption, color = mutedContent())
-        trailing?.let { Text(it, style = OmniText.caption, color = mutedContent()) }
     }
 }
 

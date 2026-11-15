@@ -1,15 +1,17 @@
 package com.omniflow.android.ui
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -20,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.designsystem.components.OmniSheetScaffold
+import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
 import com.omniflow.core.domain.model.BudgetProgress
 import com.omniflow.core.domain.model.Category
 import com.omniflow.core.domain.model.Money
@@ -58,20 +61,32 @@ internal fun BudgetEditSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 8.dp),
+                .padding(vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             if (editing == null) {
                 Text("预算范围", style = MaterialTheme.typography.labelLarge)
-                NullableValueMenu(
-                    label = categories.firstOrNull { it.id == categoryId }?.name
-                        ?: if (hasOverall) "选择一级分类" else "账本总预算",
-                    allLabel = "账本总预算",
-                    values = selectable,
-                    valueLabel = Category::name,
-                    onAll = { categoryId = null },
-                    onSelected = { categoryId = it.id },
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    FilterChip(
+                        selected = categoryId == null,
+                        onClick = { categoryId = null },
+                        label = { Text("账本总预算") },
+                        shape = OmniShapeTokens.mediumSmall,
+                    )
+                    selectable.forEach { category ->
+                        FilterChip(
+                            selected = categoryId == category.id,
+                            onClick = { categoryId = category.id },
+                            label = { Text(category.name) },
+                            shape = OmniShapeTokens.mediumSmall,
+                        )
+                    }
+                }
                 if (hasOverall && categoryId == null) {
                     Text(
                         text = "总预算已存在，保存会覆盖原来的额度。",
@@ -81,15 +96,12 @@ internal fun BudgetEditSheet(
                 }
             }
 
-            OutlinedTextField(
+            OmniTextField(
                 value = amountText,
                 onValueChange = { amountText = it; error = null },
-                label = { Text("每月额度") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
+                label = "每月额度",
                 isError = error != null,
-                supportingText = { error?.let { Text(it) } },
-                shape = RoundedCornerShape(12.dp),
+                supportingText = error,
             )
 
             if (editing != null) {

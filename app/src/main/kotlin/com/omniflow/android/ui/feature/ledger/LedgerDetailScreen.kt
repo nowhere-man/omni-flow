@@ -45,6 +45,8 @@ import com.omniflow.android.ui.LedgerCoverBox
 import com.omniflow.android.ui.OmniRadius
 import com.omniflow.android.ui.TransactionRow
 import com.omniflow.android.ui.asRmb
+import com.omniflow.android.ui.designsystem.components.OmniEmptyState
+import com.omniflow.android.ui.designsystem.components.OmniSubPageScaffold
 import com.omniflow.android.ui.expenseColor
 import com.omniflow.android.ui.incomeColor
 import com.omniflow.android.ui.mutedContent
@@ -74,47 +76,30 @@ internal fun LedgerDetailScreen(
 
     val ledger = state.ledger
 
-    Column(modifier = modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+    OmniSubPageScaffold(
+        title = ledger?.name ?: "账本详情",
+        onBack = onBack,
+        modifier = modifier,
+    ) {
+        when {
+            state.isLoading -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
             }
-            Text(
-                text = ledger?.name ?: "账本详情",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-
-        if (state.isLoading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-            return
-        }
-
-        if (ledger == null) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = state.error ?: "未找到账本信息",
-                    color = MaterialTheme.colorScheme.error,
+            ledger == null -> {
+                OmniEmptyState(
+                    message = state.error ?: "未找到账本信息",
                 )
             }
-            return
-        }
-
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .readableContentWidth()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
+            else -> {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .readableContentWidth()
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
             item {
                 LedgerOverviewCard(
                     ledger = ledger,
@@ -143,13 +128,8 @@ internal fun LedgerDetailScreen(
 
             if (state.transactions.isEmpty()) {
                 item {
-                    Text(
-                        text = "该账本暂无交易记录",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 32.dp),
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    OmniEmptyState(
+                        message = "该账本暂无交易记录",
                     )
                 }
             } else {
@@ -192,6 +172,8 @@ internal fun LedgerDetailScreen(
             }
 
             item { Spacer(Modifier.height(88.dp)) }
+        }
+            }
         }
     }
 
