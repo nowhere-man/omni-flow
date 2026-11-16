@@ -121,9 +121,9 @@ fun LedgerCoverStudioSheet(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // 实时拟物大书本预览
+            // 扁平 MD3 封面预览
             Box(modifier = Modifier.width(130.dp)) {
-                OmniTactileBook(
+                LedgerCoverPreview(
                     name = ledgerName.ifBlank { "账本名" },
                     coverKey = currentKey,
                     ledgerId = ledgerId,

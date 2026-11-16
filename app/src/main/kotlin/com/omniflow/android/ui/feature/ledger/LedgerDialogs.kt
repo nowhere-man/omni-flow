@@ -71,9 +71,9 @@ internal fun LedgerSheet(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // 实时拟物小封面
+            // 扁平 MD3 封面预览
             Box(modifier = Modifier.width(110.dp)) {
-                OmniTactileBook(
+                LedgerCoverPreview(
                     name = name.ifBlank { "新账本" },
                     coverKey = coverKey,
                     ledgerId = ledger?.id.orEmpty(),
@@ -139,9 +139,9 @@ internal fun LedgerDetailSheet(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // 大封面展示
+            // 扁平 MD3 封面展示
             Box(modifier = Modifier.width(140.dp)) {
-                OmniTactileBook(
+                LedgerCoverPreview(
                     name = ledger.name,
                     coverKey = ledger.coverKey,
                     ledgerId = ledger.id,

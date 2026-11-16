@@ -119,14 +119,13 @@ internal fun AccountListScreen(
                     FilterChip(
                         selected = state.selectedRole == null,
                         onClick = { viewModel.selectRole(null) },
-                        label = { Text("全部 (${state.accounts.size})") },
+                        label = { Text("全部") },
                     )
                     AccountRole.entries.forEach { role ->
-                        val count = state.accounts.count { it.ownerRole == role }
                         FilterChip(
                             selected = state.selectedRole == role,
                             onClick = { viewModel.selectRole(role) },
-                            label = { Text("${role.label} ($count)") },
+                            label = { Text(role.label) },
                         )
                     }
                 }

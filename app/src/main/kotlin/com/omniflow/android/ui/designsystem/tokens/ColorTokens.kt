@@ -117,11 +117,6 @@ object OmniColorTokens {
     val LedgerCoverFitnessEnd = Color(0xFFAEDD9F)
     val LedgerCoverInvestStart = Color(0xFFD4AD62)
     val LedgerCoverInvestEnd = Color(0xFFEED08E)
-
-    val ShelfPlankLight = Color(0xFFDCC8B0)
-    val ShelfPlankDark = Color(0xFF332D26)
-    val ShelfPlankShadowLight = Color(0x336B5237)
-    val ShelfPlankShadowDark = Color(0x66000000)
 }
 
 fun ledgerCoverGradient(colorKey: String): Pair<Color, Color> = when (colorKey) {

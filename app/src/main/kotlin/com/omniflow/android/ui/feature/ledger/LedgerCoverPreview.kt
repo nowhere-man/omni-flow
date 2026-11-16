@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -24,14 +27,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -39,26 +39,20 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.omniflow.android.ui.expenseColor
 import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
 import com.omniflow.android.ui.designsystem.tokens.ledgerCoverGradient
 import com.omniflow.core.domain.model.LedgerCoverSpec
 import java.io.File
 
 /**
- * 3:4 拟物实体书账本组件。
- *
- * 规格契约：
- * - 3:4 比例 Canvas 绘制
- * - 左侧 12dp 书脊折痕渐变 (spine crease gradient)
- * - 右侧 3dp 纸页厚度微影 (page-stack micro-shadow)
- * - 默认/当前账本顶部垂落燕尾书签带 (ribbon)
- * - 封面排印：大图标 + 书名，严禁印任何金额与笔数
+ * 扁平 MD3 账本封面预览卡片（替代拟物实体书）。
+ * 保留封面色彩系统（渐变色、几何底纹、自定义图），彻底移除拟本书脊折痕、边缘厚度纸影与书签丝带。
  */
 @Composable
-fun OmniTactileBook(
+fun LedgerCoverPreview(
     name: String,
     coverKey: String?,
     modifier: Modifier = Modifier,
@@ -83,113 +77,91 @@ fun OmniTactileBook(
 
     val gradient = effectivePreset?.let { ledgerCoverGradient(it.colorKey) }
     val iconKey = effectivePreset?.iconKey ?: "books"
-    val ribbonColor = expenseColor()
     val patternKey = effectivePreset?.patternKey ?: "clean"
 
-    Box(
+    val shape = RoundedCornerShape(16.dp)
+
+    ElevatedCard(
+        shape = shape,
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
         modifier = modifier
             .aspectRatio(3f / 4f)
-            .shadow(if (isArchived) 2.dp else 6.dp, BookShape)
-            .clip(BookShape)
             .then(if (isArchived) Modifier.alpha(0.55f) else Modifier)
             .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier),
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            if (customBitmap != null) {
-                drawCustomCoverImage(customBitmap, isArchived)
-            } else if (gradient != null) {
-                drawRect(
-                    brush = Brush.linearGradient(
-                        colors = listOf(gradient.first, gradient.second),
-                        start = Offset(0f, 0f),
-                        end = Offset(size.width, size.height),
-                    ),
-                )
-                drawPattern(patternKey)
+        Box(modifier = Modifier.fillMaxSize()) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                if (customBitmap != null) {
+                    drawCustomCoverImage(customBitmap, isArchived)
+                } else if (gradient != null) {
+                    drawRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(gradient.first, gradient.second),
+                            start = Offset(0f, 0f),
+                            end = Offset(size.width, size.height),
+                        ),
+                    )
+                    drawPattern(patternKey)
+                }
             }
 
-            // 左侧 12dp 书脊折痕渐变
-            val spineWidthPx = 12.dp.toPx()
-            drawRect(
-                brush = Brush.horizontalGradient(
-                    0.0f to Color.Black.copy(alpha = 0.28f),
-                    0.45f to Color.White.copy(alpha = 0.16f),
-                    1.0f to Color.Transparent,
-                    startX = 0f,
-                    endX = spineWidthPx,
-                ),
-                size = Size(spineWidthPx, size.height),
-            )
-            drawLine(
-                color = Color.Black.copy(alpha = 0.18f),
-                start = Offset(spineWidthPx, 0f),
-                end = Offset(spineWidthPx, size.height),
-                strokeWidth = 1.dp.toPx(),
-            )
-            drawLine(
-                color = Color.White.copy(alpha = 0.15f),
-                start = Offset(spineWidthPx + 1f, 0f),
-                end = Offset(spineWidthPx + 1f, size.height),
-                strokeWidth = 1.dp.toPx(),
-            )
-
-            // 右侧 3dp 纸页厚度微影
-            val pageStackWidthPx = 3.dp.toPx()
-            drawRect(
-                color = Color.White.copy(alpha = 0.35f),
-                topLeft = Offset(size.width - pageStackWidthPx, 0f),
-                size = Size(pageStackWidthPx, size.height),
-            )
-            drawLine(
-                color = Color.Black.copy(alpha = 0.15f),
-                start = Offset(size.width - pageStackWidthPx, 0f),
-                end = Offset(size.width - pageStackWidthPx, size.height),
-                strokeWidth = 1f,
-            )
-
+            // 默认徽章 (扁平 MD3 风格)
             if (isDefault) {
-                drawBookmarkRibbon(ribbonColor)
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(start = 18.dp, end = 12.dp, top = 28.dp, bottom = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Spacer(Modifier.weight(1f))
-
-            Surface(
-                shape = CircleShape,
-                color = Color.White.copy(alpha = 0.22f),
-                modifier = Modifier.size(54.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = getCategoryIcon(iconKey),
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(28.dp),
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp),
+                ) {
+                    Text(
+                        text = "默认",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                     )
                 }
             }
 
-            Spacer(Modifier.height(14.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 14.dp, vertical = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Spacer(Modifier.weight(1f))
 
-            Text(
-                text = name,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                ),
-                color = Color.White,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+                Surface(
+                    shape = CircleShape,
+                    color = Color.White.copy(alpha = 0.22f),
+                    modifier = Modifier.size(52.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = getCategoryIcon(iconKey),
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(26.dp),
+                        )
+                    }
+                }
 
-            Spacer(Modifier.weight(1.2f))
+                Spacer(Modifier.height(12.dp))
+
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                    ),
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+
+                Spacer(Modifier.weight(1.2f))
+            }
         }
     }
 }
@@ -250,22 +222,6 @@ private fun DrawScope.drawPattern(patternKey: String) {
     }
 }
 
-private fun DrawScope.drawBookmarkRibbon(ribbonColor: Color) {
-    val ribbonWidth = 16.dp.toPx()
-    val ribbonHeight = 28.dp.toPx()
-    val x = size.width - 24.dp.toPx()
-
-    val ribbonPath = Path().apply {
-        moveTo(x, 0f)
-        lineTo(x + ribbonWidth, 0f)
-        lineTo(x + ribbonWidth, ribbonHeight)
-        lineTo(x + ribbonWidth / 2f, ribbonHeight - 6.dp.toPx())
-        lineTo(x, ribbonHeight)
-        close()
-    }
-    drawPath(ribbonPath, ribbonColor)
-}
-
 private fun DrawScope.drawCustomCoverImage(bitmap: Bitmap, isArchived: Boolean) {
     val imageBitmap = bitmap.asImageBitmap()
     val filter = if (isArchived) {
@@ -273,7 +229,7 @@ private fun DrawScope.drawCustomCoverImage(bitmap: Bitmap, isArchived: Boolean) 
     } else null
     drawImage(
         image = imageBitmap,
-        dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), size.height.toInt()),
+        dstSize = IntSize(size.width.toInt(), size.height.toInt()),
         colorFilter = filter,
     )
 }
