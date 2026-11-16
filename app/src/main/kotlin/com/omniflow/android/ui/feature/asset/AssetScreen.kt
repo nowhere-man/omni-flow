@@ -5,13 +5,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
@@ -19,147 +16,126 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.MorePage
-import com.omniflow.android.ui.MoreUiState
 import com.omniflow.android.ui.OmniTextField
-import com.omniflow.android.ui.asRmb
 import com.omniflow.android.ui.designsystem.components.OmniBarSegment
 import com.omniflow.android.ui.designsystem.components.OmniEmptyState
+import com.omniflow.android.ui.designsystem.components.OmniSettingsGroup
 import com.omniflow.android.ui.designsystem.components.OmniSubPageScaffold
 import com.omniflow.android.ui.expenseColor
 import com.omniflow.android.ui.incomeColor
-import com.omniflow.android.ui.label
-import com.omniflow.core.SharedApp
-import com.omniflow.core.domain.model.Account
 import com.omniflow.core.domain.model.AccountRole
-import com.omniflow.core.domain.model.AccountSummary
-import com.omniflow.core.domain.model.AccountType
-import com.omniflow.core.domain.model.AppTimeZone
-import com.omniflow.core.domain.model.Money
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
-import kotlinx.datetime.toLocalDateTime
 
 @Composable
 internal fun AssetScreen(
-    state: MoreUiState,
-    sharedApp: SharedApp,
+    viewModel: AssetViewModel,
     onBack: () -> Unit,
     onPage: (MorePage) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val coroutineScope = rememberCoroutineScope()
-    var selectedRole by remember { mutableStateOf<AccountRole?>(null) }
-    var selectedSegmentKey by remember { mutableStateOf<String?>(null) }
-    var editingAccount by remember { mutableStateOf<Account?>(null) }
-    var showEditNotesDialog by remember { mutableStateOf(false) }
-    var monthlyNotes by remember { mutableStateOf("") }
-
-    val today = remember { Clock.System.now().toLocalDateTime(AppTimeZone).date }
-    val currentPeriod = remember(today) { "${today.year}-${today.monthNumber.toString().padStart(2, '0')}" }
-
-    // Load current month notes from reconciliation meta
-    LaunchedEffect(currentPeriod) {
-        val meta = sharedApp.reconciliation.observePeriodSnapshot(currentPeriod, null).firstOrNull()?.getOrNull()?.meta
-        if (meta != null && meta.notes.isNotBlank()) {
-            monthlyNotes = meta.notes
-        }
-    }
-
-    val activeAccounts = remember(state.accounts, selectedRole) {
-        state.accounts.filter {
-            it.deletedAt == null && it.includeInTotalAssets && (selectedRole == null || it.ownerRole == selectedRole)
-        }
-    }
-
-    // Role-filtered summary calculation
-    val summary = remember(activeAccounts) {
-        var assetsMinor = 0L
-        var liabMinor = 0L
-        activeAccounts.forEach { a ->
-            val debt = a.debt.minor
-            if (debt > 0) {
-                liabMinor += debt
-            }
-            if (a.balance.minor > 0 && a.type != AccountType.CREDIT_CARD) {
-                assetsMinor += a.balance.minor
-            }
-        }
-        AccountSummary(Money(assetsMinor), Money(liabMinor))
-    }
-
-    var totalCreditLimitMinor = 0L
-    var totalDebtMinor = 0L
-    activeAccounts.forEach { a ->
-        if (a.type == AccountType.CREDIT_CARD) {
-            totalCreditLimitMinor += a.creditLimit.minor
-            totalDebtMinor += a.debt.minor
-        }
-    }
-    val totalCreditLimit = Money(totalCreditLimitMinor)
-    val totalDebt = Money(totalDebtMinor)
-
-    // Aggregate assets by account type
-    val assetAggregates: List<Pair<AccountType, Money>> = remember(activeAccounts) {
-        AccountType.entries.mapNotNull { type ->
-            val matching = activeAccounts.filter { it.type == type && it.balance.minor > 0 && it.type != AccountType.CREDIT_CARD }
-            if (matching.isEmpty()) null
-            else {
-                val totalMinor = matching.fold(0L) { acc, a -> acc + a.balance.minor }
-                type to Money(totalMinor)
-            }
-        }
-    }
-
+    val state by viewModel.state.collectAsState()
     val incColor = incomeColor()
     val expColor = expenseColor()
 
-    val segmentItems: List<OmniBarSegment> = remember(assetAggregates, totalDebt, summary, incColor, expColor) {
-        val totalVol = summary.assets.minor + totalDebt.minor
-        if (totalVol <= 0L) emptyList()
-        else {
-            val list = mutableListOf<OmniBarSegment>()
-            assetAggregates.forEach { (type, amount) ->
-                list.add(
-                    OmniBarSegment(
-                        key = type.name,
-                        weight = amount.minor.toFloat(),
-                        color = incColor,
-                        label = type.label,
-                    ),
-                )
-            }
-            if (totalDebt.minor > 0L) {
-                list.add(
-                    OmniBarSegment(
-                        key = "LIABILITY",
-                        weight = totalDebt.minor.toFloat(),
-                        color = expColor,
-                        label = "欠款负债",
-                    ),
-                )
-            }
-            list
+    val segmentItems = remember(state.segments, incColor, expColor) {
+        state.segments.map { s ->
+            OmniBarSegment(
+                key = s.key,
+                weight = s.weight,
+                color = if (s.isLiability) expColor else incColor,
+                label = s.label,
+            )
         }
     }
 
-    // Categorize accounts for clean mobile UX
-    val creditCards = activeAccounts.filter { it.type == AccountType.CREDIT_CARD }
-    val savingsAndWallets = activeAccounts.filter { it.type == AccountType.DEBIT_CARD || it.type == AccountType.E_WALLET || it.type == AccountType.CASH }
-    val investments = activeAccounts.filter { it.type == AccountType.INVESTMENT }
+    AssetScreenContent(
+        state = state,
+        segmentItems = segmentItems,
+        onSelectRole = { viewModel.selectRole(it) },
+        onSegmentClick = { viewModel.selectSegment(it.key) },
+        onQuickEdit = { viewModel.setEditingAccount(it) },
+        onOpenEditNotes = { viewModel.setShowEditNotesDialog(true) },
+        onBack = onBack,
+        onPage = onPage,
+        modifier = modifier,
+    )
 
+    // Quick Edit Bottom Sheet
+    state.editingAccount?.let { account ->
+        QuickEditAccountSheet(
+            account = account,
+            onDismiss = { viewModel.setEditingAccount(null) },
+            onConfirm = { balance, availableLimit, profitLoss ->
+                viewModel.quickUpdateAccount(
+                    accountId = account.id,
+                    balance = balance,
+                    availableLimit = availableLimit,
+                    profitLoss = profitLoss,
+                )
+            },
+        )
+    }
+
+    // Monthly Notes Dialog
+    if (state.showEditNotesDialog) {
+        var tempNotes by remember(state.monthlyNotes) { mutableStateOf(state.monthlyNotes) }
+        AlertDialog(
+            onDismissRequest = { viewModel.setShowEditNotesDialog(false) },
+            title = { Text("记录本月对账重大收支与备忘") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "备忘将同步在对账中心按月展示（如：家庭内部转账、公积金收入、大额数码支出等）。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OmniTextField(
+                        value = tempNotes,
+                        onValueChange = { tempNotes = it },
+                        label = "备忘详情",
+                        placeholder = "输入重大财务事项...",
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.updateMonthlyNotes(tempNotes)
+                    },
+                ) {
+                    Text("保存")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.setShowEditNotesDialog(false) }) {
+                    Text("取消")
+                }
+            },
+        )
+    }
+}
+
+@Composable
+internal fun AssetScreenContent(
+    state: AssetUiState,
+    segmentItems: List<OmniBarSegment>,
+    onSelectRole: (AccountRole?) -> Unit,
+    onSegmentClick: (OmniBarSegment) -> Unit,
+    onQuickEdit: (com.omniflow.core.domain.model.Account) -> Unit,
+    onOpenEditNotes: () -> Unit,
+    onBack: () -> Unit,
+    onPage: (MorePage) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     OmniSubPageScaffold(
         title = "资产管理",
         onBack = onBack,
@@ -181,21 +157,21 @@ internal fun AssetScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     FilterChip(
-                        selected = selectedRole == null,
-                        onClick = { selectedRole = null },
+                        selected = state.selectedRole == null,
+                        onClick = { onSelectRole(null) },
                         label = { Text("家庭合并") },
                     )
                     AccountRole.entries.forEach { role ->
                         FilterChip(
-                            selected = selectedRole == role,
-                            onClick = { selectedRole = role },
+                            selected = state.selectedRole == role,
+                            onClick = { onSelectRole(role) },
                             label = { Text(role.label) },
                         )
                     }
                 }
             }
 
-            if (activeAccounts.isEmpty()) {
+            if (state.activeAccounts.isEmpty()) {
                 item {
                     OmniEmptyState(
                         status = "暂无资产数据",
@@ -209,31 +185,31 @@ internal fun AssetScreen(
                 // Hero Card
                 item(key = "asset_hero") {
                     AssetHeroCard(
-                        summary = summary,
-                        totalCreditLimit = totalCreditLimit,
-                        totalDebt = totalDebt,
-                        selectedRole = selectedRole,
+                        summary = state.summary,
+                        totalCreditLimit = state.totalCreditLimit,
+                        totalDebt = state.totalDebt,
+                        selectedRole = state.selectedRole,
                         segmentItems = segmentItems,
-                        selectedKey = selectedSegmentKey,
-                        onSegmentClick = { segment ->
-                            selectedSegmentKey = if (selectedSegmentKey == segment.key) null else segment.key
-                        },
+                        selectedKey = state.selectedSegmentKey,
+                        onSegmentClick = onSegmentClick,
                     )
                 }
 
                 // Monthly Notes Card
                 item(key = "monthly_notes") {
                     MonthlyNotesCard(
-                        notes = monthlyNotes,
-                        onEditNotes = { showEditNotesDialog = true },
+                        notes = state.monthlyNotes,
+                        onEditNotes = onOpenEditNotes,
                     )
                 }
 
-                // Section 1: Credit Cards & Lines
-                if (creditCards.isNotEmpty()) {
+                // Section 1: Credit Cards (Grouped via OmniSettingsGroup)
+                if (state.creditCards.isNotEmpty()) {
                     item(key = "credit_header") {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp, vertical = 2.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -250,19 +226,27 @@ internal fun AssetScreen(
                         }
                     }
 
-                    items(creditCards, key = { it.id }) { card ->
-                        AssetAccountRowCard(
-                            account = card,
-                            onQuickEdit = { editingAccount = it },
-                        )
+                    item(key = "credit_group") {
+                        OmniSettingsGroup {
+                            state.creditCards.forEach { card ->
+                                item {
+                                    AssetAccountRow(
+                                        account = card,
+                                        onQuickEdit = onQuickEdit,
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 
-                // Section 2: Savings & Cash
-                if (savingsAndWallets.isNotEmpty()) {
+                // Section 2: Savings & Cash (Grouped via OmniSettingsGroup)
+                if (state.savingsAndWallets.isNotEmpty()) {
                     item(key = "savings_header") {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp, vertical = 2.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -279,19 +263,27 @@ internal fun AssetScreen(
                         }
                     }
 
-                    items(savingsAndWallets, key = { it.id }) { acc ->
-                        AssetAccountRowCard(
-                            account = acc,
-                            onQuickEdit = { editingAccount = it },
-                        )
+                    item(key = "savings_group") {
+                        OmniSettingsGroup {
+                            state.savingsAndWallets.forEach { acc ->
+                                item {
+                                    AssetAccountRow(
+                                        account = acc,
+                                        onQuickEdit = onQuickEdit,
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 
-                // Section 3: Investments
-                if (investments.isNotEmpty()) {
+                // Section 3: Investments (Grouped via OmniSettingsGroup)
+                if (state.investments.isNotEmpty()) {
                     item(key = "invest_header") {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp, vertical = 2.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -308,81 +300,20 @@ internal fun AssetScreen(
                         }
                     }
 
-                    items(investments, key = { it.id }) { inv ->
-                        AssetAccountRowCard(
-                            account = inv,
-                            onQuickEdit = { editingAccount = it },
-                        )
+                    item(key = "invest_group") {
+                        OmniSettingsGroup {
+                            state.investments.forEach { inv ->
+                                item {
+                                    AssetAccountRow(
+                                        account = inv,
+                                        onQuickEdit = onQuickEdit,
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
-    }
-
-    // Quick Edit Bottom Sheet
-    editingAccount?.let { account ->
-        QuickEditAccountSheet(
-            account = account,
-            onDismiss = { editingAccount = null },
-            onConfirm = { balance, availableLimit, profitLoss ->
-                coroutineScope.launch {
-                    sharedApp.reconciliation.recordAccountUpdate(
-                        accountId = account.id,
-                        period = currentPeriod,
-                        balance = balance,
-                        availableLimit = availableLimit,
-                        profitLoss = profitLoss,
-                    )
-                }
-                editingAccount = null
-            },
-        )
-    }
-
-    // Monthly Notes Dialog
-    if (showEditNotesDialog) {
-        var tempNotes by remember { mutableStateOf(monthlyNotes) }
-        AlertDialog(
-            onDismissRequest = { showEditNotesDialog = false },
-            title = { Text("记录本月对账重大收支与备忘") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "备忘将同步在对账中心按月展示（如：家庭内部转账、公积金收入、大额数码支出等）。",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    OmniTextField(
-                        value = tempNotes,
-                        onValueChange = { tempNotes = it },
-                        label = "备忘详情",
-                        placeholder = "输入重大财务事项...",
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        monthlyNotes = tempNotes
-                        coroutineScope.launch {
-                            sharedApp.reconciliation.updateMonthlyMeta(
-                                period = currentPeriod,
-                                husbandIncome = Money.Zero,
-                                wifeIncome = Money.Zero,
-                                notes = tempNotes,
-                            )
-                        }
-                        showEditNotesDialog = false
-                    },
-                ) {
-                    Text("保存")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showEditNotesDialog = false }) {
-                    Text("取消")
-                }
-            },
-        )
     }
 }

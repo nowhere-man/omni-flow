@@ -35,6 +35,8 @@ import com.omniflow.android.ui.feature.account.AccountListScreen
 import com.omniflow.android.ui.feature.account.AccountViewModel
 import com.omniflow.android.ui.feature.account.AccountViewModelFactory
 import com.omniflow.android.ui.feature.asset.AssetScreen
+import com.omniflow.android.ui.feature.asset.AssetViewModel
+import com.omniflow.android.ui.feature.asset.AssetViewModelFactory
 import com.omniflow.android.ui.feature.category.CategoryScreen
 import com.omniflow.android.ui.feature.ledger.LedgerListScreen
 import com.omniflow.android.ui.feature.ledger.LedgerViewModel
@@ -86,6 +88,7 @@ internal fun MoreScreen(
     accountViewModel: AccountViewModel = viewModel(factory = AccountViewModelFactory(viewModel.sharedApp)),
     ledgerViewModel: LedgerViewModel = viewModel(factory = LedgerViewModelFactory(viewModel.sharedApp)),
     reconciliationViewModel: ReconciliationViewModel = viewModel(factory = ReconciliationViewModelFactory(viewModel.sharedApp)),
+    assetViewModel: AssetViewModel = viewModel(factory = AssetViewModelFactory(viewModel.sharedApp)),
     modifier: Modifier = Modifier,
 ) {
     Box(modifier.fillMaxSize()) {
@@ -109,7 +112,7 @@ internal fun MoreScreen(
             MorePage.EXPORT -> ExportPage(state, viewModel, onBack = onBack)
             MorePage.LEDGERS -> LedgerListScreen(ledgerViewModel, onOpenLedger = onOpenLedger, onBack = onBack)
             MorePage.ACCOUNTS -> AccountListScreen(accountViewModel, onOpenAccount = onOpenAccount, onBack = onBack)
-            MorePage.ASSETS -> AssetScreen(state, sharedApp = viewModel.sharedApp, onBack = onBack, onPage = onPage)
+            MorePage.ASSETS -> AssetScreen(assetViewModel, onBack = onBack, onPage = onPage)
             MorePage.RECONCILIATION -> ReconciliationScreen(reconciliationViewModel, onBack = onBack)
             MorePage.CATEGORIES -> CategoryScreen(state, viewModel, onBack = onBack, onOpenCategory = onOpenCategory)
             MorePage.TAGS -> TagScreen(state, viewModel, onBack = onBack)
