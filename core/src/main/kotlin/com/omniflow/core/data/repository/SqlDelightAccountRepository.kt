@@ -2,6 +2,7 @@ package com.omniflow.core.data.repository
 
 import com.omniflow.core.db.OmniFlowDatabase
 import com.omniflow.core.domain.model.Account
+import com.omniflow.core.domain.model.AccountAggregator
 import com.omniflow.core.domain.model.AccountId
 import com.omniflow.core.domain.model.AccountRole
 import com.omniflow.core.domain.model.AccountSummary
@@ -166,23 +167,17 @@ class SqlDelightAccountRepository(
         .toEpochMilliseconds()
 
     override suspend fun summary(role: AccountRole?): AccountSummary {
-        val (assets, liabilities) = if (role == null) {
-            val s = database.accountQueries.accountSummary().executeAsOne()
-            s.assets_minor to s.liabilities_minor
-        } else {
-            val s = database.accountQueries.accountSummaryByRole(role.name).executeAsOne()
-            s.assets_minor to s.liabilities_minor
-        }
-        return AccountSummary(Money(assets), Money(liabilities))
+        val accounts = activeAccounts()
+        val filtered = if (role == null) accounts else accounts.filter { it.ownerRole == role }
+        return AccountAggregator.calculateSummary(filtered)
     }
 
     override suspend fun totalCreditLimit(role: AccountRole?): Money {
-        val minor = if (role == null) {
-            database.accountQueries.totalCreditLimit().executeAsOne()
-        } else {
-            database.accountQueries.totalCreditLimitByRole(role.name).executeAsOne()
-        }
-        return Money(minor)
+        val accounts = activeAccounts()
+        val filtered = if (role == null) accounts else accounts.filter { it.ownerRole == role }
+        val sum = filtered.filter { it.type == AccountType.CREDIT_CARD }
+            .sumOf { it.creditLimit.minor }
+        return Money(sum)
     }
 
     override suspend fun archive(accountId: AccountId) {

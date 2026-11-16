@@ -26,4 +26,9 @@ interface ReconciliationFacade {
         wifeIncome: Money,
         notes: String,
     ): Result<Unit>
+
+    suspend fun updateMonthlyNotes(
+        period: String,
+        notes: String,
+    ): Result<Unit>
 }

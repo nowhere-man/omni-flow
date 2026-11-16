@@ -1,0 +1,2 @@
+CREATE INDEX idx_reconciliation_entry_period ON reconciliation_entry(period);
+CREATE INDEX idx_reconciliation_entry_account_id ON reconciliation_entry(account_id);

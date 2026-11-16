@@ -13,6 +13,9 @@ CREATE TABLE reconciliation_entry (
     created_at INTEGER NOT NULL
 );
 
+CREATE INDEX idx_reconciliation_entry_period ON reconciliation_entry(period);
+CREATE INDEX idx_reconciliation_entry_account_id ON reconciliation_entry(account_id);
+
 CREATE TABLE monthly_reconciliation_meta (
     period TEXT NOT NULL PRIMARY KEY,
     husband_income_minor INTEGER NOT NULL DEFAULT 0,

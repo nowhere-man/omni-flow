@@ -84,22 +84,4 @@ insertAccountBalanceRecord:
 INSERT INTO account_balance_record(id, account_id, date, balance_minor, delta_minor, created_at)
 VALUES (:id, :account_id, :date, :balance_minor, :delta_minor, :created_at);
 
-accountSummary:
-SELECT
-    COALESCE(SUM(CASE WHEN balance_minor > 0 THEN balance_minor ELSE 0 END), 0) AS assets_minor,
-    COALESCE(SUM(CASE WHEN balance_minor < 0 THEN -balance_minor ELSE 0 END), 0) AS liabilities_minor
-FROM account
-WHERE deleted_at IS NULL AND include_in_total_assets = 1;
 
-accountSummaryByRole:
-SELECT
-    COALESCE(SUM(CASE WHEN balance_minor > 0 THEN balance_minor ELSE 0 END), 0) AS assets_minor,
-    COALESCE(SUM(CASE WHEN balance_minor < 0 THEN -balance_minor ELSE 0 END), 0) AS liabilities_minor
-FROM account
-WHERE deleted_at IS NULL AND include_in_total_assets = 1 AND owner_role = :owner_role;
-
-totalCreditLimit:
-SELECT COALESCE(SUM(credit_limit_minor), 0) FROM account WHERE deleted_at IS NULL AND type = 'CREDIT_CARD';
-
-totalCreditLimitByRole:
-SELECT COALESCE(SUM(credit_limit_minor), 0) FROM account WHERE deleted_at IS NULL AND type = 'CREDIT_CARD' AND owner_role = :owner_role;

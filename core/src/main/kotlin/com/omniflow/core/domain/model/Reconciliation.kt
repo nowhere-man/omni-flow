@@ -9,7 +9,7 @@ enum class AccountRole(val label: String) {
 
     companion object {
         fun fromString(value: String?): AccountRole = when (value?.trim()?.uppercase()) {
-            "WIFE", "妻子" -> WIFE
+            "WIFE", "妻子", "女主人" -> WIFE
             "FAMILY", "家庭", "家庭公用" -> FAMILY
             else -> HUSBAND
         }
@@ -60,6 +60,16 @@ data class PeriodReconciliationSnapshot(
     val totalCreditLimit: Money,
     val husbandSummary: RoleReconciliationSummary,
     val wifeSummary: RoleReconciliationSummary,
+    val familySummary: RoleReconciliationSummary = RoleReconciliationSummary(
+        role = AccountRole.FAMILY,
+        totalAssets = Money.Zero,
+        totalLiabilities = Money.Zero,
+        netAssets = Money.Zero,
+        income = Money.Zero,
+        investmentValue = Money.Zero,
+        profitLoss = Money.Zero,
+        creditLimit = Money.Zero,
+    ),
     val meta: MonthlyReconciliationMeta,
     val derivedExpense: Money,
     val netSavings: Money,

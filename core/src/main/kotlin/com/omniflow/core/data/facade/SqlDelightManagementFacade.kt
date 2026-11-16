@@ -6,6 +6,7 @@ import app.cash.sqldelight.coroutines.mapToOneOrNull
 import com.omniflow.core.db.OmniFlowDatabase
 import com.omniflow.core.domain.facade.ManagementFacade
 import com.omniflow.core.domain.model.Account
+import com.omniflow.core.domain.model.AccountAggregator
 import com.omniflow.core.domain.model.AccountSummary
 import com.omniflow.core.domain.model.AccountType
 import com.omniflow.core.domain.model.AppPreferenceKey
@@ -60,13 +61,10 @@ class SqlDelightManagementFacade(
             }
         } }
 
-    override fun observeAccountSummary(): Flow<Result<AccountSummary>> = database.accountQueries.accountSummary()
-        .asFlow()
-        .mapToList(Dispatchers.Default)
-        .map { rows -> runCatching {
-            val summary = rows.single()
-            AccountSummary(Money(summary.assets_minor), Money(summary.liabilities_minor))
-        } }
+    override fun observeAccountSummary(): Flow<Result<AccountSummary>> = observeAccounts()
+        .map { result ->
+            result.map { accounts -> AccountAggregator.calculateSummary(accounts) }
+        }
 
     override fun observeCategories(ledgerId: LedgerId): Flow<Result<List<Category>>> = database.categoryQueries
         .activeCategoriesForLedger(ledgerId)
