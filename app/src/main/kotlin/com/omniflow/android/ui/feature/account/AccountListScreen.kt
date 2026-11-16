@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -42,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -54,6 +56,7 @@ import com.omniflow.android.ui.incomeColor
 import com.omniflow.core.domain.model.AccountId
 import com.omniflow.core.domain.model.AccountRole
 import com.omniflow.core.domain.model.AccountType
+import com.omniflow.core.domain.model.CreditBufferSummary
 import com.omniflow.core.domain.model.Money
 
 @Composable
@@ -100,9 +103,7 @@ internal fun AccountListScreen(
             // Top Hero Card: Family Credit Buffer Summary (Credits sheet representation)
             item(key = "credit_buffer_hero") {
                 CreditBufferHeroCard(
-                    totalCreditLimit = state.totalCreditLimit,
-                    husbandCreditLimit = state.husbandCreditLimit,
-                    wifeCreditLimit = state.wifeCreditLimit,
+                    creditBuffer = state.creditBuffer,
                     selectedRole = state.selectedRole,
                     hideAmount = state.hideAmount,
                 )
@@ -254,20 +255,27 @@ internal fun AccountListScreen(
 
 @Composable
 private fun CreditBufferHeroCard(
-    totalCreditLimit: Money,
-    husbandCreditLimit: Money,
-    wifeCreditLimit: Money,
+    creditBuffer: CreditBufferSummary,
     selectedRole: AccountRole?,
     hideAmount: Boolean,
 ) {
     val displayLimit = when (selectedRole) {
-        AccountRole.HUSBAND -> husbandCreditLimit
-        AccountRole.WIFE -> wifeCreditLimit
-        else -> totalCreditLimit
+        AccountRole.HUSBAND -> creditBuffer.husband.limit
+        AccountRole.WIFE -> creditBuffer.wife.limit
+        AccountRole.FAMILY -> creditBuffer.family.limit
+        null -> creditBuffer.totalLimit
     }
 
-    val total = totalCreditLimit.minor
-    val husbandRatio = if (total > 0) husbandCreditLimit.minor.toFloat() / total.toFloat() else 0.5f
+    val primary = MaterialTheme.colorScheme.primary
+    val tertiary = MaterialTheme.colorScheme.tertiary
+    val secondary = MaterialTheme.colorScheme.secondary
+    val roleColor = { role: AccountRole ->
+        when (role) {
+            AccountRole.HUSBAND -> primary
+            AccountRole.WIFE -> tertiary
+            AccountRole.FAMILY -> secondary
+        }
+    }
 
     ElevatedCard(
         shape = RoundedCornerShape(20.dp),
@@ -314,33 +322,64 @@ private fun CreditBufferHeroCard(
                 )
             }
 
-            if (selectedRole == null && total > 0) {
-                // Split bar
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    LinearProgressIndicator(
-                        progress = { husbandRatio },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp)),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.tertiary,
-                        strokeCap = StrokeCap.Round,
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text(
-                            text = "${AccountRole.HUSBAND.label} ${if (hideAmount) "••" else husbandCreditLimit.asRmb()} (${(husbandRatio * 100).toInt()}%)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
+            if (creditBuffer.totalLimit.minor > 0) {
+                if (selectedRole == null) {
+                    // Split bar - 3 segments
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp)),
+                        ) {
+                            creditBuffer.portions.forEach { portion ->
+                                if (portion.ratio > 0f) {
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(portion.ratio)
+                                            .fillMaxHeight()
+                                            .background(roleColor(portion.role)),
+                                    )
+                                }
+                            }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            creditBuffer.portions.forEach { portion ->
+                                Text(
+                                    text = "${portion.role.label} ${if (hideAmount) "••" else portion.limit.asRmb()} (${portion.percentage}%)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = roleColor(portion.role),
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    val portion = creditBuffer.portionFor(selectedRole)
+                    val color = roleColor(selectedRole)
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        LinearProgressIndicator(
+                            progress = { portion.ratio },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp)),
+                            color = color,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            strokeCap = StrokeCap.Round,
                         )
-                        Text(
-                            text = "${AccountRole.WIFE.label} ${if (hideAmount) "••" else wifeCreditLimit.asRmb()} (${((1f - husbandRatio) * 100).toInt()}%)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.tertiary,
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(
+                                text = "${selectedRole.label} ${if (hideAmount) "••" else portion.limit.asRmb()} (${portion.percentage}%)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = color,
+                            )
+                        }
                     }
                 }
             }

@@ -11,6 +11,7 @@ import com.omniflow.core.domain.model.AccountId
 import com.omniflow.core.domain.model.AccountRole
 import com.omniflow.core.domain.model.AccountSummary
 import com.omniflow.core.domain.model.AccountType
+import com.omniflow.core.domain.model.CreditBufferSummary
 import com.omniflow.core.domain.model.Money
 import com.omniflow.core.domain.model.SearchTransactionItem
 import com.omniflow.core.domain.model.TransactionSearchQuery
@@ -30,6 +31,8 @@ data class AccountListUiState(
     val totalCreditLimit: Money = Money.Zero,
     val husbandCreditLimit: Money = Money.Zero,
     val wifeCreditLimit: Money = Money.Zero,
+    val familyCreditLimit: Money = Money.Zero,
+    val creditBuffer: CreditBufferSummary = CreditBufferSummary.EMPTY,
     val selectedRole: AccountRole? = null,
     val hideAmount: Boolean = false,
     val error: String? = null,
@@ -87,19 +90,7 @@ class AccountViewModel(
 
         val groups = AccountAggregator.groupByType(filtered)
         val summary = AccountAggregator.calculateSummary(filtered)
-
-        var totalLimitMinor = 0L
-        var husbandLimitMinor = 0L
-        var wifeLimitMinor = 0L
-
-        accounts.forEach { a ->
-            if (a.type == AccountType.CREDIT_CARD && a.deletedAt == null) {
-                val limit = a.creditLimit.minor
-                totalLimitMinor += limit
-                if (a.ownerRole == AccountRole.HUSBAND) husbandLimitMinor += limit
-                if (a.ownerRole == AccountRole.WIFE) wifeLimitMinor += limit
-            }
-        }
+        val creditBuffer = AccountAggregator.calculateCreditBuffer(accounts)
 
         _listState.update {
             it.copy(
@@ -107,9 +98,11 @@ class AccountViewModel(
                 filteredAccounts = filtered,
                 groups = groups,
                 summary = summary,
-                totalCreditLimit = Money(totalLimitMinor),
-                husbandCreditLimit = Money(husbandLimitMinor),
-                wifeCreditLimit = Money(wifeLimitMinor),
+                totalCreditLimit = creditBuffer.totalLimit,
+                husbandCreditLimit = creditBuffer.husband.limit,
+                wifeCreditLimit = creditBuffer.wife.limit,
+                familyCreditLimit = creditBuffer.family.limit,
+                creditBuffer = creditBuffer,
                 selectedRole = selectedRole,
                 error = null,
             )
