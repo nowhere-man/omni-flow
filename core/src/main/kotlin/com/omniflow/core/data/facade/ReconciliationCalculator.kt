@@ -277,7 +277,7 @@ internal object ReconciliationCalculator {
     }
 
     fun isRecordedSnapshot(s: PeriodReconciliationSnapshot): Boolean =
-        s.accountEntries.isNotEmpty() || s.meta.totalIncome.minor > 0 || s.meta.notes.isNotBlank()
+        s.accountEntries.isNotEmpty() || s.meta.husbandIncome.minor > 0 || s.meta.wifeIncome.minor > 0
 
     fun emptySnapshot(period: String, now: () -> Instant): PeriodReconciliationSnapshot =
         PeriodReconciliationSnapshot(
