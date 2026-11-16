@@ -2,12 +2,15 @@ package com.omniflow.core.domain.repository
 
 import com.omniflow.core.domain.model.Account
 import com.omniflow.core.domain.model.AccountId
+import com.omniflow.core.domain.model.AccountRole
 import com.omniflow.core.domain.model.AccountSummary
 import com.omniflow.core.domain.model.Category
 import com.omniflow.core.domain.model.CategoryId
 import com.omniflow.core.domain.model.Ledger
 import com.omniflow.core.domain.model.LedgerId
 import com.omniflow.core.domain.model.Money
+import com.omniflow.core.domain.model.MonthlyReconciliationMeta
+import com.omniflow.core.domain.model.ReconciliationEntry
 import com.omniflow.core.domain.model.ImportPreviewEdit
 import com.omniflow.core.domain.model.ImportPreviewItem
 import com.omniflow.core.domain.model.ImportSessionId
@@ -37,8 +40,25 @@ interface AccountRepository {
     suspend fun create(account: Account)
     suspend fun update(account: Account)
     suspend fun calibrate(accountId: AccountId, balance: Money)
-    suspend fun summary(): AccountSummary
+    suspend fun quickUpdateFinance(
+        accountId: AccountId,
+        balance: Money,
+        availableLimit: Money?,
+        profitLoss: Money,
+    )
+    suspend fun summary(role: AccountRole? = null): AccountSummary
+    suspend fun totalCreditLimit(role: AccountRole? = null): Money
     suspend fun archive(accountId: AccountId)
+}
+
+interface ReconciliationRepository {
+    suspend fun recordEntry(entry: ReconciliationEntry)
+    suspend fun entriesForPeriod(period: String): List<ReconciliationEntry>
+    suspend fun allDistinctPeriods(): List<String>
+    suspend fun allEntries(): List<ReconciliationEntry>
+    suspend fun upsertMeta(meta: MonthlyReconciliationMeta)
+    suspend fun metaForPeriod(period: String): MonthlyReconciliationMeta?
+    suspend fun allMetas(): List<MonthlyReconciliationMeta>
 }
 
 interface TransactionRepository {

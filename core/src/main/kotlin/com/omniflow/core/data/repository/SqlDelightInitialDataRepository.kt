@@ -1,6 +1,7 @@
 package com.omniflow.core.data.repository
 
 import com.omniflow.core.db.OmniFlowDatabase
+import com.omniflow.core.domain.model.AccountRole
 import com.omniflow.core.domain.model.AccountType
 import com.omniflow.core.domain.model.AppPreferenceKey
 import com.omniflow.core.domain.model.SystemDefaults
@@ -14,6 +15,17 @@ class SqlDelightInitialDataRepository(
     private val ids: UuidGenerator = UuidGenerator(),
     private val now: () -> Instant = { Clock.System.now() },
 ) : InitialDataRepository {
+
+    private data class FamilyAccountSeed(
+        val name: String,
+        val type: AccountType,
+        val iconKey: String,
+        val creditLimitYuan: Long,
+        val availableLimitYuan: Long?,
+        val balanceYuan: Long,
+        val role: AccountRole,
+    )
+
     override suspend fun seedIfNeeded() {
         if (database.appPreferenceQueries.preference(AppPreferenceKey.InitialDataSeeded)
                 .executeAsOneOrNull() != null
@@ -30,12 +42,14 @@ class SqlDelightInitialDataRepository(
             }
 
             val ledgerId = ids.next()
-            database.ledgerQueries.insertLedger(ledgerId, "我的账本", null, timestamp, timestamp)
+            database.ledgerQueries.insertLedger(ledgerId, "家庭账本", null, timestamp, timestamp)
             database.appPreferenceQueries.upsertPreference(
                 key = AppPreferenceKey.DefaultLedgerId,
                 value = ledgerId,
                 updated_at = timestamp,
             )
+
+            // 1. Seed categories
             SystemDefaults.categoryTemplates.forEach { category ->
                 database.categoryQueries.insertCategory(
                     id = ids.next(),
@@ -48,20 +62,58 @@ class SqlDelightInitialDataRepository(
                     updated_at = timestamp,
                 )
             }
-            SystemDefaults.accountTemplates.forEach { account ->
+
+            // 2. Seed sample family accounts
+            val accountSeeds = listOf(
+                FamilyAccountSeed("示例账户-信用卡1", AccountType.CREDIT_CARD, "credit-card", 10_000, 8_000, 2_000, AccountRole.HUSBAND),
+                FamilyAccountSeed("示例账户-信用卡2", AccountType.CREDIT_CARD, "credit-card", 10_000, 9_000, 1_000, AccountRole.WIFE),
+                FamilyAccountSeed("示例账户-储蓄卡", AccountType.DEBIT_CARD, "banknote", 0, null, 5_000, AccountRole.FAMILY),
+            )
+
+            accountSeeds.forEach { seed ->
+                val accountId = ids.next()
+                val creditLimitMinor = seed.creditLimitYuan * 100
+                val availableLimitMinor = seed.availableLimitYuan?.let { it * 100 }
+                val balanceMinor = seed.balanceYuan * 100
                 database.accountQueries.insertAccount(
-                    id = ids.next(),
-                    name = account.name,
-                    type = AccountType.CASH.name,
-                    icon_key = account.iconKey,
+                    id = accountId,
+                    name = seed.name,
+                    type = seed.type.name,
+                    icon_key = seed.iconKey,
                     card_number = null,
                     note = null,
-                    balance_minor = 0,
+                    balance_minor = balanceMinor,
+                    credit_limit_minor = creditLimitMinor,
+                    available_limit_minor = availableLimitMinor,
+                    profit_loss_minor = 0L,
+                    owner_role = seed.role.name,
                     include_in_total_assets = 1L,
                     created_at = timestamp,
                     updated_at = timestamp,
                 )
+                // Record current reconciliation snapshot for 2026-10
+                val debtMinor = if (availableLimitMinor != null && creditLimitMinor > availableLimitMinor) {
+                    creditLimitMinor - availableLimitMinor
+                } else 0L
+                val depositMinor = if (seed.type != AccountType.INVESTMENT) balanceMinor else 0L
+                val investmentMinor = if (seed.type == AccountType.INVESTMENT) balanceMinor else 0L
+
+                database.reconciliationQueries.insertEntry(
+                    id = ids.next(),
+                    account_id = accountId,
+                    period = "2026-10",
+                    date = timestamp,
+                    credit_limit_minor = creditLimitMinor,
+                    available_limit_minor = availableLimitMinor,
+                    debt_minor = debtMinor,
+                    deposit_minor = depositMinor,
+                    investment_minor = investmentMinor,
+                    profit_loss_minor = 0L,
+                    owner_role = seed.role.name,
+                    created_at = timestamp,
+                )
             }
+
             database.appPreferenceQueries.upsertPreference(
                 key = AppPreferenceKey.InitialDataSeeded,
                 value = "true",
@@ -69,5 +121,4 @@ class SqlDelightInitialDataRepository(
             )
         }
     }
-
 }

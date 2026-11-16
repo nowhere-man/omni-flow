@@ -12,7 +12,7 @@ class SqlDelightTransactionDedupeRepositoryTest {
     fun treatsMerchantSuffixAsLikelyDuplicate() = runBlocking {
         val database = createJvmDatabase()
         database.ledgerQueries.insertLedger("ledger", "日常", null, 1, 1)
-        database.accountQueries.insertAccount("account", "现金", "CASH", "wallet", null, null, 0, 1, 1, 1)
+        database.accountQueries.insertAccount("account", "现金", "CASH", "wallet", null, null, 0, 0, null, 0, "HUSBAND", 1, 1, 1)
         database.categoryQueries.insertCategory("food", "ledger", null, "餐饮", "utensils", "EXPENSE", 1, 1)
         database.transactionQueries.insertTransaction(
             "transaction", "ledger", "account", "food", 1200, "EXPENSE", 10_000,

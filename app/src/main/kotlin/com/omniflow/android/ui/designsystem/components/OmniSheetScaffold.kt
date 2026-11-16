@@ -62,7 +62,7 @@ fun OmniSheetScaffold(
         shape = OmniShapeTokens.bottomSheet,
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         dragHandle = { BottomSheetDefaults.DragHandle() },
-        windowInsets = WindowInsets(0, 0, 0, 0),
+        contentWindowInsets = { WindowInsets(0) },
         modifier = modifier,
     ) {
         Column(

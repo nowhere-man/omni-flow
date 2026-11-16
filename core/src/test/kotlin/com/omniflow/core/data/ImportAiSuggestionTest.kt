@@ -168,7 +168,7 @@ class ImportAiSuggestionTest {
 
     private fun seed(): OmniFlowDatabase = createJvmDatabase().apply {
         ledgerQueries.insertLedger("ledger", "日常", null, 1, 1)
-        accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 1, 1, 1)
+        accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 0, null, 0, "HUSBAND", 1, 1, 1)
         categoryQueries.insertCategory("c-food", "ledger", null, "餐饮", "utensils", "EXPENSE", 1, 1)
         categoryQueries.insertCategory("c-transit", "ledger", null, "交通", "bus", "EXPENSE", 1, 1)
         categoryQueries.insertCategory("c-salary", "ledger", null, "工资", "banknote", "INCOME", 1, 1)

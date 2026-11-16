@@ -8,6 +8,7 @@ import com.omniflow.core.domain.model.Account
 import com.omniflow.core.domain.model.AccountAggregator
 import com.omniflow.core.domain.model.AccountGroup
 import com.omniflow.core.domain.model.AccountId
+import com.omniflow.core.domain.model.AccountRole
 import com.omniflow.core.domain.model.AccountSummary
 import com.omniflow.core.domain.model.AccountType
 import com.omniflow.core.domain.model.Money
@@ -23,8 +24,13 @@ import kotlinx.datetime.Clock
 
 data class AccountListUiState(
     val accounts: List<Account> = emptyList(),
+    val filteredAccounts: List<Account> = emptyList(),
     val groups: List<AccountGroup> = emptyList(),
     val summary: AccountSummary = AccountSummary(Money.Zero, Money.Zero),
+    val totalCreditLimit: Money = Money.Zero,
+    val husbandCreditLimit: Money = Money.Zero,
+    val wifeCreditLimit: Money = Money.Zero,
+    val selectedRole: AccountRole? = null,
     val hideAmount: Boolean = false,
     val error: String? = null,
 )
@@ -57,9 +63,7 @@ class AccountViewModel(
             sharedApp.management.observeAccounts().collect { result ->
                 result.fold(
                     onSuccess = { accounts ->
-                        val groups = AccountAggregator.groupByType(accounts)
-                        val summary = AccountAggregator.calculateSummary(accounts)
-                        _listState.update { it.copy(accounts = accounts, groups = groups, summary = summary, error = null) }
+                        recomputeState(accounts = accounts, selectedRole = _listState.value.selectedRole)
                         // 如果正在查看某个账户的详情，同步刷新账户信息
                         _detailState.value.account?.let { current ->
                             val updated = accounts.find { it.id == current.id }
@@ -72,6 +76,48 @@ class AccountViewModel(
                 )
             }
         }
+    }
+
+    private fun recomputeState(accounts: List<Account>, selectedRole: AccountRole?) {
+        val filtered = if (selectedRole == null) {
+            accounts
+        } else {
+            accounts.filter { it.ownerRole == selectedRole }
+        }
+
+        val groups = AccountAggregator.groupByType(filtered)
+        val summary = AccountAggregator.calculateSummary(filtered)
+
+        var totalLimitMinor = 0L
+        var husbandLimitMinor = 0L
+        var wifeLimitMinor = 0L
+
+        accounts.forEach { a ->
+            if (a.type == AccountType.CREDIT_CARD && a.deletedAt == null) {
+                val limit = a.creditLimit.minor
+                totalLimitMinor += limit
+                if (a.ownerRole == AccountRole.HUSBAND) husbandLimitMinor += limit
+                if (a.ownerRole == AccountRole.WIFE) wifeLimitMinor += limit
+            }
+        }
+
+        _listState.update {
+            it.copy(
+                accounts = accounts,
+                filteredAccounts = filtered,
+                groups = groups,
+                summary = summary,
+                totalCreditLimit = Money(totalLimitMinor),
+                husbandCreditLimit = Money(husbandLimitMinor),
+                wifeCreditLimit = Money(wifeLimitMinor),
+                selectedRole = selectedRole,
+                error = null,
+            )
+        }
+    }
+
+    fun selectRole(role: AccountRole?) {
+        recomputeState(accounts = _listState.value.accounts, selectedRole = role)
     }
 
     fun toggleHideAmount() {
@@ -104,6 +150,9 @@ class AccountViewModel(
         note: String?,
         balance: Money,
         includeInTotalAssets: Boolean,
+        role: AccountRole = AccountRole.HUSBAND,
+        creditLimit: Money = Money.Zero,
+        availableLimit: Money? = null,
     ) {
         viewModelScope.launch {
             val account = Account(
@@ -114,6 +163,9 @@ class AccountViewModel(
                 cardNumber = cardNumber,
                 note = note,
                 balance = balance,
+                creditLimit = creditLimit,
+                availableLimit = availableLimit,
+                ownerRole = role,
                 includeInTotalAssets = includeInTotalAssets,
             )
             sharedApp.createAccount(account).onFailure { err ->
@@ -131,6 +183,9 @@ class AccountViewModel(
         note: String?,
         balance: Money,
         includeInTotalAssets: Boolean,
+        role: AccountRole = AccountRole.HUSBAND,
+        creditLimit: Money = Money.Zero,
+        availableLimit: Money? = null,
     ) {
         viewModelScope.launch {
             val account = Account(
@@ -141,6 +196,9 @@ class AccountViewModel(
                 cardNumber = cardNumber,
                 note = note,
                 balance = balance,
+                creditLimit = creditLimit,
+                availableLimit = availableLimit,
+                ownerRole = role,
                 includeInTotalAssets = includeInTotalAssets,
             )
             sharedApp.updateAccount(account).onFailure { err ->

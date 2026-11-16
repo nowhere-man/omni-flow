@@ -185,9 +185,9 @@ internal fun AccountDetailScreen(
 
     if (showCalibrateDialog && account != null) {
         CalibrateBalanceDialog(
-            currentBalance = account.balance,
+            account = account,
             onDismiss = { showCalibrateDialog = false },
-            onCalibrate = { newBalance ->
+            onConfirm = { newBalance: Money ->
                 viewModel.calibrateBalance(accountId, newBalance)
                 showCalibrateDialog = false
             },
@@ -204,8 +204,20 @@ internal fun AccountDetailScreen(
                     onBack()
                 }
             },
-            onSave = { name, type, icon, card, note, balance, included ->
-                viewModel.updateAccount(account.id, name, type, icon, card, note, balance, included)
+            onSave = { name, type, icon, card, note, balance, included, role, creditLimit, availableLimit ->
+                viewModel.updateAccount(
+                    id = account.id,
+                    name = name,
+                    type = type,
+                    iconKey = icon,
+                    cardNumber = card,
+                    note = note,
+                    balance = balance,
+                    includeInTotalAssets = included,
+                    role = role,
+                    creditLimit = creditLimit,
+                    availableLimit = availableLimit,
+                )
                 showEditSheet = false
             },
         )

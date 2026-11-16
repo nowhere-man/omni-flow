@@ -28,7 +28,7 @@ class SqlDelightSearchAnalyticsTest {
     fun searchAndAnalyticsUseDocumentedFiltersAndExclusions() = runBlocking {
         val database = createJvmDatabase()
         database.ledgerQueries.insertLedger("ledger", "日常", null, 1, 1)
-        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 1_200, 1, 1, 1)
+        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 1_200, 0, null, 0, "HUSBAND", 1, 1, 1)
         database.categoryQueries.insertCategory("food", "ledger", null, "餐饮", "utensils", "EXPENSE", 1, 1)
         database.categoryQueries.insertCategory("restaurant", "ledger", "food", "餐厅", null, "EXPENSE", 1, 1)
         database.categoryQueries.insertCategory("salary", "ledger", null, "工资", "banknote", "INCOME", 1, 1)
@@ -88,7 +88,7 @@ class SqlDelightSearchAnalyticsTest {
     fun analyticsRanksTransactionsAndLimitsRankingToTenItems() = runBlocking {
         val database = createJvmDatabase()
         database.ledgerQueries.insertLedger("ledger", "日常", null, 1, 1)
-        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 1, 1, 1)
+        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 0, null, 0, "HUSBAND", 1, 1, 1)
         (1..11).forEach { index ->
             database.categoryQueries.insertCategory(
                 "primary-$index", "ledger", null, "分类$index", "folder", "EXPENSE", index.toLong(), 1,
@@ -122,8 +122,8 @@ class SqlDelightSearchAnalyticsTest {
         val database = createJvmDatabase()
         database.ledgerQueries.insertLedger("ledger-1", "日常", null, 1, 1)
         database.ledgerQueries.insertLedger("ledger-2", "旅行", null, 2, 1)
-        database.accountQueries.insertAccount("account-1", "现金", "CASH", "banknote", null, null, 0, 1, 1, 1)
-        database.accountQueries.insertAccount("account-2", "银行卡", "BANK", "credit-card", null, null, 0, 2, 1, 1)
+        database.accountQueries.insertAccount("account-1", "现金", "CASH", "banknote", null, null, 0, 0, null, 0, "HUSBAND", 1, 1, 1)
+        database.accountQueries.insertAccount("account-2", "银行卡", "BANK", "credit-card", null, null, 0, 0, null, 0, "HUSBAND", 2, 1, 1)
         database.categoryQueries.insertCategory("food-1", "ledger-1", null, "餐饮", "utensils", "EXPENSE", 1, 1)
         database.categoryQueries.insertCategory("restaurant-1", "ledger-1", "food-1", "餐厅", null, "EXPENSE", 2, 1)
         database.categoryQueries.insertCategory("food-2", "ledger-2", null, "餐饮", "utensils", "EXPENSE", 1, 1)
@@ -149,7 +149,7 @@ class SqlDelightSearchAnalyticsTest {
     fun dashboardYearStatementKeepsMonthsAvailableThroughCurrentMonth() = runBlocking {
         val database = createJvmDatabase()
         database.ledgerQueries.insertLedger("ledger", "日常", null, 1, 1)
-        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 1, 1, 1)
+        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 0, null, 0, "HUSBAND", 1, 1, 1)
         database.categoryQueries.insertCategory("food", "ledger", null, "餐饮", "utensils", "EXPENSE", 1, 1)
         val zone = AppTimeZone
         val now = Clock.System.now().toLocalDateTime(zone)
@@ -172,7 +172,7 @@ class SqlDelightSearchAnalyticsTest {
     fun analyticsBuildsPreviousSummaryAndContinuousTrend() = runBlocking {
         val database = createJvmDatabase()
         database.ledgerQueries.insertLedger("ledger", "日常", null, 1, 1)
-        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 1, 1, 1)
+        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 0, null, 0, "HUSBAND", 1, 1, 1)
         database.categoryQueries.insertCategory("food", "ledger", null, "餐饮", "utensils", "EXPENSE", 1, 1)
         val zone = AppTimeZone
         val start = LocalDate(2025, 1, 1).atStartOfDayIn(zone)
@@ -202,7 +202,7 @@ class SqlDelightSearchAnalyticsTest {
     fun dashboardPopulatesHealthSummaryCategoryDiffsAndInsight() = runBlocking {
         val database = createJvmDatabase()
         database.ledgerQueries.insertLedger("ledger", "日常", null, 1, 1)
-        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 1, 1, 1)
+        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 0, null, 0, "HUSBAND", 1, 1, 1)
         database.categoryQueries.insertCategory("food", "ledger", null, "餐饮", "utensils", "EXPENSE", 1, 1)
         database.categoryQueries.insertCategory("tech", "ledger", null, "数码", "laptop", "EXPENSE", 2, 1)
 
@@ -256,7 +256,7 @@ class SqlDelightSearchAnalyticsTest {
     fun analyticsCategoryBreakdownsCalculatesShareRatioAndSumEqualsOne() = runBlocking {
         val database = createJvmDatabase()
         database.ledgerQueries.insertLedger("ledger", "日常", null, 1, 1)
-        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 1, 1, 1)
+        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 0, null, 0, "HUSBAND", 1, 1, 1)
         database.categoryQueries.insertCategory("food", "ledger", null, "餐饮", "utensils", "EXPENSE", 1, 1)
         database.categoryQueries.insertCategory("lunch", "ledger", "food", "午餐", null, "EXPENSE", 1, 1)
         database.categoryQueries.insertCategory("tech", "ledger", null, "数码", "laptop", "EXPENSE", 2, 1)
@@ -310,7 +310,7 @@ class SqlDelightSearchAnalyticsTest {
     fun analyticsCategoryBreakdownsHandlesZeroTotalWithoutCrash() = runBlocking {
         val database = createJvmDatabase()
         database.ledgerQueries.insertLedger("ledger", "日常", null, 1, 1)
-        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 1, 1, 1)
+        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 0, null, 0, "HUSBAND", 1, 1, 1)
         database.categoryQueries.insertCategory("food", "ledger", null, "餐饮", "utensils", "EXPENSE", 1, 1)
 
         // Case 1: No expense transactions at all

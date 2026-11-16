@@ -22,8 +22,8 @@ class SqlDelightAnalyticsTransferExclusionTest {
     fun transfersAreExcludedFromIncomeAndExpenseStatsAndBreakdowns() = runBlocking {
         val database = createJvmDatabase()
         database.ledgerQueries.insertLedger("ledger", "日常账本", null, 1, 1)
-        database.accountQueries.insertAccount("acc-1", "银行卡", "DEBIT_CARD", "landmark", null, null, 10000, 1, 1, 1)
-        database.accountQueries.insertAccount("acc-2", "微信", "E_WALLET", "wallet", null, null, 2000, 1, 1, 1)
+        database.accountQueries.insertAccount("acc-1", "银行卡", "DEBIT_CARD", "landmark", null, null, 10000, 0, null, 0, "HUSBAND", 1, 1, 1)
+        database.accountQueries.insertAccount("acc-2", "微信", "E_WALLET", "wallet", null, null, 2000, 0, null, 0, "HUSBAND", 1, 1, 1)
         database.categoryQueries.insertCategory("cat-expense", "ledger", null, "餐饮", "utensils", "EXPENSE", 1, 1)
         database.categoryQueries.insertCategory("cat-income", "ledger", null, "工资", "banknote", "INCOME", 1, 1)
 

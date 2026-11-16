@@ -14,7 +14,7 @@ class SqlDelightBackupStoreTest {
     fun restoresCompleteBusinessDataAndPreferences() = runBlocking {
         val database = createJvmDatabase()
         database.ledgerQueries.insertLedger("ledger", "日常", null, 1, 1)
-        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 500, 1, 1, 1)
+        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 500, 0, null, 0, "HUSBAND", 1, 1, 1)
         database.categoryQueries.insertCategory("category", "ledger", null, "餐饮", "utensils", "EXPENSE", 1, 1)
         database.categoryQueries.updatePrimaryCategorySortOrder(3, 2, "category", "ledger", "EXPENSE")
         database.tagQueries.insertTag("tag", "ledger", "工作", 1, 1)

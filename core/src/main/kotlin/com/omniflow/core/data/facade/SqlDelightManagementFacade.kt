@@ -50,6 +50,10 @@ class SqlDelightManagementFacade(
                     cardNumber = it.card_number,
                     note = it.note,
                     balance = Money(it.balance_minor),
+                    creditLimit = Money(it.credit_limit_minor),
+                    availableLimit = it.available_limit_minor?.let(::Money),
+                    profitLoss = Money(it.profit_loss_minor),
+                    ownerRole = com.omniflow.core.domain.model.AccountRole.fromString(it.owner_role),
                     includeInTotalAssets = it.include_in_total_assets != 0L,
                     deletedAt = it.deleted_at?.let(Instant::fromEpochMilliseconds),
                 )

@@ -46,7 +46,7 @@ class SqlDelightTransactionRepositoryTest {
         val database = createJvmDatabase()
         seed(database)
         database.accountQueries.insertAccount(
-            "second-account", "银行卡", "DEBIT_CARD", "landmark", null, null, 0, 1, 1, 1,
+            "second-account", "银行卡", "DEBIT_CARD", "landmark", null, null, 0, 0, null, 0, "HUSBAND", 1, 1, 1,
         )
         val repository = SqlDelightTransactionRepository(database)
         repository.create(transaction("transaction", TransactionType.EXPENSE, Money(100)))
@@ -71,7 +71,7 @@ class SqlDelightTransactionRepositoryTest {
         val database = createJvmDatabase()
         seed(database)
         database.accountQueries.insertAccount(
-            "second-account", "微信零钱", "E_WALLET", "wallet", null, null, 500, 1, 1, 1,
+            "second-account", "微信零钱", "E_WALLET", "wallet", null, null, 500, 0, null, 0, "HUSBAND", 1, 1, 1,
         )
         val repository = SqlDelightTransactionRepository(database)
 
@@ -107,7 +107,7 @@ class SqlDelightTransactionRepositoryTest {
         val database = createJvmDatabase()
         seed(database)
         database.accountQueries.insertAccount(
-            "second-account", "微信零钱", "E_WALLET", "wallet", null, null, 1000, 1, 1, 1,
+            "second-account", "微信零钱", "E_WALLET", "wallet", null, null, 1000, 0, null, 0, "HUSBAND", 1, 1, 1,
         )
         val repository = SqlDelightTransactionRepository(database)
 
@@ -173,6 +173,10 @@ class SqlDelightTransactionRepositoryTest {
             card_number = null,
             note = null,
             balance_minor = 0,
+            credit_limit_minor = 0,
+            available_limit_minor = null,
+            profit_loss_minor = 0,
+            owner_role = "HUSBAND",
             include_in_total_assets = 1L,
             created_at = 1,
             updated_at = 1,

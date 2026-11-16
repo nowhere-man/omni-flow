@@ -1,10 +1,9 @@
 package com.omniflow.android.ui.feature.account
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,20 +15,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -40,23 +42,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.omniflow.android.ui.asRmb
 import com.omniflow.android.ui.OmniText
+import com.omniflow.android.ui.asRmb
 import com.omniflow.android.ui.designsystem.components.OmniEmptyState
 import com.omniflow.android.ui.designsystem.components.OmniSubPageScaffold
-import com.omniflow.android.ui.designsystem.tokens.OmniColorTokens
-import com.omniflow.android.ui.designsystem.tokens.accountCardGradient
-import com.omniflow.android.ui.designsystem.tokens.accountTypeBadgeColors
-import com.omniflow.android.ui.designsystem.tokens.getCategoryIcon
 import com.omniflow.android.ui.expenseColor
-import com.omniflow.android.ui.label
-import com.omniflow.core.domain.model.Account
+import com.omniflow.android.ui.incomeColor
 import com.omniflow.core.domain.model.AccountId
+import com.omniflow.core.domain.model.AccountRole
 import com.omniflow.core.domain.model.AccountType
 import com.omniflow.core.domain.model.Money
 
@@ -71,7 +67,7 @@ internal fun AccountListScreen(
     var showNewAccountSheet by remember { mutableStateOf(false) }
     var excludedExpanded by remember { mutableStateOf(false) }
 
-    val activeAccounts = state.accounts.filter { it.deletedAt == null }
+    val activeAccounts = state.filteredAccounts.filter { it.deletedAt == null }
     val includedAccounts = activeAccounts.filter { it.includeInTotalAssets }
     val excludedAccounts = activeAccounts.filterNot { it.includeInTotalAssets }
 
@@ -101,6 +97,41 @@ internal fun AccountListScreen(
             contentPadding = PaddingValues(top = 8.dp, bottom = 88.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            // Top Hero Card: Family Credit Buffer Summary (Credits sheet representation)
+            item(key = "credit_buffer_hero") {
+                CreditBufferHeroCard(
+                    totalCreditLimit = state.totalCreditLimit,
+                    husbandCreditLimit = state.husbandCreditLimit,
+                    wifeCreditLimit = state.wifeCreditLimit,
+                    selectedRole = state.selectedRole,
+                    hideAmount = state.hideAmount,
+                )
+            }
+
+            // Role Filter Chips Row
+            item(key = "role_filter_row") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    FilterChip(
+                        selected = state.selectedRole == null,
+                        onClick = { viewModel.selectRole(null) },
+                        label = { Text("全部 (${state.accounts.size})") },
+                    )
+                    AccountRole.entries.forEach { role ->
+                        val count = state.accounts.count { it.ownerRole == role }
+                        FilterChip(
+                            selected = state.selectedRole == role,
+                            onClick = { viewModel.selectRole(role) },
+                            label = { Text("${role.label} ($count)") },
+                        )
+                    }
+                }
+            }
+
             state.error?.let { error ->
                 item {
                     Text(
@@ -114,11 +145,11 @@ internal fun AccountListScreen(
             if (activeAccounts.isEmpty()) {
                 item {
                     OmniEmptyState(
-                        status = "还没有账户",
-                        value = "添加您的第一个银行卡、钱包或现金账户",
+                        status = "暂无相关账户",
+                        value = "点击下方按钮添加新账户或切换角色筛选",
                         actionLabel = "新建账户",
                         onAction = { showNewAccountSheet = true },
-                        modifier = Modifier.padding(top = 40.dp),
+                        modifier = Modifier.padding(top = 24.dp),
                     )
                 }
             } else {
@@ -203,10 +234,117 @@ internal fun AccountListScreen(
         AccountSheet(
             account = null,
             onDismiss = { showNewAccountSheet = false },
-            onSave = { name, type, icon, card, note, balance, included ->
-                viewModel.createAccount(name, type, icon, card, note, balance, included)
+            onSave = { name, type, icon, card, note, balance, included, role, creditLimit, availableLimit ->
+                viewModel.createAccount(
+                    name = name,
+                    type = type,
+                    iconKey = icon,
+                    cardNumber = card,
+                    note = note,
+                    balance = balance,
+                    includeInTotalAssets = included,
+                    role = role,
+                    creditLimit = creditLimit,
+                    availableLimit = availableLimit,
+                )
                 showNewAccountSheet = false
             },
         )
+    }
+}
+
+@Composable
+private fun CreditBufferHeroCard(
+    totalCreditLimit: Money,
+    husbandCreditLimit: Money,
+    wifeCreditLimit: Money,
+    selectedRole: AccountRole?,
+    hideAmount: Boolean,
+) {
+    val displayLimit = when (selectedRole) {
+        AccountRole.HUSBAND -> husbandCreditLimit
+        AccountRole.WIFE -> wifeCreditLimit
+        else -> totalCreditLimit
+    }
+
+    val total = totalCreditLimit.minor
+    val husbandRatio = if (total > 0) husbandCreditLimit.minor.toFloat() / total.toFloat() else 0.5f
+
+    ElevatedCard(
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CreditCard,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    Text(
+                        text = if (selectedRole == null) "家庭授信总储备" else "${selectedRole.label}授信储备",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+
+                Text(
+                    text = if (hideAmount) "••••••" else displayLimit.asRmb(),
+                    style = OmniText.amountHero,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+
+            if (selectedRole == null && total > 0) {
+                // Split bar
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LinearProgressIndicator(
+                        progress = { husbandRatio },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp)),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.tertiary,
+                        strokeCap = StrokeCap.Round,
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = "${AccountRole.HUSBAND.label} ${if (hideAmount) "••" else husbandCreditLimit.asRmb()} (${(husbandRatio * 100).toInt()}%)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            text = "${AccountRole.WIFE.label} ${if (hideAmount) "••" else wifeCreditLimit.asRmb()} (${((1f - husbandRatio) * 100).toInt()}%)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.tertiary,
+                        )
+                    }
+                }
+            }
+        }
     }
 }

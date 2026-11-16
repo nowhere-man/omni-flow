@@ -40,7 +40,7 @@ import com.omniflow.android.ui.designsystem.components.OmniEmptyState
 import com.omniflow.android.ui.designsystem.components.OmniSubPageScaffold
 import com.omniflow.android.ui.designsystem.tokens.OmniSpacingTokens
 import com.omniflow.core.domain.model.Ledger
-import com.omniflow.core.domain.model.LedgerAggregates
+import com.omniflow.core.domain.model.LedgerOverview
 import com.omniflow.core.domain.model.LedgerId
 
 /**
@@ -280,7 +280,7 @@ internal fun LedgerListScreen(
 @Composable
 private fun LedgerCard(
     ledger: Ledger,
-    stat: LedgerAggregates?,
+    stat: LedgerOverview?,
     isDefault: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,

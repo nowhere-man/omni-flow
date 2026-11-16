@@ -199,6 +199,15 @@ fun MoreHomeScreen(
                         onClick = { onPage(MorePage.ASSETS) },
                     )
                 }
+                item {
+                    MoreOptionItem(
+                        page = MorePage.RECONCILIATION,
+                        badgeType = SemanticBadgeType.FINANCIAL,
+                        state = state,
+                        versionName = versionName,
+                        onClick = { onPage(MorePage.RECONCILIATION) },
+                    )
+                }
             }
         }
 
@@ -374,6 +383,7 @@ private fun MorePage.description(state: MoreUiState): String = when (this) {
     MorePage.LEDGERS -> "账本封面、默认账本与收支概览"
     MorePage.ACCOUNTS -> "账户余额、卡片信息与流水"
     MorePage.ASSETS -> "净资产构成与负债"
+    MorePage.RECONCILIATION -> "月度收支对账、储蓄率与财富天梯"
     MorePage.IMPORT -> "从支付宝、微信、银行流水批量导入"
     MorePage.AI -> "导入时让大模型建议一级分类"
     MorePage.RULES -> "自动分类和排除规则"

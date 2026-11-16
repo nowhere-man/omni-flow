@@ -23,7 +23,7 @@ class SqlDelightInitialDataRepositoryTest {
         assertEquals(16, database.categoryQueries.activeCategoriesForLedger(
             ledger.id,
         ).executeAsList().size)
-        assertEquals(7, database.accountQueries.activeAccounts().executeAsList().size)
+        assertEquals(3, database.accountQueries.activeAccounts().executeAsList().size)
         assertEquals(ledger.id, database.appPreferenceQueries.preference("default_ledger_id").executeAsOne())
     }
 }

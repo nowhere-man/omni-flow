@@ -14,7 +14,7 @@ class SqlDelightQingziInteropFacadeTest {
     fun exportsDataThatTheQingziParserCanRead() = runBlocking {
         val database = createJvmDatabase()
         database.ledgerQueries.insertLedger("ledger", "日常", null, 1, 1)
-        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 1, 1, 1)
+        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 0, null, 0, "HUSBAND", 1, 1, 1)
         database.categoryQueries.insertCategory("category", "ledger", null, "餐饮", "utensils", "EXPENSE", 1, 1)
         database.transactionQueries.insertTransaction(
             "transaction", "ledger", "account", "category", 1_234, "EXPENSE", 1_000,
@@ -34,7 +34,7 @@ class SqlDelightQingziInteropFacadeTest {
         val database = createJvmDatabase()
         database.ledgerQueries.insertLedger("ledger", "日常", null, 1, 1)
         database.ledgerQueries.insertLedger("other-ledger", "旅行", null, 1, 1)
-        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 1, 1, 1)
+        database.accountQueries.insertAccount("account", "现金", "CASH", "banknote", null, null, 0, 0, null, 0, "HUSBAND", 1, 1, 1)
         database.categoryQueries.insertCategory("expense", "ledger", null, "餐饮", "utensils", "EXPENSE", 1, 1)
         database.categoryQueries.insertCategory("income", "ledger", null, "工资", "banknote", "INCOME", 1, 1)
         database.categoryQueries.insertCategory("other-expense", "other-ledger", null, "交通", "car", "EXPENSE", 1, 1)

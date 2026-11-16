@@ -460,6 +460,7 @@ fun OmniFlowApp(
                 is OmniRoute.MoreLedgers,
                 is OmniRoute.MoreAccounts,
                 is OmniRoute.MoreAssets,
+                is OmniRoute.MoreReconciliation,
                 is OmniRoute.MoreCategories,
                 is OmniRoute.MoreTags, is OmniRoute.MoreAbout -> MoreScreen(
                     state = moreState,

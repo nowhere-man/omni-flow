@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.Rule
 import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.CloudSync
@@ -45,6 +46,9 @@ import com.omniflow.android.ui.feature.more.ExportPage
 import com.omniflow.android.ui.feature.more.ImportPage
 import com.omniflow.android.ui.feature.more.MoreHomeScreen
 import com.omniflow.android.ui.feature.more.SettingsPage
+import com.omniflow.android.ui.feature.reconciliation.ReconciliationScreen
+import com.omniflow.android.ui.feature.reconciliation.ReconciliationViewModel
+import com.omniflow.android.ui.feature.reconciliation.ReconciliationViewModelFactory
 import com.omniflow.android.ui.feature.reminder.ReminderScreen
 import com.omniflow.android.ui.feature.rule.RuleScreen
 import com.omniflow.android.ui.feature.tag.TagScreen
@@ -56,6 +60,7 @@ enum class MorePage(val label: String, val icon: ImageVector) {
     LEDGERS("账本管理", Icons.Default.AccountBalance),
     ACCOUNTS("账户管理", Icons.Default.Wallet),
     ASSETS("资产管理", Icons.Default.Savings),
+    RECONCILIATION("对账中心", Icons.Default.Assessment),
     IMPORT("导入账单", Icons.Default.FileUpload),
     AI("智能分类", Icons.Default.AutoAwesome),
     RULES("规则管理", Icons.AutoMirrored.Filled.Rule),
@@ -80,6 +85,7 @@ internal fun MoreScreen(
     onOpenCategory: (String) -> Unit,
     accountViewModel: AccountViewModel = viewModel(factory = AccountViewModelFactory(viewModel.sharedApp)),
     ledgerViewModel: LedgerViewModel = viewModel(factory = LedgerViewModelFactory(viewModel.sharedApp)),
+    reconciliationViewModel: ReconciliationViewModel = viewModel(factory = ReconciliationViewModelFactory(viewModel.sharedApp)),
     modifier: Modifier = Modifier,
 ) {
     Box(modifier.fillMaxSize()) {
@@ -103,7 +109,8 @@ internal fun MoreScreen(
             MorePage.EXPORT -> ExportPage(state, viewModel, onBack = onBack)
             MorePage.LEDGERS -> LedgerListScreen(ledgerViewModel, onOpenLedger = onOpenLedger, onBack = onBack)
             MorePage.ACCOUNTS -> AccountListScreen(accountViewModel, onOpenAccount = onOpenAccount, onBack = onBack)
-            MorePage.ASSETS -> AssetScreen(state, onBack = onBack, onPage = onPage)
+            MorePage.ASSETS -> AssetScreen(state, sharedApp = viewModel.sharedApp, onBack = onBack, onPage = onPage)
+            MorePage.RECONCILIATION -> ReconciliationScreen(reconciliationViewModel, onBack = onBack)
             MorePage.CATEGORIES -> CategoryScreen(state, viewModel, onBack = onBack, onOpenCategory = onOpenCategory)
             MorePage.TAGS -> TagScreen(state, viewModel, onBack = onBack)
             MorePage.REMINDERS -> ReminderScreen(

@@ -34,9 +34,23 @@ data class Account(
     val cardNumber: String? = null,
     val note: String? = null,
     val balance: Money,
+    val creditLimit: Money = Money.Zero,
+    val availableLimit: Money? = null,
+    val profitLoss: Money = Money.Zero,
+    val ownerRole: AccountRole = AccountRole.HUSBAND,
     val includeInTotalAssets: Boolean,
     val deletedAt: Instant? = null,
-)
+) {
+    val debt: Money
+        get() = if (type == AccountType.CREDIT_CARD && availableLimit != null) {
+            val d = creditLimit.minor - availableLimit.minor
+            Money(if (d > 0) d else 0L)
+        } else if (balance.minor < 0) {
+            Money(-balance.minor)
+        } else {
+            Money.Zero
+        }
+}
 
 data class Category(
     val id: CategoryId,

@@ -85,10 +85,15 @@ class SharedApp(
     private val reminderRepository = SqlDelightReminderRepository(database)
     private val transactions = SqlDelightTransactionRepository(database)
     private val preferenceFacade = SqlDelightAppPreferenceFacade(database)
+    private val reconciliationRepository = com.omniflow.core.data.repository.SqlDelightReconciliationRepository(database)
 
     val home: HomeFacade = SqlDelightHomeFacade(database)
     val management: ManagementFacade = SqlDelightManagementFacade(database)
     val analytics: AnalyticsFacade = SqlDelightAnalyticsFacade(database)
+    val reconciliation: com.omniflow.core.domain.facade.ReconciliationFacade = com.omniflow.core.data.facade.SqlDelightReconciliationFacade(
+        reconciliationRepository = reconciliationRepository,
+        accountRepository = accounts,
+    )
     val preferences: AppPreferenceFacade = preferenceFacade
     val reminders: ReminderFacade = SqlDelightReminderFacade(database)
     val budgets: BudgetFacade = SqlDelightBudgetFacade(database)

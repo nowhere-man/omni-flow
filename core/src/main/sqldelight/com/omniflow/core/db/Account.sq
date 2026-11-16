@@ -6,6 +6,10 @@ CREATE TABLE account (
     card_number TEXT,
     note TEXT,
     balance_minor INTEGER NOT NULL DEFAULT 0,
+    credit_limit_minor INTEGER NOT NULL DEFAULT 0,
+    available_limit_minor INTEGER,
+    profit_loss_minor INTEGER NOT NULL DEFAULT 0,
+    owner_role TEXT NOT NULL DEFAULT 'HUSBAND',
     include_in_total_assets INTEGER NOT NULL DEFAULT 1,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
@@ -24,11 +28,14 @@ CREATE TABLE account_balance_record (
 activeAccounts:
 SELECT * FROM account WHERE deleted_at IS NULL ORDER BY name;
 
+activeAccountsByRole:
+SELECT * FROM account WHERE deleted_at IS NULL AND owner_role = :owner_role ORDER BY name;
+
 insertAccount:
 INSERT INTO account(
-    id, name, type, icon_key, card_number, note, balance_minor, include_in_total_assets, created_at, updated_at
+    id, name, type, icon_key, card_number, note, balance_minor, credit_limit_minor, available_limit_minor, profit_loss_minor, owner_role, include_in_total_assets, created_at, updated_at
 ) VALUES (
-    :id, :name, :type, :icon_key, :card_number, :note, :balance_minor, :include_in_total_assets, :created_at, :updated_at
+    :id, :name, :type, :icon_key, :card_number, :note, :balance_minor, :credit_limit_minor, :available_limit_minor, :profit_loss_minor, :owner_role, :include_in_total_assets, :created_at, :updated_at
 );
 
 activeAccountId:
@@ -53,7 +60,19 @@ SET name = :name,
     icon_key = :icon_key,
     card_number = :card_number,
     note = :note,
+    credit_limit_minor = :credit_limit_minor,
+    available_limit_minor = :available_limit_minor,
+    profit_loss_minor = :profit_loss_minor,
+    owner_role = :owner_role,
     include_in_total_assets = :include_in_total_assets,
+    updated_at = :updated_at
+WHERE id = :id AND deleted_at IS NULL;
+
+quickUpdateAccountFinance:
+UPDATE account
+SET balance_minor = :balance_minor,
+    available_limit_minor = :available_limit_minor,
+    profit_loss_minor = :profit_loss_minor,
     updated_at = :updated_at
 WHERE id = :id AND deleted_at IS NULL;
 
@@ -71,3 +90,16 @@ SELECT
     COALESCE(SUM(CASE WHEN balance_minor < 0 THEN -balance_minor ELSE 0 END), 0) AS liabilities_minor
 FROM account
 WHERE deleted_at IS NULL AND include_in_total_assets = 1;
+
+accountSummaryByRole:
+SELECT
+    COALESCE(SUM(CASE WHEN balance_minor > 0 THEN balance_minor ELSE 0 END), 0) AS assets_minor,
+    COALESCE(SUM(CASE WHEN balance_minor < 0 THEN -balance_minor ELSE 0 END), 0) AS liabilities_minor
+FROM account
+WHERE deleted_at IS NULL AND include_in_total_assets = 1 AND owner_role = :owner_role;
+
+totalCreditLimit:
+SELECT COALESCE(SUM(credit_limit_minor), 0) FROM account WHERE deleted_at IS NULL AND type = 'CREDIT_CARD';
+
+totalCreditLimitByRole:
+SELECT COALESCE(SUM(credit_limit_minor), 0) FROM account WHERE deleted_at IS NULL AND type = 'CREDIT_CARD' AND owner_role = :owner_role;
