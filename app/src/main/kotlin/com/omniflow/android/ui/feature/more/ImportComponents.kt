@@ -21,20 +21,27 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.omniflow.android.R
 import com.omniflow.android.ui.OmniRadius
 import com.omniflow.android.ui.OmniText
+import com.omniflow.android.ui.designsystem.components.OmniBadgeIcon
+import com.omniflow.android.ui.designsystem.tokens.OmniIconTokens
 import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
+import com.omniflow.android.ui.designsystem.tokens.OmniTypographyTokens
 import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
 import com.omniflow.android.ui.designsystem.tokens.semanticBadgeColors
 import com.omniflow.android.ui.mutedContent
@@ -121,8 +128,11 @@ internal fun ImportStepperHeader(
     }
 }
 
+/**
+ * 导入来源行：置于 OmniSettingsGroup 分段列表中，底色与圆角由分组提供。
+ */
 @Composable
-internal fun ImportSourceCard(
+internal fun ImportSourceRow(
     format: ImportFormat?,
     title: String,
     hint: String,
@@ -130,71 +140,53 @@ internal fun ImportSourceCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    ElevatedCard(
+    Surface(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
+        color = Color.Transparent,
+        modifier = modifier
+            .fillMaxWidth()
+            .alpha(if (enabled) 1f else 0.38f),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            when (format) {
-                ImportFormat.WECHAT -> {
-                    Icon(
-                        painter = painterResource(R.drawable.brand_wechat),
-                        contentDescription = "微信支付",
-                        modifier = Modifier.size(44.dp),
-                        tint = androidx.compose.ui.graphics.Color.Unspecified,
-                    )
-                }
-                ImportFormat.ALIPAY -> {
-                    Icon(
-                        painter = painterResource(R.drawable.brand_alipay),
-                        contentDescription = "支付宝",
-                        modifier = Modifier.size(44.dp),
-                        tint = androidx.compose.ui.graphics.Color.Unspecified,
-                    )
-                }
-                else -> {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            Icons.Default.Description,
-                            contentDescription = "通用 CSV",
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        ListItem(
+            headlineContent = {
                 Text(
                     text = title,
-                    style = OmniText.titleRow,
+                    style = OmniTypographyTokens.settingsRowTitle,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
+            },
+            supportingContent = {
                 Text(
                     text = hint,
-                    style = OmniText.caption,
+                    style = OmniTypographyTokens.settingsRowSubtitle,
                     color = mutedContent(),
                 )
-            }
-        }
+            },
+            leadingContent = {
+                val iconSize = OmniIconTokens.badgeContainerSize
+                when (format) {
+                    ImportFormat.WECHAT -> Icon(
+                        painter = painterResource(R.drawable.brand_wechat),
+                        contentDescription = "微信支付",
+                        modifier = Modifier.size(iconSize),
+                        tint = Color.Unspecified,
+                    )
+                    ImportFormat.ALIPAY -> Icon(
+                        painter = painterResource(R.drawable.brand_alipay),
+                        contentDescription = "支付宝",
+                        modifier = Modifier.size(iconSize),
+                        tint = Color.Unspecified,
+                    )
+                    else -> OmniBadgeIcon(
+                        icon = Icons.Default.Description,
+                        badgeType = SemanticBadgeType.IMPORT_EXPORT,
+                        contentDescription = "通用 CSV",
+                    )
+                }
+            },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        )
     }
 }
 

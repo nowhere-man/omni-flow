@@ -24,22 +24,26 @@ object OmniColorTokens {
 
     // Tonal Surface 现代中性容器阶梯规范 (对标 Google M3 现代设计基准，告别暗黄暗沉)
     val SurfaceBackgroundLight = Color(0xFFF7F9FB)
-    val SurfaceBackgroundDark = Color(0xFF131315)
+    val SurfaceBackgroundDark = Color(0xFF1D1F20)
 
     val SurfaceContainerLowestLight = Color(0xFFFFFFFF)
-    val SurfaceContainerLowestDark = Color(0xFF0E0E10)
+    val SurfaceContainerLowestDark = Color(0xFF17191A)
 
     val SurfaceContainerLowLight = Color(0xFFFFFFFF)
-    val SurfaceContainerLowDark = Color(0xFF1C1D20)
+    val SurfaceContainerLowDark = Color(0xFF27292A)
 
     val SurfaceContainerLight = Color(0xFFEFF1F4)
-    val SurfaceContainerDark = Color(0xFF232528)
+    val SurfaceContainerDark = Color(0xFF2D2F30)
 
     val SurfaceContainerHighLight = Color(0xFFE7E9ED)
-    val SurfaceContainerHighDark = Color(0xFF2C2E33)
+    val SurfaceContainerHighDark = Color(0xFF333536)
 
     val SurfaceContainerHighestLight = Color(0xFFDFE2E6)
-    val SurfaceContainerHighestDark = Color(0xFF37393F)
+    val SurfaceContainerHighestDark = Color(0xFF3B3D3E)
+
+    // 分段列表项底色 (对齐 Google 账号深色页实测：页面 #1D1F20 / 列表项 #363839)
+    val ListItemContainerLight = Color(0xFFFFFFFF)
+    val ListItemContainerDark = Color(0xFF363839)
 
     // Expressive 语义徽章色彩（容器色 + 图标色）对
     // 浅/深两模式统一为「亮粉彩圆盘 + 同色相深色 glyph」，深色模式不再使用深底浅图标
@@ -218,3 +222,13 @@ fun warningColor(): Color =
 @Composable
 @ReadOnlyComposable
 fun errorColor(): Color = expenseColor()
+
+/** 分段列表 (OmniSettingsGroup) 每一项的底色。 */
+@Composable
+@ReadOnlyComposable
+fun listItemContainerColor(): Color =
+    if (MaterialTheme.colorScheme.background.luminance() < 0.5f) {
+        OmniColorTokens.ListItemContainerDark
+    } else {
+        OmniColorTokens.ListItemContainerLight
+    }

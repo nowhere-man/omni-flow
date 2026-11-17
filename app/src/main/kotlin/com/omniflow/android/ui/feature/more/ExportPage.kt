@@ -18,10 +18,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.TextFormat
 import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,20 +35,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.omniflow.android.ui.ExportDateButton
 import com.omniflow.android.ui.MoreUiState
 import com.omniflow.android.ui.OmniFlowViewModel
 import com.omniflow.android.ui.OmniText
 import com.omniflow.android.ui.designsystem.components.OmniExpressiveSwitch
+import com.omniflow.android.ui.designsystem.components.OmniSettingsControlRow
+import com.omniflow.android.ui.designsystem.components.OmniSettingsGroup
+import com.omniflow.android.ui.designsystem.components.OmniSettingsRow
 import com.omniflow.android.ui.designsystem.components.OmniSubPageScaffold
 import com.omniflow.android.ui.designsystem.tokens.OmniShapeTokens
+import com.omniflow.android.ui.designsystem.tokens.SemanticBadgeType
 import com.omniflow.android.ui.exportRange
-import com.omniflow.android.ui.mutedContent
 import com.omniflow.core.data.export.JsonToCsvExporter
 import com.omniflow.core.domain.model.AppTimeZone
 import com.omniflow.core.domain.model.DateRange
@@ -57,7 +61,7 @@ import kotlinx.datetime.toLocalDateTime
 
 /**
  * 导出账单工作台：
- * 顶部实时预览看板 + 格式与 UTF-8 BOM 控制 + FilterChip 筛选 + 常驻胶囊导出按钮。
+ * 顶部实时预览看板 + 分段列表（格式与 UTF-8 BOM / 筛选条件）+ 常驻胶囊导出按钮。
  */
 @Composable
 fun ExportPage(
@@ -143,165 +147,132 @@ fun ExportPage(
                     )
                 }
 
-                // 2. 导出格式与 BOM
+                // 2. 导出格式与 BOM（分段列表）
                 item {
-                    ElevatedCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = OmniShapeTokens.card,
-                        colors = CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                        ),
-                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            Text("导出格式", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
-
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                ExportFormatChoice.entries.forEach { choice ->
-                                    FilterChip(
-                                        selected = formatChoice == choice,
-                                        onClick = { formatChoice = choice },
-                                        label = { Text(choice.label) },
-                                        shape = RoundedCornerShape(12.dp),
-                                    )
+                    OmniSettingsGroup {
+                        item {
+                            OmniSettingsControlRow(
+                                title = "导出格式",
+                                subtitle = "CSV 便于表格查看，JSON 保留完整结构",
+                                icon = Icons.Default.Description,
+                                badgeType = SemanticBadgeType.IMPORT_EXPORT,
+                            ) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    ExportFormatChoice.entries.forEach { choice ->
+                                        FilterChip(
+                                            selected = formatChoice == choice,
+                                            onClick = { formatChoice = choice },
+                                            label = { Text(choice.label) },
+                                            shape = RoundedCornerShape(12.dp),
+                                        )
+                                    }
                                 }
                             }
-
-                            if (formatChoice == ExportFormatChoice.CSV) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                ) {
-                                    Column(Modifier.weight(1f)) {
-                                        Text("添加 UTF-8 BOM", style = MaterialTheme.typography.labelLarge)
-                                        Text("解决 Excel 打开中文乱码问题（推荐开启）", style = OmniText.caption, color = mutedContent())
-                                    }
-                                    OmniExpressiveSwitch(checked = useBom, onCheckedChange = { useBom = it })
-                                }
+                        }
+                        if (formatChoice == ExportFormatChoice.CSV) {
+                            item {
+                                OmniSettingsRow(
+                                    title = "添加 UTF-8 BOM",
+                                    subtitle = "解决 Excel 打开中文乱码问题（推荐开启）",
+                                    icon = Icons.Default.TextFormat,
+                                    badgeType = SemanticBadgeType.IMPORT_EXPORT,
+                                    onClick = { useBom = !useBom },
+                                    trailing = {
+                                        OmniExpressiveSwitch(checked = useBom, onCheckedChange = { useBom = it })
+                                    },
+                                )
                             }
                         }
                     }
                 }
 
-                // 3. 时间跨度筛选
+                // 3. 筛选条件：时间跨度 / 账本范围 / 交易类型（分段列表）
                 item {
-                    ElevatedCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = OmniShapeTokens.card,
-                        colors = CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                        ),
-                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            Text("时间跨度", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
-
-                            Row(
-                                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    OmniSettingsGroup {
+                        item {
+                            OmniSettingsControlRow(
+                                title = "时间跨度",
+                                icon = Icons.Default.DateRange,
+                                badgeType = SemanticBadgeType.IMPORT_EXPORT,
                             ) {
-                                ExportTimeSpan.entries.forEach { span ->
-                                    FilterChip(
-                                        selected = timeSpan == span,
-                                        onClick = { timeSpan = span },
-                                        label = { Text(span.label) },
-                                        shape = RoundedCornerShape(12.dp),
-                                    )
+                                Column {
+                                    Row(
+                                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
+                                        ExportTimeSpan.entries.forEach { span ->
+                                            FilterChip(
+                                                selected = timeSpan == span,
+                                                onClick = { timeSpan = span },
+                                                label = { Text(span.label) },
+                                                shape = RoundedCornerShape(12.dp),
+                                            )
+                                        }
+                                    }
+
+                                    AnimatedVisibility(visible = timeSpan == ExportTimeSpan.CUSTOM) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        ) {
+                                            ExportDateButton("开始日期", startDate, Modifier.weight(1f)) { startDate = it }
+                                            ExportDateButton("结束日期", endDate, Modifier.weight(1f)) { endDate = it }
+                                        }
+                                    }
                                 }
                             }
-
-                            AnimatedVisibility(visible = timeSpan == ExportTimeSpan.CUSTOM) {
+                        }
+                        item {
+                            OmniSettingsControlRow(
+                                title = "账本范围",
+                                icon = Icons.AutoMirrored.Filled.MenuBook,
+                                badgeType = SemanticBadgeType.IMPORT_EXPORT,
+                            ) {
                                 Row(
-                                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                                    modifier = Modifier.horizontalScroll(rememberScrollState()),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
-                                    ExportDateButton("开始日期", startDate, Modifier.weight(1f)) { startDate = it }
-                                    ExportDateButton("结束日期", endDate, Modifier.weight(1f)) { endDate = it }
+                                    FilterChip(
+                                        selected = ledgerScope is LedgerScope.All,
+                                        onClick = { ledgerScope = LedgerScope.All },
+                                        label = { Text("全部账本") },
+                                        shape = RoundedCornerShape(12.dp),
+                                    )
+
+                                    state.ledgers.forEach { ledger ->
+                                        FilterChip(
+                                            selected = ledgerScope is LedgerScope.Single && (ledgerScope as LedgerScope.Single).ledgerId == ledger.id,
+                                            onClick = { ledgerScope = LedgerScope.Single(ledger.id) },
+                                            label = { Text(ledger.name) },
+                                            shape = RoundedCornerShape(12.dp),
+                                        )
+                                    }
                                 }
                             }
                         }
-                    }
-                }
-
-                // 4. 账本范围筛选
-                item {
-                    ElevatedCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = OmniShapeTokens.card,
-                        colors = CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                        ),
-                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            Text("账本范围", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
-
-                            Row(
-                                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        item {
+                            OmniSettingsControlRow(
+                                title = "交易类型",
+                                icon = Icons.Default.FilterList,
+                                badgeType = SemanticBadgeType.IMPORT_EXPORT,
                             ) {
-                                FilterChip(
-                                    selected = ledgerScope is LedgerScope.All,
-                                    onClick = { ledgerScope = LedgerScope.All },
-                                    label = { Text("全部账本") },
-                                    shape = RoundedCornerShape(12.dp),
-                                )
-
-                                state.ledgers.forEach { ledger ->
-                                    FilterChip(
-                                        selected = ledgerScope is LedgerScope.Single && (ledgerScope as LedgerScope.Single).ledgerId == ledger.id,
-                                        onClick = { ledgerScope = LedgerScope.Single(ledger.id) },
-                                        label = { Text(ledger.name) },
-                                        shape = RoundedCornerShape(12.dp),
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 5. 交易类型筛选
-                item {
-                    ElevatedCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = OmniShapeTokens.card,
-                        colors = CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                        ),
-                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            Text("交易类型", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
-
-                            Row(
-                                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                listOf(
-                                    null to "全部类型",
-                                    TransactionType.EXPENSE to "支出",
-                                    TransactionType.INCOME to "收入",
-                                    TransactionType.TRANSFER to "转账",
-                                ).forEach { (type, label) ->
-                                    FilterChip(
-                                        selected = exportType == type,
-                                        onClick = { exportType = type },
-                                        label = { Text(label) },
-                                        shape = RoundedCornerShape(12.dp),
-                                    )
+                                Row(
+                                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    listOf(
+                                        null to "全部类型",
+                                        TransactionType.EXPENSE to "支出",
+                                        TransactionType.INCOME to "收入",
+                                        TransactionType.TRANSFER to "转账",
+                                    ).forEach { (type, label) ->
+                                        FilterChip(
+                                            selected = exportType == type,
+                                            onClick = { exportType = type },
+                                            label = { Text(label) },
+                                            shape = RoundedCornerShape(12.dp),
+                                        )
+                                    }
                                 }
                             }
                         }

@@ -31,6 +31,7 @@ import com.omniflow.android.ui.MoreUiState
 import com.omniflow.android.ui.OmniFlowViewModel
 import com.omniflow.android.ui.OmniText
 import com.omniflow.android.ui.designsystem.components.OmniEmptyState
+import com.omniflow.android.ui.designsystem.components.OmniSettingsGroup
 import com.omniflow.android.ui.designsystem.components.OmniSubPageScaffold
 import com.omniflow.android.ui.mutedContent
 import com.omniflow.core.domain.model.ImportPreviewPhase
@@ -151,46 +152,47 @@ fun ImportPage(
                             )
                         }
 
-                        // 来源 1：微信支付
+                        // 导入来源：微信支付 / 支付宝 / 通用 CSV（分段列表）
                         item {
-                            ImportSourceCard(
-                                format = ImportFormat.WECHAT,
-                                title = "微信支付",
-                                hint = "微信 App > 我 > 服务 > 钱包 > 账单 > 常见问题 > 下载账单",
-                                enabled = ledgerId != null && state.accounts.isNotEmpty() && !state.isImporting,
-                                onClick = {
-                                    selectedFormat = ImportFormat.WECHAT
-                                    fileLauncher.launch("*/*")
-                                },
-                            )
-                        }
-
-                        // 来源 2：支付宝
-                        item {
-                            ImportSourceCard(
-                                format = ImportFormat.ALIPAY,
-                                title = "支付宝",
-                                hint = "支付宝 App > 我的 > 账单 > 更多选项 > 开具交易流水证明",
-                                enabled = ledgerId != null && state.accounts.isNotEmpty() && !state.isImporting,
-                                onClick = {
-                                    selectedFormat = ImportFormat.ALIPAY
-                                    fileLauncher.launch("*/*")
-                                },
-                            )
-                        }
-
-                        // 来源 3：通用 CSV
-                        item {
-                            ImportSourceCard(
-                                format = null,
-                                title = "通用 CSV",
-                                hint = "支持标准 UTF-8 / GB18030 编码的 CSV 交易明细文件",
-                                enabled = ledgerId != null && state.accounts.isNotEmpty() && !state.isImporting,
-                                onClick = {
-                                    selectedFormat = null
-                                    fileLauncher.launch("*/*")
-                                },
-                            )
+                            val sourceEnabled = ledgerId != null && state.accounts.isNotEmpty() && !state.isImporting
+                            OmniSettingsGroup {
+                                item {
+                                    ImportSourceRow(
+                                        format = ImportFormat.WECHAT,
+                                        title = "微信支付",
+                                        hint = "微信 App > 我 > 服务 > 钱包 > 账单 > 常见问题 > 下载账单",
+                                        enabled = sourceEnabled,
+                                        onClick = {
+                                            selectedFormat = ImportFormat.WECHAT
+                                            fileLauncher.launch("*/*")
+                                        },
+                                    )
+                                }
+                                item {
+                                    ImportSourceRow(
+                                        format = ImportFormat.ALIPAY,
+                                        title = "支付宝",
+                                        hint = "支付宝 App > 我的 > 账单 > 更多选项 > 开具交易流水证明",
+                                        enabled = sourceEnabled,
+                                        onClick = {
+                                            selectedFormat = ImportFormat.ALIPAY
+                                            fileLauncher.launch("*/*")
+                                        },
+                                    )
+                                }
+                                item {
+                                    ImportSourceRow(
+                                        format = null,
+                                        title = "通用 CSV",
+                                        hint = "支持标准 UTF-8 / GB18030 编码的 CSV 交易明细文件",
+                                        enabled = sourceEnabled,
+                                        onClick = {
+                                            selectedFormat = null
+                                            fileLauncher.launch("*/*")
+                                        },
+                                    )
+                                }
+                            }
                         }
 
                         if (state.isImporting) {

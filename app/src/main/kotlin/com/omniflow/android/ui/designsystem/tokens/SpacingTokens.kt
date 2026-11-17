@@ -8,8 +8,8 @@ import androidx.compose.ui.unit.dp
  * 间距规格口径 (Jack 拍板 2026-11-15 修正决策，取代第五轮组内 0dp 贴合读数)：
  * - 页面横向外侧边距：16.dp (OmniSpacingTokens.pageHorizontal)
  * - 分组之间的纵向间距：16.dp (OmniSpacingTokens.groupSpacing)
- * - 分组内部行与行纵向间距：8.dp (OmniSpacingTokens.intraGroupSpacing)，
- *   组内每行为独立圆角卡片，透出底层页面背景，不再合体为单张大卡片，组内细分割线随之废弃
+ * - 分组内部行与行纵向间距：2.dp (OmniSpacingTokens.intraGroupSpacing)，
+ *   组内每行为独立圆角卡片，透出底层页面背景，不使用分割线 (对齐 Google 账号页实测，2026-11-17)
  * - 列表行标准最小行高：72.dp (OmniSpacingTokens.settingsRowMinHeight)
  */
 object OmniSpacingTokens {
@@ -32,8 +32,8 @@ object OmniSpacingTokens {
     /** 分组卡片之间的纵向间距: 16.dp */
     val groupSpacing = 16.dp
 
-    /** 同一分组内行与行的间距: 8.dp (透出页面背景；Jack 决策 2026-11-15，取代第五轮 0dp 贴合模型) */
-    val intraGroupSpacing = 8.dp
+    /** 同一分组内行与行的间距: 2.dp (透出页面背景，对齐 Google 账号页实测) */
+    val intraGroupSpacing = 2.dp
 
     /** 设置行标准最小高度: 72.dp (M3 两行 ListItem 标准) */
     val settingsRowMinHeight = 72.dp

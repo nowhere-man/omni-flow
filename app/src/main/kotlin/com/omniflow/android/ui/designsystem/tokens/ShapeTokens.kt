@@ -20,6 +20,9 @@ import androidx.compose.ui.unit.dp
  *    - 分组卡片 / 统计卡片 / Hero 卡片: RoundedCornerShape(24.dp)
  *    - 对话框: RoundedCornerShape(28.dp)
  *    - 底部弹层: RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+ * 5. 分段列表 (OmniSettingsGroup，对齐 Google 账号页实测)：
+ *    - 组外侧圆角 (首项顶部 / 末项底部 / 单项四角): 20.dp
+ *    - 组内相邻项之间的圆角: 4.dp
  */
 object OmniShapeTokens {
     /** 4.dp: 柱状图单柱顶部、进度条端点、紧凑 Badge */
@@ -60,4 +63,10 @@ object OmniShapeTokens {
     val card = large
     val bottomSheet = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     val dialog = extraLarge
+
+    /** 分段列表组外侧圆角：首项顶部、末项底部、单项四角 */
+    val listItemOuterRadius = 20.dp
+
+    /** 分段列表组内相邻项之间的圆角 */
+    val listItemInnerRadius = 4.dp
 }

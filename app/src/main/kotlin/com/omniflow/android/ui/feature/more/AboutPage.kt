@@ -84,7 +84,7 @@ fun AboutPage(
 
             Spacer(Modifier.height(OmniSpacingTokens.xxl))
 
-            // 功能卡片组 (24dp 大圆角卡片，细分割线相连，所属第 1 组 SYSTEM 配色)
+            // 功能分段列表 (OmniSettingsGroup，项间 2dp 间隙，所属第 1 组 SYSTEM 配色)
             OmniSettingsGroup {
                 item {
                     OmniSettingsRow(
